@@ -1,0 +1,25 @@
+.root {
+
+    /* Primarios */
+
+    -fx-primary: #1976D2;
+    -fx-primary-dark: #1565C0;
+    -fx-primary-light: #42A5F5;
+
+    /* Estados */
+
+    -fx-success: #2E7D32;
+    -fx-warning: #ED6C02;
+    -fx-danger: #D32F2F;
+
+    /* Neutros */
+
+    -fx-background: #F5F5F5;
+    -fx-surface: white;
+
+    -fx-border: #D9D9D9;
+
+    -fx-text: #222222;
+    -fx-text-light: #6B6B6B;
+
+}

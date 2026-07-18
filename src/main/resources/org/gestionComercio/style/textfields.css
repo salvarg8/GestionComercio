@@ -1,0 +1,16 @@
+.text-field,
+.password-field {
+
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+
+    -fx-border-color: #CCCCCC;
+
+}
+
+.text-field:focused,
+.password-field:focused {
+
+    -fx-border-color: -fx-primary;
+
+}

@@ -1,0 +1,37 @@
+.menu {
+    -fx-background-color: #20232A;
+}
+.menu-button {
+
+    -fx-background-color: transparent;
+
+    -fx-text-fill: white;
+
+    -fx-font-size: 14px;
+
+    -fx-font-weight: bold;
+
+    -fx-background-radius: 6;
+
+    -fx-alignment: CENTER_LEFT;
+
+    -fx-padding: 10 15;
+
+    -fx-cursor: hand;
+}
+.menu-button:hover {
+
+    -fx-background-color: #2D313A;
+
+}
+.menu-button:pressed {
+
+    -fx-background-color: #3B4048;
+
+}
+.menu-button-active {
+
+    -fx-background-color: -fx-primary;
+
+    -fx-text-fill: white;
+}

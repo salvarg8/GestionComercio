@@ -1,0 +1,36 @@
+.button {
+
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+
+    -fx-font-weight: bold;
+
+}
+
+.btn-primary {
+
+    -fx-background-color: -fx-primary;
+    -fx-text-fill: white;
+
+}
+
+.btn-primary:hover {
+
+    -fx-background-color: -fx-primary-dark;
+
+}
+
+.btn-secondary {
+
+    -fx-background-color: white;
+    -fx-border-color: -fx-primary;
+    -fx-text-fill: -fx-primary;
+
+}
+
+.btn-danger {
+
+    -fx-background-color: -fx-danger;
+    -fx-text-fill: white;
+
+}

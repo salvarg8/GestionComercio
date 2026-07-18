@@ -1,0 +1,33 @@
+.root {
+    -fx-background-color: -fx-background;
+}
+
+/* Barra lateral */
+
+.sidebar {
+    -fx-background-color: #1F2937;
+    -fx-padding: 15;
+}
+
+/* Encabezado */
+
+.header {
+    -fx-background-color: white;
+    -fx-border-color: transparent transparent #DDDDDD transparent;
+    -fx-padding: 10 20;
+}
+
+/* Área principal */
+
+.content {
+    -fx-background-color: -fx-background;
+    -fx-padding: 20;
+}
+
+/* Barra inferior */
+
+.footer {
+    -fx-background-color: white;
+    -fx-border-color: #DDDDDD transparent transparent transparent;
+    -fx-padding: 8 20;
+}
