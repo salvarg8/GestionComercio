@@ -13,8 +13,9 @@
 
 .header {
     -fx-background-color: white;
-    -fx-border-color: transparent transparent #DDDDDD transparent;
-    -fx-padding: 10 20;
+    -fx-border-color: #E5E7EB;
+    -fx-border-width: 0 0 1 0;
+    -fx-alignment: center-left;
 }
 
 /* Área principal */

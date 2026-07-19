@@ -3,16 +3,20 @@ package org.gestionComercio.service;
 import java.util.List;
 import java.util.Optional;
 
-public interface CrudService<T, ID> {
+public interface CrudService<D, ID> {
 
-    T save(T entity);
+    D save(D dto);
 
-    T update(T entity);
+    D update(D dto);
 
     void delete(ID id);
 
-    Optional<T> findById(ID id);
+    Optional<D> findById(ID id);
 
-    List<T> findAll();
+    List<D> findAll();
+
+    List<D> search(String texto);
+
+    long count();
 
 }

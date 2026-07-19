@@ -34,3 +34,29 @@
     -fx-text-fill: white;
 
 }
+.menu-button {
+
+    -fx-background-color: transparent;
+
+    -fx-text-fill: white;
+
+    -fx-font-size: 14px;
+
+    -fx-background-radius: 8;
+
+    -fx-alignment: CENTER_LEFT;
+
+    -fx-padding: 0 0 0 16;
+
+    -fx-pref-height: 42px;
+
+    -fx-max-width: Infinity;
+
+    -fx-cursor: hand;
+}
+
+.menu-button:hover {
+
+    -fx-background-color: #1E293B;
+
+}

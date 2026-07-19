@@ -28,7 +28,7 @@ public abstract class BaseEntity {
     @Enumerated(EnumType.STRING)
     @Builder.Default
     @Column(nullable = false)
-    private EstadoRegistro estado = EstadoRegistro.ACTIVO;
+    private EstadoRegistro estadoRegistro = EstadoRegistro.ACTIVO;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)

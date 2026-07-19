@@ -1,7 +1,5 @@
 package org.gestionComercio.navigation;
 
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -11,48 +9,34 @@ import org.springframework.stereotype.Component;
 public class Navigator {
 
     private final StageManager stageManager;
+    private final ViewLoader viewLoader;
 
-    /**
-     * Contenedor central del Dashboard.
-     */
     private StackPane contentPane;
 
-    /**
-     * Se registra una única vez cuando se carga el Dashboard.
-     */
     public void setContentPane(StackPane contentPane) {
         this.contentPane = contentPane;
     }
 
-    /**
-     * Cambia la escena completa.
-     * Ejemplo:
-     * Login -> Dashboard
-     */
-    public void open(View view) {
+    public void navigate(AppView view) {
 
-        Parent root = ViewLoader.load(view.getFxml());
+        LoadedView loadedView = viewLoader.load(view);
 
-        Scene scene = new Scene(root);
+        switch (loadedView.navigationType()) {
 
-        stageManager.setScene(scene);
-        stageManager.setTitle(view.getTitulo());
-        stageManager.show();
-    }
+            case WINDOW -> stageManager.showWindow(loadedView);
 
-    /**
-     * Cambia únicamente el contenido del Dashboard.
-     */
-    public void show(View view) {
+            case CONTENT -> {
 
-        if (contentPane == null) {
-            throw new IllegalStateException(
-                    "El contenedor principal del Dashboard no fue inicializado.");
+                if (contentPane == null) {
+                    throw new IllegalStateException(
+                            "El contenedor principal del Dashboard no fue inicializado.");
+                }
+
+                stageManager.showContent(loadedView, contentPane);
+            }
+
+            case MODAL -> stageManager.showModal(loadedView);
+
         }
-
-        Parent root = ViewLoader.load(view.getFxml());
-
-        contentPane.getChildren().setAll(root);
     }
-
 }

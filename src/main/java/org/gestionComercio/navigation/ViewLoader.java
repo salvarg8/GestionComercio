@@ -2,27 +2,38 @@ package org.gestionComercio.navigation;
 
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
-import org.gestionComercio.config.SpringContext;
+import lombok.RequiredArgsConstructor;
+import org.gestionComercio.exception.ViewLoadException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
+@Component
+@RequiredArgsConstructor
 public class ViewLoader {
 
-    private ViewLoader() {
-    }
+    private final ApplicationContext applicationContext;
 
-    public static Parent load(String fxml) {
+    public LoadedView load(AppView view) {
 
         try {
 
-            FXMLLoader loader = new FXMLLoader(ViewLoader.class.getResource(fxml));
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource(view.getFxml()));
 
-            loader.setControllerFactory(SpringContext.getContext()::getBean);
+            loader.setControllerFactory(applicationContext::getBean);
 
-            return loader.load();
+            Parent root = loader.load();
+
+            return new LoadedView(
+                    view,
+                    root,
+                    loader.getController()
+            );
 
         } catch (IOException e) {
-            throw new RuntimeException("Error al cargar el FXML: " + fxml, e);
+            throw new ViewLoadException(view, e);
         }
     }
 }

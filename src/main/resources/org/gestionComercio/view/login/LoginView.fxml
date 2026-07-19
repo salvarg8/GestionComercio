@@ -9,12 +9,12 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.AnchorPane?>
 
-<AnchorPane id="pnlLogin" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="461.0" prefWidth="406.0" styleClass="login-panel" stylesheets="@../style/style.css" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.gestionComercio.controller.LogginController">
+<AnchorPane id="pnlLogin" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="461.0" prefWidth="406.0" styleClass="login-panel" stylesheets="@../../style/style.css" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.gestionComercio.controller.LoginController">
 
    <children>
       <ImageView id="imgLogo" fitHeight="369.0" fitWidth="337.0" layoutX="45.0" layoutY="-52.0" pickOnBounds="true" preserveRatio="true">
          <image>
-            <Image url="@../images/Logo.png" />
+            <Image url="@../../images/Logo.png" />
          </image>
       </ImageView>
 
