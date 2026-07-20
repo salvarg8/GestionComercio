@@ -4,7 +4,7 @@ import javafx.scene.control.Alert;
 
 public class ExceptionDialog {
 
-    public static void warning(String message){
+    public static void warning(String message) {
 
         Alert alert = new Alert(Alert.AlertType.WARNING);
 
@@ -16,7 +16,7 @@ public class ExceptionDialog {
 
     }
 
-    public static void error(String message){
+    public static void error(String message) {
 
         Alert alert = new Alert(Alert.AlertType.ERROR);
 
@@ -28,7 +28,7 @@ public class ExceptionDialog {
 
     }
 
-    public static void information(String message){
+    public static void information(String message) {
 
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
 
