@@ -1,8 +1,6 @@
 package org.gestionComercio.controller;
 
-import lombok.Getter;
 import org.gestionComercio.controller.base.AbstractController;
-import org.gestionComercio.entity.Usuario;
 import org.gestionComercio.navigation.Navigator;
 import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.UsuarioService;

@@ -1,7 +1,20 @@
 package org.gestionComercio.entity;
 
-import jakarta.persistence.*;
-import lombok.*;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.gestionComercio.enums.EstadoCaja;
 
@@ -31,7 +44,7 @@ public class Caja extends BaseEntity {
     private BigDecimal saldoFinal;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable =false)
+    @Column(nullable = false)
     private EstadoCaja estadoCaja;
 
     @ManyToOne(fetch = FetchType.LAZY)

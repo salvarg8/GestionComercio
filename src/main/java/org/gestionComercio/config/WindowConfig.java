@@ -2,7 +2,7 @@ package org.gestionComercio.config;
 
 public final class WindowConfig {
 
-    private WindowConfig() {}
+    private WindowConfig() { }
 
     public static final double WIDTH = 1280;
     public static final double HEIGHT = 720;

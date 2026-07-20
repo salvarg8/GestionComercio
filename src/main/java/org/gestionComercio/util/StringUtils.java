@@ -13,7 +13,7 @@ public final class StringUtils {
             return "";
         }
 
-        return text.substring(0,1).toUpperCase()
+        return text.substring(0 , 1).toUpperCase()
                 + text.substring(1).toLowerCase();
 
     }
@@ -35,7 +35,7 @@ public final class StringUtils {
         }
 
         return Normalizer.normalize(text, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "");
+                .replaceAll("\\p{M}",  "");
 
     }
 

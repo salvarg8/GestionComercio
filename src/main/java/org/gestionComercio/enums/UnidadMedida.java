@@ -1,6 +1,6 @@
 package org.gestionComercio.enums;
 
-public enum UnidadMedida implements Descriptible{
+public enum UnidadMedida implements Descriptible {
 
     UNIDAD("Unidad"),
     CAJA("Caja"),

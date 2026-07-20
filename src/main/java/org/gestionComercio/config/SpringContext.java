@@ -2,7 +2,7 @@ package org.gestionComercio.config;
 
 import org.springframework.context.ConfigurableApplicationContext;
 
-public class SpringContext {
+public final class SpringContext {
 
     private static ConfigurableApplicationContext context;
 

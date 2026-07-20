@@ -2,7 +2,7 @@ package org.gestionComercio.enums;
 
 import java.math.BigDecimal;
 
-public enum AlicuotaIVA implements Descriptible{
+public enum AlicuotaIVA implements Descriptible {
 
     EXENTO("Exento", BigDecimal.ZERO),
 
