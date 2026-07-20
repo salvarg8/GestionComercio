@@ -3,6 +3,7 @@ package org.gestionComercio.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.gestionComercio.enums.EstadoUsuario;
 import org.gestionComercio.enums.TipoDocumento;
 
 @Getter
@@ -26,9 +27,10 @@ public class Usuario extends BaseEntity {
     @Column(nullable = false, length = 100)
     private String apellido;
 
-    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
     @Builder.Default
-    private Boolean activo = true;
+    private EstadoUsuario estadoUsuario = EstadoUsuario.ACTIVO;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "empresa_id", nullable = false)

@@ -5,7 +5,6 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import lombok.Getter;
 import org.gestionComercio.config.WindowConfig;
-import org.springframework.boot.autoconfigure.web.reactive.WebSessionIdResolverAutoConfiguration;
 import org.springframework.stereotype.Component;
 
 @Getter
