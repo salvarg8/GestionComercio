@@ -12,4 +12,8 @@ public class SesionUsuario {
 
     private Usuario usuario;
 
+    public void cerrarSesion() {
+        this.usuario = null;
+    }
+
 }
