@@ -101,7 +101,7 @@
 
             <Separator />
 
-            <Button fx:id="btnCerrarSesion" maxWidth="Infinity" styleClass="logout-button" text="Cerrar sesión" />
+            <Button fx:id="btnCerrarSesion" onAction="#cerrarSesion" maxWidth="Infinity" styleClass="logout-button" text="Cerrar sesión" />
 
         </VBox>
 
