@@ -2,17 +2,23 @@ package org.gestionComercio.bootstrap;
 
 import lombok.RequiredArgsConstructor;
 import org.gestionComercio.entity.Empresa;
+import org.gestionComercio.entity.Permiso;
 import org.gestionComercio.entity.Rol;
 import org.gestionComercio.entity.Usuario;
 import org.gestionComercio.enums.CondicionIVA;
 import org.gestionComercio.enums.EstadoUsuario;
+import org.gestionComercio.enums.PermisoCodigo;
 import org.gestionComercio.enums.TipoDocumento;
 import org.gestionComercio.repository.EmpresaRepository;
+import org.gestionComercio.repository.PermisoRepository;
 import org.gestionComercio.repository.RolRepository;
 import org.gestionComercio.repository.UsuarioRepository;
 import org.gestionComercio.service.PasswordService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
+
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -22,11 +28,15 @@ public class DataInitializer implements CommandLineRunner {
     private final RolRepository rolRepository;
     private final UsuarioRepository usuarioRepository;
     private final PasswordService passwordService;
+    private final PermisoRepository permisoRepository;
 
     @Override
     public void run(String... args) {
 
         Empresa empresa = crearEmpresaSiNoExiste();
+
+        crearPermisosSiNoExisten();
+
         Rol rolAdmin = crearRolAdminSiNoExiste();
 
         crearUsuarioAdminSiNoExiste(empresa, rolAdmin);
@@ -53,12 +63,23 @@ public class DataInitializer implements CommandLineRunner {
 
     private Rol crearRolAdminSiNoExiste() {
 
+        Set<Permiso> permisos =
+                new LinkedHashSet<>(permisoRepository.findAllByOrderByCodigoAsc());
+
         return rolRepository.findByNombre("ADMIN")
+                .map(rol -> {
+
+                    rol.setPermisos(permisos);
+
+                    return rolRepository.save(rol);
+
+                })
                 .orElseGet(() -> {
 
                     Rol rol = Rol.builder()
                             .nombre("ADMIN")
                             .descripcion("Administrador del sistema")
+                            .permisos(permisos)
                             .build();
 
                     return rolRepository.save(rol);
@@ -84,5 +105,21 @@ public class DataInitializer implements CommandLineRunner {
                 .build();
 
         usuarioRepository.save(usuario);
+    }
+    private void crearPermisosSiNoExisten() {
+
+        for (PermisoCodigo codigo : PermisoCodigo.values()) {
+
+            if (permisoRepository.existsByCodigo(codigo)) {
+                continue;
+            }
+
+            Permiso permiso = Permiso.builder()
+                    .codigo(codigo)
+                    .descripcion(codigo.getDescripcion())
+                    .build();
+
+            permisoRepository.save(permiso);
+        }
     }
 }
