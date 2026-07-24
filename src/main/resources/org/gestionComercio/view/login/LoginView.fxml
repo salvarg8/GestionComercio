@@ -20,15 +20,18 @@
 
       <Label layoutX="66.0" layoutY="223.0" styleClass="label-subtitulo" text="Usuario:" />
 
-      <TextField id="txtUsuario" layoutX="63.0" layoutY="252.0" prefWidth="272.0" />
+      <TextField fx:id="txtUsuario" layoutX="63.0" layoutY="252.0" prefWidth="272.0" />
 
       <Label layoutX="63.0" layoutY="285.0" styleClass="label-subtitulo" text="Contraseña:" />
 
-      <PasswordField id="txtContraseña" layoutX="63.0" layoutY="310.0" prefWidth="272.0" />
+      <PasswordField fx:id="txtPassword" layoutX="63.0" layoutY="310.0" prefWidth="272.0" />
 
-      <CheckBox id="chkMostrarNoMostrarContraseña" layoutX="89.0" layoutY="361.0" text="Mostrar contraseña" />
+      <CheckBox fx:id="chkMostrarNoMostrarContraseña" onAction="#mostrarNoMostrarContraseña" layoutX="89.0" layoutY="361.0" text="Mostrar contraseña" />
 
-      <Button id="btnIngresar" layoutX="83.0" layoutY="397.0" prefHeight="39.0" prefWidth="232.0" styleClass="boton-login" text="Ingresar" />
+      <Button fx:id="btnIngresar" onAction="#ingresar" defaultButton="true" layoutX="83.0" layoutY="397.0" prefHeight="39.0" prefWidth="232.0" styleClass="boton-login" text="Ingresar" />
+
+      <TextField fx:id="txtPasswordVisible" layoutX="63.0" layoutY="310.0" prefWidth="272.0" visible="false" managed="false"/>
+
 
    </children>
 

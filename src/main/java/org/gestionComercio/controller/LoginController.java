@@ -1,6 +1,7 @@
 package org.gestionComercio.controller;
 
 import javafx.fxml.FXML;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import org.gestionComercio.controller.base.AbstractController;
@@ -21,6 +22,12 @@ public class LoginController extends AbstractController {
     @FXML
     private PasswordField txtPassword;
 
+    @FXML
+    private TextField txtPasswordVisible;
+
+    @FXML
+    private CheckBox chkMostrarNoMostrarContraseña;
+
     private final AuthenticationService authenticationService;
     private final SesionUsuario sesionUsuario;
     private final Navigator navigator;
@@ -29,32 +36,78 @@ public class LoginController extends AbstractController {
             AuthenticationService authenticationService,
             SesionUsuario sesionUsuario,
             Navigator navigator) {
+
         this.authenticationService = authenticationService;
         this.sesionUsuario = sesionUsuario;
         this.navigator = navigator;
+        System.out.println("Constructor -> " + this);
+
+    }
+
+    @FXML
+    protected void initializeBindings() {
+        System.out.println("initialize");
+        System.out.println(txtPassword);
+        System.out.println(txtPasswordVisible);
+
+        txtPasswordVisible.textProperty().bindBidirectional(txtPassword.textProperty());
+    }
+
+    @Override
+    public void onShow() {
+        txtUsuario.requestFocus();
     }
 
     /**
-     * Método FXML. Lee desde la UI, delega a la lógica de negocio
-     * y maneja las excepciones para mostrarlas en la UI.
+     * Método invocado desde el botón Ingresar.
      */
     @FXML
     private void ingresar() {
+
         try {
             performLogin(txtUsuario.getText(), txtPassword.getText());
+
         } catch (AuthenticationException e) {
-            // La excepción se captura aquí y se muestra al usuario.
-            info("Error de autenticación: " + e.getMessage());
+
+            txtPassword.clear();
+            txtPassword.requestFocus();
+
+            info("Error de autenticación");
         }
     }
 
     /**
-     * Lógica de autenticación pura, sin dependencias de UI.
-     * Lanza una excepción si la autenticación falla.
+     * Lógica de autenticación.
      */
-    void performLogin(String username, String password) throws AuthenticationException {
+    void performLogin(String username, String password) {
+
         Usuario usuario = authenticationService.authenticate(username, password);
+
         sesionUsuario.setUsuario(usuario);
+
         navigator.navigate(AppView.DASHBOARD);
+    }
+
+    /**
+     * Muestra u oculta la contraseña.
+     */
+    @FXML
+    private void mostrarNoMostrarContraseña() {
+
+        boolean mostrar = chkMostrarNoMostrarContraseña.isSelected();
+
+        txtPassword.setVisible(!mostrar);
+        txtPassword.setManaged(!mostrar);
+
+        txtPasswordVisible.setVisible(mostrar);
+        txtPasswordVisible.setManaged(mostrar);
+
+        if (mostrar) {
+            txtPasswordVisible.requestFocus();
+            txtPasswordVisible.positionCaret(txtPasswordVisible.getText().length());
+        } else {
+            txtPassword.requestFocus();
+            txtPassword.positionCaret(txtPassword.getText().length());
+        }
     }
 }
