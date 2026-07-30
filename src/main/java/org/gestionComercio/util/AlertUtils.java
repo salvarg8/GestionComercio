@@ -10,14 +10,12 @@ public final class AlertUtils {
     private AlertUtils() {
     }
 
-    public static void information(String title, String message) {
+    public static void information(String message) {
 
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-
-        alert.setTitle(title);
+        alert.setTitle("Información");
         alert.setHeaderText(null);
         alert.setContentText(message);
-
         alert.showAndWait();
     }
 
@@ -32,14 +30,12 @@ public final class AlertUtils {
         alert.showAndWait();
     }
 
-    public static void error(String title, String message) {
+    public static void error(String message) {
 
         Alert alert = new Alert(Alert.AlertType.ERROR);
-
-        alert.setTitle(title);
+        alert.setTitle("Error");
         alert.setHeaderText(null);
         alert.setContentText(message);
-
         alert.showAndWait();
     }
 
