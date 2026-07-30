@@ -66,7 +66,7 @@ public class DataInitializer implements CommandLineRunner {
         Set<Permiso> permisos =
                 new LinkedHashSet<>(permisoRepository.findAllByOrderByCodigoAsc());
 
-        return rolRepository.findByNombre("ADMIN")
+        return rolRepository.findByNombreIgnoreCase("ADMIN")
                 .map(rol -> {
 
                     rol.setPermisos(permisos);
