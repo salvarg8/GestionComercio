@@ -20,7 +20,22 @@ public enum AppView {
             "Gestión Comercial",
             NavigationType.WINDOW,
             WindowMode.MAXIMIZED
+    ),
+
+    ROL_LIST(
+            "/org/gestionComercio/view/rol/RolList.fxml",
+            "Lista de roles",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED
+    ),
+
+    ROL_FORM(
+            "/org/gestionComercio/view/rol/RolForm.fxml",
+            "Roles",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED
     );
+
 
     private final String fxml;
 

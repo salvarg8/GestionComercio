@@ -120,7 +120,7 @@ public class ProductoServiceImpl implements ProductoService {
         ValidationResult result = productoValidator.validate(dto);
 
         if (result.hasErrors()) {
-            throw new ValidationException(result.getMessage());
+            throw new ValidationException(result);
         }
     }
 

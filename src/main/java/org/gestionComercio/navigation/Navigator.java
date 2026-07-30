@@ -18,8 +18,21 @@ public class Navigator {
     }
 
     public void navigate(AppView view) {
+        navigate(view, null);
+    }
+
+    public void navigate(AppView view, Object data) {
 
         LoadedView loadedView = viewLoader.load(view);
+
+        if (data != null && loadedView.controller() instanceof DataReceiver receiver) {
+            receiver.setData(data);
+        }
+
+        show(loadedView);
+    }
+
+    private void show(LoadedView loadedView) {
 
         switch (loadedView.navigationType()) {
 
@@ -36,7 +49,6 @@ public class Navigator {
             }
 
             case MODAL -> stageManager.showModal(loadedView);
-
         }
     }
 }

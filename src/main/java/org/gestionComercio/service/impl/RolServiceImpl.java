@@ -116,7 +116,7 @@ public class RolServiceImpl implements RolService {
         ValidationResult result = rolValidator.validate(dto);
 
         if (result.hasErrors()) {
-            throw new ValidationException(result.getMessage());
+            throw new ValidationException(result);
         }
     }
 
