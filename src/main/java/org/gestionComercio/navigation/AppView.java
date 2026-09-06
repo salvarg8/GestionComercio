@@ -34,7 +34,12 @@ public enum AppView {
             "Roles",
             NavigationType.CONTENT,
             WindowMode.MAXIMIZED
-    );
+    ),
+    PERMISO_LIST(
+            "/org/gestionComercio/view/permiso/PermisoList.fxml",
+            "Permisos",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED);
 
 
     private final String fxml;

@@ -30,6 +30,9 @@ public class DashboardController extends AbstractController {
     private Button btnRoles;
 
     @FXML
+    private Button btnPermisos;
+
+    @FXML
     private Button btnCerrarSesion;
 
     @Override
@@ -50,6 +53,8 @@ public class DashboardController extends AbstractController {
 
         btnRoles.setOnAction(e ->
                 navigator.navigate(AppView.ROL_LIST));
+
+        btnPermisos.setOnAction(e -> navigator.navigate(AppView.PERMISO_LIST));
 
         btnCerrarSesion.setOnAction(e -> cerrarSesion());
     }
