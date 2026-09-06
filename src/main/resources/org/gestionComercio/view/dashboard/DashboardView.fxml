@@ -97,6 +97,8 @@
 
             <Button fx:id="btnConfiguracion" maxWidth="Infinity" styleClass="menu-button" text="Configuración" />
 
+            <Button fx:id="btnPermisos" maxWidth="Infinity" styleClass="menu-button" text="Permisos" />
+
             <Button fx:id="btnRoles" maxWidth="Infinity" styleClass="menu-button" text="Roles" />
 
             <Region VBox.vgrow="ALWAYS" />

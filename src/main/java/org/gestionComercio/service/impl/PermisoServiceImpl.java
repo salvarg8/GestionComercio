@@ -26,4 +26,21 @@ public class PermisoServiceImpl implements PermisoService {
                 .map(permisoMapper::toDto)
                 .toList();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PermisoDto> search(String texto) {
+
+        if (texto == null || texto.isBlank()) {
+            return findAll();
+        }
+
+        String filtro = texto.trim().toLowerCase();
+
+        return findAll().stream()
+                .filter(p ->
+                        p.getCodigo().name().toLowerCase().contains(filtro)
+                                || p.getDescripcion().toLowerCase().contains(filtro))
+                .toList();
+    }
 }

@@ -8,4 +8,6 @@ public interface PermisoService {
 
     List<PermisoDto> findAll();
 
+    List<PermisoDto> search(String texto);
+
 }

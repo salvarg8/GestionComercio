@@ -17,5 +17,7 @@ public class PermisoDto extends BaseDto {
 
     private PermisoCodigo codigo;
 
+    private String modulo;
+
     private String descripcion;
 }
