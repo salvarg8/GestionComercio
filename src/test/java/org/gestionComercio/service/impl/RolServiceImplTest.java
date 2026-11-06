@@ -4,6 +4,9 @@ import org.gestionComercio.dto.rol.RolDto;
 import org.gestionComercio.entity.Permiso;
 import org.gestionComercio.entity.Rol;
 import org.gestionComercio.enums.EstadoRegistro;
+import org.gestionComercio.enums.PermisoCodigo;
+import org.gestionComercio.exception.AuthorizationException;
+import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.exception.EntityNotFoundException;
 import org.gestionComercio.exception.ValidationException;
 import org.gestionComercio.mapper.RolMapper;
@@ -39,6 +42,9 @@ class RolServiceImplTest {
 
     @Mock
     private RolValidator rolValidator;
+
+    @Mock
+    private SesionUsuario sesionUsuario;
 
     @InjectMocks
     private RolServiceImpl rolService;
@@ -430,5 +436,58 @@ class RolServiceImplTest {
         long cantidad = rolService.count();
 
         assertEquals(10L, cantidad);
+    }
+
+    private void denegar(PermisoCodigo codigo) {
+        doThrow(new AuthorizationException("sin permiso"))
+                .when(sesionUsuario).requerirPermiso(codigo);
+    }
+
+    @Test
+    @DisplayName("save() sin ROL_CREAR debería lanzar AuthorizationException y no guardar")
+    void shouldNotSaveWithoutPermission() {
+
+        denegar(PermisoCodigo.ROL_CREAR);
+
+        assertThrows(AuthorizationException.class,
+                () -> rolService.save(crearRolDto()));
+
+        verifyNoInteractions(rolRepository, rolValidator);
+    }
+
+    @Test
+    @DisplayName("update() sin ROL_EDITAR debería lanzar AuthorizationException y no modificar")
+    void shouldNotUpdateWithoutPermission() {
+
+        denegar(PermisoCodigo.ROL_EDITAR);
+
+        assertThrows(AuthorizationException.class,
+                () -> rolService.update(crearRolDto()));
+
+        verifyNoInteractions(rolRepository, rolValidator);
+    }
+
+    @Test
+    @DisplayName("delete() sin ROL_ELIMINAR debería lanzar AuthorizationException y no eliminar")
+    void shouldNotDeleteWithoutPermission() {
+
+        denegar(PermisoCodigo.ROL_ELIMINAR);
+
+        assertThrows(AuthorizationException.class,
+                () -> rolService.delete(1L));
+
+        verifyNoInteractions(rolRepository);
+    }
+
+    @Test
+    @DisplayName("findAll() sin ROL_VER debería lanzar AuthorizationException")
+    void shouldNotListWithoutPermission() {
+
+        denegar(PermisoCodigo.ROL_VER);
+
+        assertThrows(AuthorizationException.class,
+                () -> rolService.findAll());
+
+        verifyNoInteractions(rolRepository);
     }
 }

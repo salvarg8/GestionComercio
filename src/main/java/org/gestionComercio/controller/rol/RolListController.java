@@ -10,16 +10,20 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import lombok.RequiredArgsConstructor;
 import org.gestionComercio.controller.base.AbstractController;
 import org.gestionComercio.dto.rol.RolDto;
+import org.gestionComercio.enums.PermisoCodigo;
+import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.navigation.AppView;
 import org.gestionComercio.navigation.Navigator;
 import org.gestionComercio.service.RolService;
 import org.gestionComercio.view.component.table.ActionTableCell;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
 
 @Controller
 @RequiredArgsConstructor
+@Scope("prototype")
 public class RolListController extends AbstractController {
 
     @FXML
@@ -45,10 +49,15 @@ public class RolListController extends AbstractController {
 
     private final RolService rolService;
     private final Navigator navigator;
+    private final SesionUsuario sesionUsuario;
 
 
     @Override
     protected void initializeComponents() {
+
+        boolean puedeCrear = sesionUsuario.tienePermiso(PermisoCodigo.ROL_CREAR);
+        btnNuevo.setVisible(puedeCrear);
+        btnNuevo.setManaged(puedeCrear);
 
         configurarColumnas();
         cargarRoles();
@@ -99,23 +108,43 @@ public class RolListController extends AbstractController {
     }
 
     private void nuevo() {
+        if (!sesionUsuario.tienePermiso(PermisoCodigo.ROL_CREAR)) {
+            warning("No tiene permiso para crear roles.");
+            return;
+        }
+
         navigator.navigate(AppView.ROL_FORM);
     }
 
     private void configurarColumnaAcciones() {
 
+        boolean puedeEditar = sesionUsuario.tienePermiso(PermisoCodigo.ROL_EDITAR);
+        boolean puedeEliminar = sesionUsuario.tienePermiso(PermisoCodigo.ROL_ELIMINAR);
+
+        colAcciones.setVisible(puedeEditar || puedeEliminar);
+
         colAcciones.setCellFactory(column ->
-                new ActionTableCell<>(
-                        this::editar,
-                        this::eliminar
+                new ActionTableCell<RolDto>(
+                        puedeEditar ? this::editar : null,
+                        puedeEliminar ? this::eliminar : null
                 ));
     }
 
     private void editar(RolDto rol) {
+        if (!sesionUsuario.tienePermiso(PermisoCodigo.ROL_EDITAR)) {
+            warning("No tiene permiso para editar roles.");
+            return;
+        }
+
         navigator.navigate(AppView.ROL_FORM, rol);
     }
 
     private void eliminar(RolDto rol) {
+
+        if (!sesionUsuario.tienePermiso(PermisoCodigo.ROL_ELIMINAR)) {
+            warning("No tiene permiso para eliminar roles.");
+            return;
+        }
 
         if (!confirm(
                 "Eliminar rol",

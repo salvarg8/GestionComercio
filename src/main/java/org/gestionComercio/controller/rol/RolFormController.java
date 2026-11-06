@@ -10,12 +10,15 @@ import javafx.util.StringConverter;
 import lombok.RequiredArgsConstructor;
 import org.gestionComercio.controller.base.AbstractController;
 import org.gestionComercio.dto.rol.RolDto;
+import org.gestionComercio.enums.PermisoCodigo;
+import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.navigation.AppView;
 import org.gestionComercio.navigation.DataReceiver;
 import org.gestionComercio.navigation.Navigator;
 import org.gestionComercio.service.PermisoService;
 import org.gestionComercio.service.RolService;
 import org.gestionComercio.viewModel.PermisoItem;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
@@ -24,10 +27,12 @@ import java.util.stream.Collectors;
 
 @Controller
 @RequiredArgsConstructor
+@Scope("prototype")
 public class RolFormController extends AbstractController implements DataReceiver<RolDto> {
     private final RolService rolService;
     private final PermisoService permisoService;
     private final Navigator navigator;
+    private final SesionUsuario sesionUsuario;
 
 
     @FXML
@@ -107,6 +112,9 @@ public class RolFormController extends AbstractController implements DataReceive
     private void guardar() {
 
         execute(() -> {
+
+            sesionUsuario.requerirPermiso(
+                    rolActual == null ? PermisoCodigo.ROL_CREAR : PermisoCodigo.ROL_EDITAR);
 
             RolDto dto = construirDto();
 

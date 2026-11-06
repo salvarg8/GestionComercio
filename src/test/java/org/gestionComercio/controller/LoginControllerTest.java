@@ -13,6 +13,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
@@ -45,7 +47,7 @@ class LoginControllerTest {
 
         // Assert
         verify(authenticationService).authenticate(username, password);
-        verify(sesionUsuario).setUsuario(usuarioValido);
+        verify(sesionUsuario).iniciarSesion(usuarioValido, Set.of());
         verify(navigator).navigate(AppView.DASHBOARD);
     }
 
@@ -64,7 +66,7 @@ class LoginControllerTest {
         });
 
         // Verificamos que no hubo interacciones de éxito
-        verify(sesionUsuario, never()).setUsuario(any());
+        verify(sesionUsuario, never()).iniciarSesion(any(), any());
         verify(navigator, never()).navigate(any(AppView.class));
     }
 }
