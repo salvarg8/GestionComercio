@@ -16,18 +16,26 @@ public class ActionTableCell<T> extends TableCell<T, Void> {
     Button btnEliminar = new Button("", new FontIcon(FontAwesomeSolid.TRASH));
     private final HBox container = new HBox(8);
 
+    /**
+     * Si una acción es null, su botón no se muestra.
+     */
     public ActionTableCell(
             Consumer<T> onEditar,
             Consumer<T> onEliminar) {
 
         container.setAlignment(Pos.CENTER);
-        container.getChildren().addAll(btnEditar, btnEliminar);
 
-        btnEditar.setOnAction(e ->
-                onEditar.accept(getTableRow().getItem()));
+        if (onEditar != null) {
+            btnEditar.setOnAction(e ->
+                    onEditar.accept(getTableRow().getItem()));
+            container.getChildren().add(btnEditar);
+        }
 
-        btnEliminar.setOnAction(e ->
-                onEliminar.accept(getTableRow().getItem()));
+        if (onEliminar != null) {
+            btnEliminar.setOnAction(e ->
+                    onEliminar.accept(getTableRow().getItem()));
+            container.getChildren().add(btnEliminar);
+        }
     }
 
     @Override

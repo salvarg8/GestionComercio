@@ -19,6 +19,9 @@ public enum PermisoCodigo {
     ROL_EDITAR("Roles", "Editar roles"),
     ROL_ELIMINAR("Roles", "Eliminar roles"),
 
+    // Permisos
+    PERMISO_VER("Permisos", "Ver permisos"),
+
     // Empresa
     EMPRESA_VER("Empresa", "Ver empresas"),
     EMPRESA_EDITAR("Empresa", "Editar empresas"),

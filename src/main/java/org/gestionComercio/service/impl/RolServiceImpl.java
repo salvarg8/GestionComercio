@@ -5,11 +5,13 @@ import org.gestionComercio.dto.rol.RolDto;
 import org.gestionComercio.entity.Permiso;
 import org.gestionComercio.entity.Rol;
 import org.gestionComercio.enums.EstadoRegistro;
+import org.gestionComercio.enums.PermisoCodigo;
 import org.gestionComercio.exception.EntityNotFoundException;
 import org.gestionComercio.exception.ValidationException;
 import org.gestionComercio.mapper.RolMapper;
 import org.gestionComercio.repository.PermisoRepository;
 import org.gestionComercio.repository.RolRepository;
+import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.RolService;
 import org.gestionComercio.validation.RolValidator;
 import org.gestionComercio.validation.ValidationResult;
@@ -31,9 +33,12 @@ public class RolServiceImpl implements RolService {
 
     private final RolMapper rolMapper;
     private final RolValidator rolValidator;
+    private final SesionUsuario sesionUsuario;
 
     @Override
     public RolDto save(RolDto dto) {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.ROL_CREAR);
 
         normalizar(dto);
 
@@ -50,6 +55,8 @@ public class RolServiceImpl implements RolService {
 
     @Override
     public RolDto update(RolDto dto) {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.ROL_EDITAR);
 
         normalizar(dto);
 
@@ -69,6 +76,8 @@ public class RolServiceImpl implements RolService {
     @Override
     public void delete(Long id) {
 
+        sesionUsuario.requerirPermiso(PermisoCodigo.ROL_ELIMINAR);
+
         Rol rol = buscarRol(id);
 
         rol.setEstadoRegistro(EstadoRegistro.INACTIVO);
@@ -80,6 +89,8 @@ public class RolServiceImpl implements RolService {
     @Override
     public Optional<RolDto> findById(Long id) {
 
+        sesionUsuario.requerirPermiso(PermisoCodigo.ROL_VER);
+
         return rolRepository.findById(id)
                 .map(rolMapper::toDto);
     }
@@ -87,6 +98,8 @@ public class RolServiceImpl implements RolService {
     @Transactional(readOnly = true)
     @Override
     public List<RolDto> findAll() {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.ROL_VER);
 
         return rolRepository.findAll()
                 .stream()
@@ -98,6 +111,8 @@ public class RolServiceImpl implements RolService {
     @Override
     public List<RolDto> search(String texto) {
 
+        sesionUsuario.requerirPermiso(PermisoCodigo.ROL_VER);
+
         return rolRepository.findByNombreContainingIgnoreCase(texto)
                 .stream()
                 .map(rolMapper::toDto)
@@ -107,6 +122,8 @@ public class RolServiceImpl implements RolService {
     @Transactional(readOnly = true)
     @Override
     public long count() {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.ROL_VER);
 
         return rolRepository.count();
     }

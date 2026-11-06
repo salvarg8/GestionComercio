@@ -5,15 +5,23 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import org.gestionComercio.controller.base.AbstractController;
+import org.gestionComercio.entity.Permiso;
 import org.gestionComercio.entity.Usuario;
+import org.gestionComercio.enums.PermisoCodigo;
 import org.gestionComercio.exception.AuthenticationException;
 import org.gestionComercio.navigation.AppView;
 import org.gestionComercio.navigation.Navigator;
 import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.AuthenticationService;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 @Component
+@Scope("prototype")
 public class LoginController extends AbstractController {
 
     @FXML
@@ -83,9 +91,19 @@ public class LoginController extends AbstractController {
 
         Usuario usuario = authenticationService.authenticate(username, password);
 
-        sesionUsuario.setUsuario(usuario);
+        sesionUsuario.iniciarSesion(usuario, obtenerPermisos(usuario));
 
         navigator.navigate(AppView.DASHBOARD);
+    }
+
+    private Set<PermisoCodigo> obtenerPermisos(Usuario usuario) {
+        if (usuario.getRol() == null || usuario.getRol().getPermisos() == null) {
+            return Collections.emptySet();
+        }
+
+        return usuario.getRol().getPermisos().stream()
+                .map(Permiso::getCodigo)
+                .collect(Collectors.toSet());
     }
 
     /**

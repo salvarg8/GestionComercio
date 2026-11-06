@@ -7,6 +7,7 @@ import org.gestionComercio.entity.Marca;
 import org.gestionComercio.entity.Producto;
 import org.gestionComercio.entity.Proveedor;
 import org.gestionComercio.enums.EstadoRegistro;
+import org.gestionComercio.enums.PermisoCodigo;
 import org.gestionComercio.exception.EntityNotFoundException;
 import org.gestionComercio.exception.ValidationException;
 import org.gestionComercio.mapper.ProductoMapper;
@@ -14,6 +15,7 @@ import org.gestionComercio.repository.CategoriaRepository;
 import org.gestionComercio.repository.MarcaRepository;
 import org.gestionComercio.repository.ProductoRepository;
 import org.gestionComercio.repository.ProveedorRepository;
+import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.ProductoService;
 import org.gestionComercio.validation.ProductoValidator;
 import org.gestionComercio.validation.ValidationResult;
@@ -35,9 +37,12 @@ public class ProductoServiceImpl implements ProductoService {
 
     private final ProductoMapper productoMapper;
     private final ProductoValidator productoValidator;
+    private final SesionUsuario sesionUsuario;
 
     @Override
     public ProductoDto save(ProductoDto dto) {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.PRODUCTO_CREAR);
 
         validar(dto);
 
@@ -54,6 +59,8 @@ public class ProductoServiceImpl implements ProductoService {
 
     @Override
     public ProductoDto update(ProductoDto dto) {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.PRODUCTO_EDITAR);
 
         validar(dto);
 
@@ -73,6 +80,8 @@ public class ProductoServiceImpl implements ProductoService {
     @Override
     public void delete(Long id) {
 
+        sesionUsuario.requerirPermiso(PermisoCodigo.PRODUCTO_ELIMINAR);
+
         Producto producto = buscarProducto(id);
 
         producto.setEstadoRegistro(EstadoRegistro.INACTIVO);
@@ -84,6 +93,8 @@ public class ProductoServiceImpl implements ProductoService {
     @Override
     public Optional<ProductoDto> findById(Long id) {
 
+        sesionUsuario.requerirPermiso(PermisoCodigo.PRODUCTO_VER);
+
         return productoRepository.findById(id)
                 .map(productoMapper::toDto);
     }
@@ -91,6 +102,8 @@ public class ProductoServiceImpl implements ProductoService {
     @Transactional(readOnly = true)
     @Override
     public List<ProductoDto> findAll() {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.PRODUCTO_VER);
 
         return productoRepository.findAll()
                 .stream()
@@ -102,6 +115,8 @@ public class ProductoServiceImpl implements ProductoService {
     @Override
     public List<ProductoDto> search(String texto) {
 
+        sesionUsuario.requerirPermiso(PermisoCodigo.PRODUCTO_VER);
+
         return productoRepository
                 .findByNombreContainingIgnoreCase(texto)
                 .stream()
@@ -112,6 +127,7 @@ public class ProductoServiceImpl implements ProductoService {
     @Transactional(readOnly = true)
     @Override
     public long count() {
+        sesionUsuario.requerirPermiso(PermisoCodigo.PRODUCTO_VER);
         return productoRepository.count();
     }
 

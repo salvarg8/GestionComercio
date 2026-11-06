@@ -10,12 +10,14 @@ import lombok.RequiredArgsConstructor;
 import org.gestionComercio.controller.base.AbstractController;
 import org.gestionComercio.dto.permiso.PermisoDto;
 import org.gestionComercio.service.PermisoService;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 @Component
 @RequiredArgsConstructor
+@Scope("prototype")
 public class PermisoListController extends AbstractController {
 
     private final PermisoService permisoService;
