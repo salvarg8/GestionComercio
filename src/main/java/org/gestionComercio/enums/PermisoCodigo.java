@@ -38,6 +38,12 @@ public enum PermisoCodigo {
     PRODUCTO_EDITAR("Productos", "Editar productos"),
     PRODUCTO_ELIMINAR("Productos", "Eliminar productos"),
 
+    // Categorías
+    CATEGORIA_VER("Categorías", "Ver categorías"),
+    CATEGORIA_CREAR("Categorías", "Crear categorías"),
+    CATEGORIA_EDITAR("Categorías", "Editar categorías"),
+    CATEGORIA_ELIMINAR("Categorías", "Eliminar categorías"),
+
     // Ventas
     VENTA_VER("Ventas", "Ver ventas"),
     VENTA_CREAR("Ventas", "Crear ventas"),

@@ -72,6 +72,25 @@ public enum AppView {
             PermisoCodigo.USUARIO_EDITAR
     ),
 
+    CATEGORIA_LIST(
+            "/org/gestionComercio/view/categoria/CategoriaList.fxml",
+            "Categorías",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.CATEGORIA_VER
+    ),
+
+    CATEGORIA_FORM(
+            "/org/gestionComercio/view/categoria/CategoriaForm.fxml",
+            "Categoría",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.CATEGORIA_CREAR,
+            PermisoCodigo.CATEGORIA_EDITAR
+    ),
+
     /** Disponible para cualquier usuario con sesión iniciada. */
     CAMBIAR_PASSWORD(
             "/org/gestionComercio/view/perfil/CambiarPassword.fxml",

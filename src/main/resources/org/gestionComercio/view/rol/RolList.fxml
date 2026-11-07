@@ -37,7 +37,7 @@
                        promptText="Buscar..."
                        prefWidth="250"/>
 
-            <Button fx:id="btnNuevo"
+            <Button fx:id="btnNuevo" styleClass="btn-primary"
                     text="Nuevo"/>
 
         </HBox>

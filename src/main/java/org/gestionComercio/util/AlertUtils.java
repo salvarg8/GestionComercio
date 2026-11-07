@@ -1,55 +1,34 @@
 package org.gestionComercio.util;
 
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
+import org.gestionComercio.util.dialog.Dialogs;
 
-import java.util.Optional;
-
+/**
+ * Atajos para las ventanas emergentes más comunes. Todas usan el estilo de
+ * {@link Dialogs}.
+ */
 public final class AlertUtils {
 
     private AlertUtils() {
     }
 
     public static void information(String message) {
+        Dialogs.informacion("Información", message);
+    }
 
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Información");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+    public static void success(String message) {
+        Dialogs.exito("Operación realizada", message);
     }
 
     public static void warning(String title, String message) {
-
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-
-        alert.showAndWait();
+        Dialogs.advertencia(title, message);
     }
 
     public static void error(String message) {
-
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Error");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        Dialogs.error("Error", message);
     }
 
     public static boolean confirm(String title, String message) {
-
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-
-        Optional<ButtonType> result = alert.showAndWait();
-
-        return result.isPresent() && result.get() == ButtonType.OK;
+        return Dialogs.confirmar(title, message);
     }
 
 }

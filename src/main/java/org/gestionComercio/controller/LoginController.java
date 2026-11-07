@@ -13,6 +13,7 @@ import org.gestionComercio.navigation.AppView;
 import org.gestionComercio.navigation.Navigator;
 import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.AuthenticationService;
+import org.gestionComercio.util.dialog.Dialogs;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -80,7 +81,7 @@ public class LoginController extends AbstractController {
             txtPassword.clear();
             txtPassword.requestFocus();
 
-            info("Error de autenticación");
+            Dialogs.error("No se pudo iniciar sesión", e.getMessage());
         }
     }
 

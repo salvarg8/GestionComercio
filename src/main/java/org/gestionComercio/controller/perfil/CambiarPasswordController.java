@@ -61,7 +61,7 @@ public class CambiarPasswordController extends AbstractController {
 
             limpiar();
 
-            info("La contraseña se cambió correctamente.");
+            success("La contraseña se cambió correctamente.");
         });
     }
 

@@ -36,6 +36,11 @@ public class App extends Application {
 
         primaryStage.setResizable(false);
 
+        var icono = App.class.getResource("/org/gestionComercio/images/Logo3.png");
+        if (icono != null) {
+            primaryStage.getIcons().add(new javafx.scene.image.Image(icono.toExternalForm()));
+        }
+
         navigator.navigate(AppView.LOGIN);
     }
 

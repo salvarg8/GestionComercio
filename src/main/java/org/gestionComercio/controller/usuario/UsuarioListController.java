@@ -136,7 +136,7 @@ public class UsuarioListController extends AbstractController {
 
     private void eliminar(UsuarioDto usuario) {
 
-        if (!confirm(
+        if (!confirmDelete(
                 "Eliminar usuario",
                 "¿Desea eliminar el usuario \"" + usuario.getUsuario() + "\"?")) {
             return;
@@ -148,7 +148,7 @@ public class UsuarioListController extends AbstractController {
 
             cargarUsuarios();
 
-            info("Usuario eliminado correctamente.");
+            success("Usuario eliminado correctamente.");
         });
     }
 }

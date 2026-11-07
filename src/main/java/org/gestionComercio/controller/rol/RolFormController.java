@@ -120,10 +120,10 @@ public class RolFormController extends AbstractController implements DataReceive
 
             if (rolActual == null) {
                 rolService.save(dto);
-                info("Rol creado correctamente.");
+                success("Rol creado correctamente.");
             } else {
                 rolService.update(dto);
-                info("Rol actualizado correctamente.");
+                success("Rol actualizado correctamente.");
             }
 
             cancelar();

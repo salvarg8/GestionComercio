@@ -165,10 +165,10 @@ public class ProductoServiceImpl implements ProductoService {
 
     private Categoria buscarCategoria(Long id) {
 
-        return categoriaRepository.findById(id)
+        return categoriaRepository.findByIdAndEstadoRegistro(id, EstadoRegistro.ACTIVO)
                 .orElseThrow(() ->
                         new EntityNotFoundException(
-                                "No existe una categoría con ID: " + id));
+                                "No existe una categoría activa con ID: " + id));
     }
 
     private Marca buscarMarca(Long id) {

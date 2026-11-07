@@ -34,4 +34,6 @@ public interface ProductoRepository extends BaseRepository<Producto, Long> {
             String codigo,
             Long id,
             EstadoRegistro estadoRegistro);
+
+    boolean existsByCategoriaIdAndEstadoRegistro(Long categoriaId, EstadoRegistro estadoRegistro);
 }
