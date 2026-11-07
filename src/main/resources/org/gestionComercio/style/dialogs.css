@@ -1,0 +1,112 @@
+/* ===================================================== */
+/* Ventanas emergentes (ver util/dialog/Dialogs.java)     */
+/* ===================================================== */
+
+/* El color de acento cambia según el tipo de mensaje. */
+
+.dialog-pane.app-dialog {
+
+    -dialog-accent: -fx-primary;
+
+    -fx-background-color: -fx-surface;
+    -fx-padding: 0;
+
+    -fx-border-color: -dialog-accent transparent transparent transparent;
+    -fx-border-width: 4 0 0 0;
+
+    -fx-font-family: "Segoe UI";
+    -fx-font-size: 13px;
+
+}
+
+.dialog-pane.app-dialog.dialog-success {
+    -dialog-accent: -fx-success;
+}
+
+.dialog-pane.app-dialog.dialog-warning {
+    -dialog-accent: -fx-warning;
+}
+
+.dialog-pane.app-dialog.dialog-error {
+    -dialog-accent: -fx-danger;
+}
+
+/* Cuerpo */
+
+.dialog-pane.app-dialog > .content {
+    -fx-background-color: -fx-surface;
+    -fx-padding: 22 26 22 22;
+}
+
+.dialog-icon-badge {
+
+    -fx-background-color: derive(-dialog-accent, 85%);
+    -fx-background-radius: 22;
+
+    -fx-min-width: 44;
+    -fx-min-height: 44;
+    -fx-max-width: 44;
+    -fx-max-height: 44;
+
+}
+
+.dialog-icon {
+    -fx-icon-color: -dialog-accent;
+    -fx-icon-size: 22;
+}
+
+.dialog-title {
+
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text;
+
+    -fx-padding: 2 0 0 0;
+
+}
+
+.dialog-message {
+
+    -fx-text-fill: #4B5563;
+    -fx-font-size: 13px;
+    -fx-line-spacing: 2;
+
+}
+
+.dialog-list-item {
+    -fx-padding: 0 0 0 4;
+}
+
+/* Barra de botones */
+
+.dialog-pane.app-dialog > .button-bar {
+
+    -fx-background-color: #F9FAFB;
+
+    -fx-border-color: #E5E7EB transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+
+    -fx-padding: 12 20 12 20;
+
+    /* ButtonBar no suma bien el padding al calcular su alto: sin esto los botones quedan cortados. */
+    -fx-min-height: 59;
+    -fx-pref-height: 59;
+
+}
+
+.dialog-pane.app-dialog > .button-bar > .container {
+    -fx-padding: 0;
+}
+
+/* Los colores de los botones vienen de buttons.css (btn-primary, btn-secondary, btn-danger),
+   igual que en las pantallas. Acá sólo se ajusta el tamaño. */
+
+.dialog-pane.app-dialog .button {
+    -fx-min-width: 96;
+}
+
+/* El botón por defecto se destaca con un anillo sutil del color primario. */
+
+.dialog-pane.app-dialog .button:default {
+    -fx-effect: dropshadow(gaussian, rgba(25, 118, 210, 0.35), 6, 0, 0, 0);
+}

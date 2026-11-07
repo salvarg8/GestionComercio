@@ -1,11 +1,9 @@
 package org.gestionComercio.controller.base;
 
 import javafx.fxml.Initializable;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
 import org.gestionComercio.exception.BusinessException;
 import org.gestionComercio.exception.ValidationException;
-import org.gestionComercio.util.AlertUtils;
+import org.gestionComercio.util.dialog.Dialogs;
 import org.gestionComercio.util.dialog.ValidationDialog;
 
 import java.net.URL;
@@ -30,15 +28,20 @@ public abstract class AbstractController
     protected void initializeEvents() { }
 
     protected void info(String mensaje) {
-        AlertUtils.information(mensaje);
+        Dialogs.informacion("Información", mensaje);
+    }
+
+    /** Confirmación de una operación que salió bien (guardar, eliminar, etc.). */
+    protected void success(String mensaje) {
+        Dialogs.exito("Operación realizada", mensaje);
     }
 
     protected void warning(String mensaje) {
-        AlertUtils.warning("Atención", mensaje);
+        Dialogs.advertencia("Atención", mensaje);
     }
 
     protected void error(String mensaje) {
-        AlertUtils.error(mensaje);
+        Dialogs.error("Error", mensaje);
     }
 
     @FunctionalInterface
@@ -58,26 +61,27 @@ public abstract class AbstractController
 
         } catch (BusinessException ex) {
 
-            AlertUtils.error(ex.getMessage());
+            // Reglas de negocio y permisos: el usuario puede resolverlo, no es una falla.
+            Dialogs.advertencia("No se pudo completar la operación", ex.getMessage());
 
         } catch (Exception ex) {
 
-            AlertUtils.error("Ocurrió un error inesperado.");
+            Dialogs.error("Ocurrió un error inesperado",
+                    "Si el problema persiste, comuníquese con soporte.");
         }
     }
 
     protected boolean confirm(String titulo,
                               String mensaje) {
 
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        return Dialogs.confirmar(titulo, mensaje);
+    }
 
-        alert.setTitle(titulo);
-        alert.setHeaderText(null);
-        alert.setContentText(mensaje);
+    /** Confirmación para acciones destructivas: botón rojo y "Cancelar" por defecto. */
+    protected boolean confirmDelete(String titulo,
+                                    String mensaje) {
 
-        return alert.showAndWait()
-                .filter(ButtonType.OK::equals)
-                .isPresent();
+        return Dialogs.confirmar(titulo, mensaje, "Eliminar", true);
     }
 
 }

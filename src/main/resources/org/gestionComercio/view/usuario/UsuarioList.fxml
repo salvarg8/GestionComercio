@@ -36,7 +36,7 @@
                        promptText="Buscar por usuario, nombre o documento..."
                        prefWidth="300"/>
 
-            <Button fx:id="btnNuevo"
+            <Button fx:id="btnNuevo" styleClass="btn-primary"
                     text="Nuevo"/>
 
         </HBox>

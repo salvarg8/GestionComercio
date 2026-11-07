@@ -9,3 +9,21 @@
     -fx-font-size: 22px;
 
 }
+
+/* Errores de validación junto a cada campo */
+
+.field-error-label {
+
+    -fx-text-fill: #c62828;
+    -fx-font-size: 11px;
+
+}
+
+.text-field.field-invalid,
+.text-area.field-invalid {
+
+    -fx-border-color: #c62828;
+    -fx-border-width: 1;
+    -fx-border-radius: 3;
+
+}

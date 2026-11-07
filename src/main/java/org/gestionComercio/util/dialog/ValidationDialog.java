@@ -1,6 +1,6 @@
 package org.gestionComercio.util.dialog;
 
-import javafx.scene.control.Alert;
+import org.gestionComercio.validation.ValidationError;
 import org.gestionComercio.validation.ValidationResult;
 
 public final class ValidationDialog {
@@ -10,11 +10,14 @@ public final class ValidationDialog {
 
     public static void show(ValidationResult result) {
 
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle("Validación");
-        alert.setHeaderText("Se encontraron errores");
-        alert.setContentText(result.getMessage());
-
-        alert.showAndWait();
+        Dialogs.lista(
+                Dialogs.Tipo.ADVERTENCIA,
+                "Revisá los datos ingresados",
+                result.getErrors().size() == 1
+                        ? "Hay un dato para corregir:"
+                        : "Hay " + result.getErrors().size() + " datos para corregir:",
+                result.getErrors().stream()
+                        .map(ValidationError::getMessage)
+                        .toList());
     }
 }

@@ -146,7 +146,7 @@ public class RolListController extends AbstractController {
             return;
         }
 
-        if (!confirm(
+        if (!confirmDelete(
                 "Eliminar rol",
                 "¿Desea eliminar el rol \"" + rol.getNombre() + "\"?")) {
             return;
@@ -158,7 +158,7 @@ public class RolListController extends AbstractController {
 
             cargarRoles();
 
-            info("Rol eliminado correctamente.");
+            success("Rol eliminado correctamente.");
         });
     }
 

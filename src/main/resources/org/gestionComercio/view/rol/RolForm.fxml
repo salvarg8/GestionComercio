@@ -77,10 +77,10 @@
 
                     <children>
 
-                        <Button fx:id="btnCancelar"
+                        <Button fx:id="btnCancelar" styleClass="btn-secondary"
                                 text="Cancelar"/>
 
-                        <Button fx:id="btnGuardar"
+                        <Button fx:id="btnGuardar" styleClass="btn-primary"
                                 defaultButton="true"
                                 text="Guardar"/>
 

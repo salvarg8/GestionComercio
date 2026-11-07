@@ -158,10 +158,10 @@ public class UsuarioFormController extends AbstractController implements DataRec
 
             if (usuarioActual == null) {
                 usuarioService.save(dto);
-                info("Usuario creado correctamente.");
+                success("Usuario creado correctamente.");
             } else {
                 usuarioService.update(dto);
-                info("Usuario actualizado correctamente.");
+                success("Usuario actualizado correctamente.");
             }
 
             volver();

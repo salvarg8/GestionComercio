@@ -1,3 +1,9 @@
+/* ===================================================== */
+/* Botones                                                */
+/* Único lugar donde se definen los colores de botones:  */
+/* pantallas y ventanas emergentes usan estas clases.     */
+/* ===================================================== */
+
 .button {
 
     -fx-background-radius: 8;
@@ -7,6 +13,29 @@
 
 }
 
+/* Base común de los botones con color de la app */
+
+.btn-primary,
+.btn-secondary,
+.btn-danger {
+
+    -fx-min-height: 34;
+    -fx-pref-height: 34;
+    -fx-padding: 0 18 0 18;
+
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-background-insets: 0;
+    -fx-border-insets: 0;
+
+    /* Sin el anillo de foco celeste de JavaFX, que tapa el color del botón */
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+
+}
+
+/* Primario: acción principal (Guardar, Nuevo, Aceptar) */
+
 .btn-primary {
 
     -fx-background-color: -fx-primary;
@@ -14,11 +43,26 @@
 
 }
 
-.btn-primary:hover {
+.btn-primary:hover,
+.btn-primary:focused:hover {
 
     -fx-background-color: -fx-primary-dark;
 
 }
+
+.btn-primary:pressed {
+
+    -fx-background-color: derive(-fx-primary-dark, -15%);
+
+}
+
+.btn-primary .ikonli-font-icon {
+
+    -fx-icon-color: white;
+
+}
+
+/* Secundario: acciones alternativas (Cancelar, Limpiar) */
 
 .btn-secondary {
 
@@ -28,12 +72,95 @@
 
 }
 
+.btn-secondary:hover,
+.btn-secondary:focused:hover {
+
+    -fx-background-color: derive(-fx-primary, 90%);
+
+}
+
+.btn-secondary:pressed {
+
+    -fx-background-color: derive(-fx-primary, 80%);
+
+}
+
+/* Peligro: acciones destructivas (Eliminar) */
+
 .btn-danger {
 
     -fx-background-color: -fx-danger;
     -fx-text-fill: white;
 
 }
+
+.btn-danger:hover,
+.btn-danger:focused:hover {
+
+    -fx-background-color: derive(-fx-danger, -15%);
+
+}
+
+.btn-danger:pressed {
+
+    -fx-background-color: derive(-fx-danger, -25%);
+
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-danger:disabled {
+
+    -fx-opacity: 0.5;
+
+}
+
+/* Botones de ícono de las tablas (editar / eliminar) */
+
+.btn-icon {
+
+    -fx-background-color: transparent;
+    -fx-background-radius: 6;
+    -fx-background-insets: 0;
+    -fx-padding: 5 8 5 8;
+
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+
+}
+
+.btn-icon .ikonli-font-icon {
+
+    -fx-icon-size: 14;
+
+}
+
+.btn-icon.btn-icon-edit .ikonli-font-icon {
+
+    -fx-icon-color: -fx-primary;
+
+}
+
+.btn-icon.btn-icon-edit:hover {
+
+    -fx-background-color: derive(-fx-primary, 85%);
+
+}
+
+.btn-icon.btn-icon-delete .ikonli-font-icon {
+
+    -fx-icon-color: -fx-danger;
+
+}
+
+.btn-icon.btn-icon-delete:hover {
+
+    -fx-background-color: derive(-fx-danger, 85%);
+
+}
+
+/* Menú lateral */
+
 .menu-button {
 
     -fx-background-color: transparent;

@@ -3,6 +3,7 @@ package org.gestionComercio.view.component.table;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.TableCell;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import org.kordamp.ikonli.javafx.FontIcon;
 import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
@@ -24,6 +25,12 @@ public class ActionTableCell<T> extends TableCell<T, Void> {
             Consumer<T> onEliminar) {
 
         container.setAlignment(Pos.CENTER);
+
+        btnEditar.getStyleClass().addAll("btn-icon", "btn-icon-edit");
+        btnEliminar.getStyleClass().addAll("btn-icon", "btn-icon-delete");
+
+        btnEditar.setTooltip(new Tooltip("Editar"));
+        btnEliminar.setTooltip(new Tooltip("Eliminar"));
 
         if (onEditar != null) {
             btnEditar.setOnAction(e ->
