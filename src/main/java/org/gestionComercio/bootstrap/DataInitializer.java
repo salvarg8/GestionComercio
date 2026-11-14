@@ -33,9 +33,12 @@ public class DataInitializer implements CommandLineRunner {
     private final PasswordService passwordService;
     private final PermisoRepository permisoRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final ProveedorTablaMigracion proveedorTablaMigracion;
 
     @Override
     public void run(String... args) {
+
+        proveedorTablaMigracion.migrarSiCorresponde();
 
         Empresa empresa = crearEmpresaSiNoExiste();
 

@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<AnchorPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="org.gestionComercio.controller.proveedor.ProveedorFormController">
+
+    <children>
+
+        <VBox spacing="15.0"
+              prefWidth="640"
+              maxWidth="640"
+              AnchorPane.topAnchor="20.0"
+              AnchorPane.leftAnchor="20.0">
+
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+
+            <children>
+
+                <Label fx:id="lblTitulo"
+                       text="Nuevo proveedor"
+                       style="-fx-font-size: 22px; -fx-font-weight: bold;"/>
+
+                <!-- Razón social y CUIT -->
+
+                <HBox spacing="15">
+
+                    <children>
+
+                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+
+                            <children>
+
+                                <Label text="Razón social o nombre *"/>
+
+                                <TextField fx:id="txtRazonSocial"
+                                           promptText="Ej.: Distribuidora del Centro S.A."/>
+
+                                <Label fx:id="lblErrorRazonSocial"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                            </children>
+
+                        </VBox>
+
+                        <VBox spacing="5.0" prefWidth="200" minWidth="200">
+
+                            <children>
+
+                                <Label text="CUIT"/>
+
+                                <TextField fx:id="txtCuit"
+                                           promptText="Opcional. Ej.: 30-71234567-1"/>
+
+                                <Label fx:id="lblErrorCuit"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                            </children>
+
+                        </VBox>
+
+                    </children>
+
+                </HBox>
+
+                <!-- Teléfono y email -->
+
+                <HBox spacing="15">
+
+                    <children>
+
+                        <VBox spacing="5.0" prefWidth="200" minWidth="200">
+
+                            <children>
+
+                                <Label text="Teléfono"/>
+
+                                <TextField fx:id="txtTelefono"
+                                           promptText="Opcional"/>
+
+                                <Label fx:id="lblErrorTelefono"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                            </children>
+
+                        </VBox>
+
+                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+
+                            <children>
+
+                                <Label text="Email"/>
+
+                                <TextField fx:id="txtEmail"
+                                           promptText="Opcional. Ej.: ventas@proveedor.com"/>
+
+                                <Label fx:id="lblErrorEmail"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                            </children>
+
+                        </VBox>
+
+                    </children>
+
+                </HBox>
+
+                <!-- Dirección -->
+
+                <VBox spacing="5.0">
+
+                    <children>
+
+                        <Label text="Dirección"/>
+
+                        <TextField fx:id="txtDireccion"
+                                   promptText="Opcional"/>
+
+                        <Label fx:id="lblErrorDireccion"
+                               styleClass="field-error-label"
+                               wrapText="true"
+                               visible="false"
+                               managed="false"/>
+
+                    </children>
+
+                </VBox>
+
+                <!-- Observaciones -->
+
+                <VBox spacing="5.0">
+
+                    <children>
+
+                        <Label text="Observaciones"/>
+
+                        <TextArea fx:id="txtObservaciones"
+                                  promptText="Opcional"
+                                  prefRowCount="4"
+                                  wrapText="true"/>
+
+                        <Label fx:id="lblErrorObservaciones"
+                               styleClass="field-error-label"
+                               wrapText="true"
+                               visible="false"
+                               managed="false"/>
+
+                    </children>
+
+                </VBox>
+
+                <HBox spacing="10"
+                      alignment="CENTER_RIGHT">
+
+                    <children>
+
+                        <Button fx:id="btnCancelar" styleClass="btn-secondary"
+                                cancelButton="true"
+                                text="Cancelar"/>
+
+                        <Button fx:id="btnGuardar" styleClass="btn-primary"
+                                defaultButton="true"
+                                text="Guardar"/>
+
+                    </children>
+
+                </HBox>
+
+            </children>
+
+        </VBox>
+
+    </children>
+
+</AnchorPane>

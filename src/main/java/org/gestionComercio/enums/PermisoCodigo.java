@@ -51,6 +51,13 @@ public enum PermisoCodigo {
     MARCA_DAR_BAJA("Marcas", "Dar de baja marcas"),
     MARCA_HABILITAR("Marcas", "Volver a habilitar marcas dadas de baja"),
 
+    // Proveedores
+    PROVEEDOR_VER("Proveedores", "Ver proveedores"),
+    PROVEEDOR_CREAR("Proveedores", "Crear proveedores"),
+    PROVEEDOR_EDITAR("Proveedores", "Editar proveedores"),
+    PROVEEDOR_DAR_BAJA("Proveedores", "Dar de baja proveedores"),
+    PROVEEDOR_HABILITAR("Proveedores", "Volver a habilitar proveedores dados de baja"),
+
     // Ventas
     VENTA_VER("Ventas", "Ver ventas"),
     VENTA_CREAR("Ventas", "Crear ventas"),

@@ -152,7 +152,7 @@ public class ProductoServiceImpl implements ProductoService {
 
         producto.setCategoria(buscarCategoria(dto.getCategoriaId()));
         producto.setMarca(buscarMarca(dto.getMarcaId(), producto.getMarca()));
-        producto.setProveedor(buscarProveedor(dto.getProveedorId()));
+        producto.setProveedor(buscarProveedor(dto.getProveedorId(), producto.getProveedor()));
     }
 
     private Producto buscarProducto(Long id) {
@@ -187,11 +187,19 @@ public class ProductoServiceImpl implements ProductoService {
                                 "No existe una marca activa con ID: " + id));
     }
 
-    private Proveedor buscarProveedor(Long id) {
+    /**
+     * Sólo se pueden asignar proveedores activos, salvo que el producto ya tuviera
+     * ese proveedor: uno dado de baja no obliga a cambiarlo al editar el producto.
+     */
+    private Proveedor buscarProveedor(Long id, Proveedor proveedorActual) {
 
-        return proveedorRepository.findById(id)
+        if (proveedorActual != null && id != null && id.equals(proveedorActual.getId())) {
+            return proveedorActual;
+        }
+
+        return proveedorRepository.findByIdAndEstadoRegistro(id, EstadoRegistro.ACTIVO)
                 .orElseThrow(() ->
                         new EntityNotFoundException(
-                                "No existe un proveedor con ID: " + id));
+                                "No existe un proveedor activo con ID: " + id));
     }
 }

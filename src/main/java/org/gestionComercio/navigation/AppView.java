@@ -110,6 +110,25 @@ public enum AppView {
             PermisoCodigo.MARCA_EDITAR
     ),
 
+    PROVEEDOR_LIST(
+            "/org/gestionComercio/view/proveedor/ProveedorList.fxml",
+            "Proveedores",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.PROVEEDOR_VER
+    ),
+
+    PROVEEDOR_FORM(
+            "/org/gestionComercio/view/proveedor/ProveedorForm.fxml",
+            "Proveedor",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.PROVEEDOR_CREAR,
+            PermisoCodigo.PROVEEDOR_EDITAR
+    ),
+
     /** Disponible para cualquier usuario con sesión iniciada. */
     CAMBIAR_PASSWORD(
             "/org/gestionComercio/view/perfil/CambiarPassword.fxml",
