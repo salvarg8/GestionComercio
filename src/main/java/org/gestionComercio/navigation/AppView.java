@@ -91,6 +91,25 @@ public enum AppView {
             PermisoCodigo.CATEGORIA_EDITAR
     ),
 
+    MARCA_LIST(
+            "/org/gestionComercio/view/marca/MarcaList.fxml",
+            "Marcas",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.MARCA_VER
+    ),
+
+    MARCA_FORM(
+            "/org/gestionComercio/view/marca/MarcaForm.fxml",
+            "Marca",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.MARCA_CREAR,
+            PermisoCodigo.MARCA_EDITAR
+    ),
+
     /** Disponible para cualquier usuario con sesión iniciada. */
     CAMBIAR_PASSWORD(
             "/org/gestionComercio/view/perfil/CambiarPassword.fxml",

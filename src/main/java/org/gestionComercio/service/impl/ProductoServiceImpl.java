@@ -151,7 +151,7 @@ public class ProductoServiceImpl implements ProductoService {
     private void cargarRelaciones(Producto producto, ProductoDto dto) {
 
         producto.setCategoria(buscarCategoria(dto.getCategoriaId()));
-        producto.setMarca(buscarMarca(dto.getMarcaId()));
+        producto.setMarca(buscarMarca(dto.getMarcaId(), producto.getMarca()));
         producto.setProveedor(buscarProveedor(dto.getProveedorId()));
     }
 
@@ -171,12 +171,20 @@ public class ProductoServiceImpl implements ProductoService {
                                 "No existe una categoría activa con ID: " + id));
     }
 
-    private Marca buscarMarca(Long id) {
+    /**
+     * Sólo se pueden asignar marcas activas, salvo que el producto ya tuviera
+     * esa marca: una marca dada de baja no obliga a cambiarla al editar el producto.
+     */
+    private Marca buscarMarca(Long id, Marca marcaActual) {
 
-        return marcaRepository.findById(id)
+        if (marcaActual != null && id != null && id.equals(marcaActual.getId())) {
+            return marcaActual;
+        }
+
+        return marcaRepository.findByIdAndEstadoRegistro(id, EstadoRegistro.ACTIVO)
                 .orElseThrow(() ->
                         new EntityNotFoundException(
-                                "No existe una marca con ID: " + id));
+                                "No existe una marca activa con ID: " + id));
     }
 
     private Proveedor buscarProveedor(Long id) {

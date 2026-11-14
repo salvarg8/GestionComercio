@@ -159,6 +159,18 @@
 
 }
 
+.btn-icon.btn-icon-enable .ikonli-font-icon {
+
+    -fx-icon-color: -fx-success;
+
+}
+
+.btn-icon.btn-icon-enable:hover {
+
+    -fx-background-color: derive(-fx-success, 85%);
+
+}
+
 /* Menú lateral */
 
 .menu-button {
