@@ -44,6 +44,13 @@ public enum PermisoCodigo {
     CATEGORIA_EDITAR("Categorías", "Editar categorías"),
     CATEGORIA_ELIMINAR("Categorías", "Eliminar categorías"),
 
+    // Marcas
+    MARCA_VER("Marcas", "Ver marcas"),
+    MARCA_CREAR("Marcas", "Crear marcas"),
+    MARCA_EDITAR("Marcas", "Editar marcas"),
+    MARCA_DAR_BAJA("Marcas", "Dar de baja marcas"),
+    MARCA_HABILITAR("Marcas", "Volver a habilitar marcas dadas de baja"),
+
     // Ventas
     VENTA_VER("Ventas", "Ver ventas"),
     VENTA_CREAR("Ventas", "Crear ventas"),

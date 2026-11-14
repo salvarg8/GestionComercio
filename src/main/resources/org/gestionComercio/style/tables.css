@@ -13,3 +13,36 @@
     -fx-text-fill: white;
 
 }
+
+/* Registros dados de baja: texto atenuado */
+
+.table-row-cell:dado-de-baja .table-cell {
+
+    -fx-text-fill: #9CA3AF;
+
+}
+
+/* Etiqueta de estado (Activa / Dada de baja) */
+
+.estado-badge {
+
+    -fx-padding: 2 10 2 10;
+    -fx-background-radius: 10;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+
+}
+
+.estado-badge.estado-activo {
+
+    -fx-background-color: derive(-fx-success, 85%);
+    -fx-text-fill: -fx-success;
+
+}
+
+.estado-badge.estado-inactivo {
+
+    -fx-background-color: #F3F4F6;
+    -fx-text-fill: #6B7280;
+
+}
