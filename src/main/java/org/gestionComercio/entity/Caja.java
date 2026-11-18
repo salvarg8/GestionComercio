@@ -40,8 +40,20 @@ public class Caja extends BaseEntity {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal saldoInicial;
 
+    /** Saldo contado en el arqueo al cerrar. */
     @Column(precision = 12, scale = 2)
     private BigDecimal saldoFinal;
+
+    /** Saldo según el sistema al cerrar: saldo inicial + ingresos − egresos. */
+    @Column(precision = 12, scale = 2)
+    private BigDecimal saldoEsperado;
+
+    /** Saldo contado − saldo esperado: positiva si sobra, negativa si falta. */
+    @Column(precision = 12, scale = 2)
+    private BigDecimal diferencia;
+
+    @Column(length = 255)
+    private String observacionCierre;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

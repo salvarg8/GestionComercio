@@ -66,6 +66,12 @@ public enum PermisoCodigo {
     PROVEEDOR_DAR_BAJA("Proveedores", "Dar de baja proveedores"),
     PROVEEDOR_HABILITAR("Proveedores", "Volver a habilitar proveedores dados de baja"),
 
+    // Caja
+    CAJA_VER("Caja", "Ver la caja y sus movimientos"),
+    CAJA_ABRIR("Caja", "Abrir caja"),
+    CAJA_CERRAR("Caja", "Cerrar caja con arqueo"),
+    CAJA_REGISTRAR_MOVIMIENTO("Caja", "Registrar ingresos, egresos, gastos y retiros de caja"),
+
     // Ventas
     VENTA_VER("Ventas", "Ver ventas"),
     VENTA_CREAR("Ventas", "Crear ventas"),
