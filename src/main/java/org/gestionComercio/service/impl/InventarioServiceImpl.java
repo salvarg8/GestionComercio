@@ -1,6 +1,7 @@
 package org.gestionComercio.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.gestionComercio.dto.inventario.FiltroMovimientos;
 import org.gestionComercio.dto.inventario.MovimientoInventarioDto;
 import org.gestionComercio.entity.MovimientoInventario;
 import org.gestionComercio.entity.Producto;
@@ -130,18 +131,33 @@ public class InventarioServiceImpl implements InventarioService {
     @Override
     public List<MovimientoInventarioDto> buscarMovimientos(LocalDate desde, LocalDate hasta, Long productoId) {
 
-        sesionUsuario.requerirPermiso(PermisoCodigo.INVENTARIO_VER);
-
         if (desde == null || hasta == null) {
+            sesionUsuario.requerirPermiso(PermisoCodigo.INVENTARIO_VER);
             throw new BusinessException("Debe indicar las fechas desde y hasta.");
         }
 
-        if (desde.isAfter(hasta)) {
+        return consultarMovimientos(new FiltroMovimientos(productoId, null, desde, hasta));
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<MovimientoInventarioDto> consultarMovimientos(FiltroMovimientos filtro) {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.INVENTARIO_VER);
+
+        FiltroMovimientos criterios = filtro == null ? FiltroMovimientos.todos() : filtro;
+        LocalDate desde = criterios.desde();
+        LocalDate hasta = criterios.hasta();
+
+        if (desde != null && hasta != null && desde.isAfter(hasta)) {
             throw new BusinessException("La fecha desde no puede ser posterior a la fecha hasta.");
         }
 
-        return movimientoInventarioMapper.toDtoList(movimientoInventarioRepository.buscar(
-                desde.atStartOfDay(), hasta.atTime(LocalTime.MAX), productoId));
+        return movimientoInventarioMapper.toDtoList(movimientoInventarioRepository.consultar(
+                criterios.productoId(),
+                criterios.tipo(),
+                desde == null ? null : desde.atStartOfDay(),
+                hasta == null ? null : hasta.atTime(LocalTime.MAX)));
     }
 
     /**

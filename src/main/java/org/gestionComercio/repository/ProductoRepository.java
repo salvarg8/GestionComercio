@@ -107,6 +107,23 @@ public interface ProductoRepository extends BaseRepository<Producto, Long> {
             """)
     Optional<StockProductoDto> consultarStockDeProducto(@Param("id") Long id);
 
+    /**
+     * Existencias de los productos (activos o dados de baja) que tienen al menos
+     * un movimiento de inventario, ordenadas por nombre.
+     */
+    @Query("""
+            select new org.gestionComercio.dto.inventario.StockProductoDto(
+                p.id, p.codigo, p.codigoBarras, p.nombre,
+                c.id, c.nombre, m.nombre,
+                p.unidadMedida, p.stock, p.stockMinimo, p.manejaStock, p.estadoRegistro)
+            from Producto p
+              join p.categoria c
+              join p.marca m
+            where exists (select 1 from MovimientoInventario mi where mi.producto = p)
+            order by p.nombre asc
+            """)
+    List<StockProductoDto> consultarStockConMovimientos();
+
     /** Productos activos que manejan stock. */
     @Query("""
             select count(p) from Producto p

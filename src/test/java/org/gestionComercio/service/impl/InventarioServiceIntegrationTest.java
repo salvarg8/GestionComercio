@@ -4,8 +4,10 @@ import com.zaxxer.hikari.HikariDataSource;
 import jakarta.persistence.EntityManager;
 import org.gestionComercio.config.AuditorProvider;
 import org.gestionComercio.config.JpaAuditingConfig;
+import org.gestionComercio.dto.inventario.FiltroMovimientos;
 import org.gestionComercio.dto.inventario.LineaInventario;
 import org.gestionComercio.dto.inventario.MovimientoInventarioDto;
+import org.gestionComercio.dto.inventario.StockProductoDto;
 import org.gestionComercio.entity.Categoria;
 import org.gestionComercio.entity.Empresa;
 import org.gestionComercio.entity.Marca;
@@ -25,6 +27,7 @@ import org.gestionComercio.exception.ConcurrencyException;
 import org.gestionComercio.mapper.MovimientoInventarioMapperImpl;
 import org.gestionComercio.repository.MovimientoInventarioRepository;
 import org.gestionComercio.security.SesionUsuario;
+import org.gestionComercio.service.ConsultaStockService;
 import org.gestionComercio.service.InventarioComprobanteService;
 import org.gestionComercio.service.InventarioService;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +46,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.sql.DataSource;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -65,6 +71,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({
         InventarioServiceImpl.class,
+        ConsultaStockServiceImpl.class,
         InventarioComprobanteServiceImpl.class,
         RegistradorMovimientosInventario.class,
         MovimientoInventarioMapperImpl.class,
@@ -81,6 +88,9 @@ class InventarioServiceIntegrationTest {
 
     @Autowired
     private InventarioComprobanteService comprobanteService;
+
+    @Autowired
+    private ConsultaStockService consultaStockService;
 
     @Autowired
     private MovimientoInventarioRepository movimientoInventarioRepository;
@@ -273,6 +283,121 @@ class InventarioServiceIntegrationTest {
         // Se revirtió la transacción completa: sólo queda el movimiento inicial.
         assertThat(productoEnBase(id).getStock()).isEqualByComparingTo("10");
         assertThat(movimientoInventarioRepository.countByProductoId(id)).isEqualTo(1);
+    }
+
+    // ------------------------------------------------------------------
+    // Historial de movimientos
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("El historial de un producto en orden cronológico reconstruye la evolución de su stock")
+    void historialReconstruyeEvolucion() {
+        Long id = crearProducto("Yerba", UnidadMedida.UNIDAD);
+        inventarioService.registrarEntrada(id, bd("10"), "Compra");
+        inventarioService.registrarSalida(id, bd("3"), "Venta");
+        inventarioService.ajustarStock(id, bd("9"), MotivoAjusteInventario.RECUENTO, null);
+        inventarioService.registrarEntrada(id, bd("2"), "Compra");
+
+        List<MovimientoInventarioDto> movimientos = new ArrayList<>(
+                inventarioService.consultarMovimientos(FiltroMovimientos.deProducto(id)));
+        Collections.reverse(movimientos);
+
+        assertThat(movimientos).extracting(MovimientoInventarioDto::getTipo).containsExactly(
+                TipoMovimientoInventario.ENTRADA, TipoMovimientoInventario.SALIDA,
+                TipoMovimientoInventario.AJUSTE, TipoMovimientoInventario.ENTRADA);
+
+        // Cada movimiento parte del stock en que terminó el anterior.
+        assertThat(movimientos.get(0).getStockAnterior()).isEqualByComparingTo("0");
+        for (int i = 1; i < movimientos.size(); i++) {
+            assertThat(movimientos.get(i).getStockAnterior())
+                    .isEqualByComparingTo(movimientos.get(i - 1).getStockResultante());
+        }
+        assertThat(movimientos).extracting(MovimientoInventarioDto::getStockResultante)
+                .usingElementComparator(BigDecimal::compareTo)
+                .containsExactly(bd("10"), bd("7"), bd("9"), bd("11"));
+
+        // El último resultante coincide con el stock actual del producto.
+        assertThat(productoEnBase(id).getStock()).isEqualByComparingTo(movimientos.get(3).getStockResultante());
+
+        assertThat(movimientos).allSatisfy(m -> {
+            assertThat(m.getUsuarioNombre()).isEqualTo("user" + sufijo);
+            assertThat(m.getUsuarioNombreCompleto()).isEqualTo("Ana Pérez");
+            assertThat(m.getMotivo()).isNotBlank();
+        });
+    }
+
+    @Test
+    @DisplayName("El historial filtra por tipo de movimiento")
+    void historialPorTipo() {
+        Long id = crearProducto("Arroz", UnidadMedida.UNIDAD);
+        inventarioService.registrarEntrada(id, bd("10"), "Compra");
+        inventarioService.registrarSalida(id, bd("3"), "Venta");
+        inventarioService.registrarSalida(id, bd("1"), "Venta");
+        inventarioService.registrarAjuste(id, bd("-1"), MotivoAjusteInventario.OTRO, "Rotura");
+
+        assertThat(inventarioService.consultarMovimientos(
+                new FiltroMovimientos(id, TipoMovimientoInventario.SALIDA, null, null)))
+                .extracting(MovimientoInventarioDto::getCantidad)
+                .usingElementComparator(BigDecimal::compareTo)
+                .containsExactly(bd("-1"), bd("-3"));
+
+        assertThat(inventarioService.consultarMovimientos(
+                new FiltroMovimientos(id, TipoMovimientoInventario.AJUSTE, null, null)))
+                .singleElement()
+                .satisfies(m -> assertThat(m.getMotivoAjuste()).isEqualTo(MotivoAjusteInventario.OTRO));
+
+        assertThat(inventarioService.consultarMovimientos(
+                new FiltroMovimientos(id, TipoMovimientoInventario.ENTRADA, null, null))).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("El historial filtra por rango de fechas, con cualquiera de los extremos o ambos")
+    void historialPorFechas() {
+        Long id = crearProducto("Fideos", UnidadMedida.UNIDAD);
+        inventarioService.registrarEntrada(id, bd("5"), "Compra");
+        LocalDate hoy = LocalDate.now();
+
+        assertThat(inventarioService.consultarMovimientos(new FiltroMovimientos(id, null, hoy, hoy))).hasSize(1);
+        assertThat(inventarioService.consultarMovimientos(new FiltroMovimientos(id, null, hoy, null))).hasSize(1);
+        assertThat(inventarioService.consultarMovimientos(new FiltroMovimientos(id, null, null, hoy))).hasSize(1);
+
+        assertThat(inventarioService.consultarMovimientos(
+                new FiltroMovimientos(id, null, hoy.plusDays(1), null))).isEmpty();
+        assertThat(inventarioService.consultarMovimientos(
+                new FiltroMovimientos(id, null, null, hoy.minusDays(1)))).isEmpty();
+        assertThat(inventarioService.consultarMovimientos(
+                new FiltroMovimientos(id, null, hoy.minusDays(7), hoy.minusDays(1)))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Sin filtros el historial trae los movimientos de todos los productos")
+    void historialSinFiltros() {
+        Long yerba = crearProducto("Yerba", UnidadMedida.UNIDAD);
+        Long queso = crearProducto("Queso", UnidadMedida.KILOGRAMO);
+        MovimientoInventarioDto primero = inventarioService.registrarEntrada(yerba, bd("1"), "Compra");
+        MovimientoInventarioDto segundo = inventarioService.registrarEntrada(queso, bd("2"), "Compra");
+
+        List<MovimientoInventarioDto> todos = inventarioService.consultarMovimientos(FiltroMovimientos.todos());
+
+        assertThat(todos).extracting(MovimientoInventarioDto::getId)
+                .contains(primero.getId(), segundo.getId());
+        // Del más reciente al más antiguo.
+        assertThat(todos.indexOf(todos.stream().filter(m -> m.getId().equals(segundo.getId())).findFirst().orElseThrow()))
+                .isLessThan(todos.indexOf(todos.stream()
+                        .filter(m -> m.getId().equals(primero.getId())).findFirst().orElseThrow()));
+    }
+
+    @Test
+    @DisplayName("Los productos para filtrar el historial son los que tienen movimientos")
+    void productosConMovimientos() {
+        Long conMovimientos = crearProducto("Yerba", UnidadMedida.UNIDAD);
+        Long sinMovimientos = crearProducto("Sal", UnidadMedida.UNIDAD);
+        inventarioService.registrarEntrada(conMovimientos, bd("1"), "Compra");
+
+        assertThat(consultaStockService.consultarProductosConMovimientos())
+                .extracting(StockProductoDto::productoId)
+                .contains(conMovimientos)
+                .doesNotContain(sinMovimientos);
     }
 
     // ------------------------------------------------------------------

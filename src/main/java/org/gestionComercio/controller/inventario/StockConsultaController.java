@@ -21,6 +21,8 @@ import org.gestionComercio.dto.inventario.MovimientoInventarioDto;
 import org.gestionComercio.enums.FiltroStock;
 import org.gestionComercio.enums.PermisoCodigo;
 import org.gestionComercio.enums.SituacionStock;
+import org.gestionComercio.navigation.AppView;
+import org.gestionComercio.navigation.Navigator;
 import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.CategoriaService;
 import org.gestionComercio.service.ConsultaStockService;
@@ -42,7 +44,8 @@ import java.util.function.Function;
  * Consulta de las existencias actuales de los productos activos: por producto
  * (búsqueda por nombre o código), por categoría y por situación (stock bajo,
  * sin stock). Con el permiso INVENTARIO_AJUSTAR permite además corregir el
- * stock de un producto indicando el stock real ({@link AjusteStockDialog}).
+ * stock de un producto indicando el stock real ({@link AjusteStockDialog}). Desde cada producto se
+ * puede abrir su historial de movimientos.
  */
 @Controller
 @RequiredArgsConstructor
@@ -111,6 +114,7 @@ public class StockConsultaController extends AbstractController {
     private final CategoriaService categoriaService;
     private final InventarioService inventarioService;
     private final SesionUsuario sesionUsuario;
+    private final Navigator navigator;
 
     @Override
     protected void initializeComponents() {
@@ -229,22 +233,29 @@ public class StockConsultaController extends AbstractController {
         });
     }
 
-    /** La acción de ajustar sólo aparece con permiso y en productos que manejan stock. */
+    /**
+     * Ver movimientos está siempre disponible (la pantalla ya exige INVENTARIO_VER).
+     * Ajustar sólo aparece con permiso y en productos que manejan stock.
+     */
     private void configurarAcciones() {
 
         boolean puedeAjustar = puedeAjustar();
 
-        colAcciones.setVisible(puedeAjustar);
+        List<Accion<StockProductoDto>> acciones = new ArrayList<>();
+
+        acciones.add(new Accion<StockProductoDto>(FontAwesomeSolid.HISTORY, "Ver movimientos", "btn-icon-edit",
+                stock -> true, this::verMovimientos));
+
+        if (puedeAjustar) {
+            acciones.add(new Accion<StockProductoDto>(FontAwesomeSolid.SLIDERS_H, "Ajustar stock", "btn-icon-edit",
+                    stock -> Boolean.TRUE.equals(stock.manejaStock()), this::ajustar));
+        }
+
+        colAcciones.setCellFactory(column -> new RowActionsTableCell<>(acciones));
 
         if (!puedeAjustar) {
             return;
         }
-
-        List<Accion<StockProductoDto>> acciones = List.of(
-                new Accion<>(FontAwesomeSolid.SLIDERS_H, "Ajustar stock", "btn-icon-edit",
-                        stock -> Boolean.TRUE.equals(stock.manejaStock()), this::ajustar));
-
-        colAcciones.setCellFactory(column -> new RowActionsTableCell<>(acciones));
 
         // Doble clic sobre un producto: atajo para ajustarlo.
         tblStock.setRowFactory(tabla -> {
@@ -264,6 +275,11 @@ public class StockConsultaController extends AbstractController {
 
     private boolean puedeAjustar() {
         return sesionUsuario.tienePermiso(PermisoCodigo.INVENTARIO_AJUSTAR);
+    }
+
+    /** Abre el historial de movimientos filtrado por el producto. */
+    private void verMovimientos(StockProductoDto stock) {
+        navigator.navigate(AppView.MOVIMIENTO_HISTORIAL, stock.productoId());
     }
 
     /** Abre el ajuste del producto; si se registra, informa el resultado y refresca la tabla. */

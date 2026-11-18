@@ -88,8 +88,18 @@ class ConsultaStockServiceImplTest {
         assertThrows(AuthorizationException.class, () -> service.consultar("", null, FiltroStock.TODOS));
         assertThrows(AuthorizationException.class, () -> service.consultarProducto(1L));
         assertThrows(AuthorizationException.class, () -> service.resumen());
+        assertThrows(AuthorizationException.class, () -> service.consultarProductosConMovimientos());
 
         verifyNoInteractions(productoRepository);
+    }
+
+    @Test
+    @DisplayName("Lista los productos con movimientos para el historial")
+    void productosConMovimientos() {
+        List<StockProductoDto> esperado = List.of(stock(1L), stock(2L));
+        when(productoRepository.consultarStockConMovimientos()).thenReturn(esperado);
+
+        assertSame(esperado, service.consultarProductosConMovimientos());
     }
 
     @Test
