@@ -129,6 +129,25 @@ public enum AppView {
             PermisoCodigo.PROVEEDOR_EDITAR
     ),
 
+    PRODUCTO_LIST(
+            "/org/gestionComercio/view/producto/ProductoList.fxml",
+            "Productos",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.PRODUCTO_VER
+    ),
+
+    PRODUCTO_FORM(
+            "/org/gestionComercio/view/producto/ProductoForm.fxml",
+            "Producto",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.PRODUCTO_CREAR,
+            PermisoCodigo.PRODUCTO_EDITAR
+    ),
+
     /** Disponible para cualquier usuario con sesión iniciada. */
     CAMBIAR_PASSWORD(
             "/org/gestionComercio/view/perfil/CambiarPassword.fxml",

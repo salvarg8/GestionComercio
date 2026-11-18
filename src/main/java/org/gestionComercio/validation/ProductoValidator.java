@@ -1,15 +1,41 @@
 package org.gestionComercio.validation;
 
 import lombok.RequiredArgsConstructor;
-import org.gestionComercio.dto.ProductoDto;
+import org.gestionComercio.dto.producto.ProductoDto;
+import org.gestionComercio.entity.Producto;
+import org.gestionComercio.enums.EstadoRegistro;
+import org.gestionComercio.repository.CategoriaRepository;
+import org.gestionComercio.repository.MarcaRepository;
 import org.gestionComercio.repository.ProductoRepository;
+import org.gestionComercio.repository.ProveedorRepository;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+import java.util.Objects;
+import java.util.Optional;
+
+/**
+ * Valida un producto ya normalizado por el servicio (textos recortados y
+ * opcionales vacíos en null).
+ */
 @Component
 @RequiredArgsConstructor
 public class ProductoValidator implements Validator<ProductoDto> {
 
+    /* Coinciden con los largos de las columnas de la entidad Producto. */
+    public static final int CODIGO_MAX = 50;
+    public static final int CODIGO_BARRAS_MAX = 20;
+    public static final int NOMBRE_MAX = 150;
+    public static final int DESCRIPCION_MAX = 500;
+
+    /* Columnas de precio: precision 12, scale 2. */
+    public static final int PRECIO_DECIMALES_MAX = 2;
+    public static final int PRECIO_ENTEROS_MAX = 10;
+
     private final ProductoRepository productoRepository;
+    private final CategoriaRepository categoriaRepository;
+    private final MarcaRepository marcaRepository;
+    private final ProveedorRepository proveedorRepository;
 
     @Override
     public ValidationResult validate(ProductoDto dto) {
@@ -22,6 +48,7 @@ public class ProductoValidator implements Validator<ProductoDto> {
         validarDescripcion(dto, result);
         validarPrecios(dto, result);
         validarStock(dto, result);
+        validarClasificacionFiscal(dto, result);
         validarRelaciones(dto, result);
 
         return result;
@@ -29,19 +56,27 @@ public class ProductoValidator implements Validator<ProductoDto> {
 
     private void validarCodigo(ProductoDto dto, ValidationResult result) {
 
-        ValidationUtils.required(dto.getCodigo(), "codigo", "El código es obligatorio.", result);
+        ValidationUtils.required(dto.getCodigo(), "codigo", "El código interno es obligatorio.", result);
 
         if (dto.getCodigo() == null || dto.getCodigo().isBlank()) {
             return;
         }
 
-        boolean existe = dto.getId() == null
-                ? productoRepository.existsByCodigo(dto.getCodigo())
-                : productoRepository.existsByCodigoAndIdNot(dto.getCodigo(), dto.getId());
-
-        if (existe) {
-            result.addError("codigo", "Ya existe un producto con ese código.");
+        if (dto.getCodigo().length() > CODIGO_MAX) {
+            result.addError("codigo",
+                    "El código interno no puede superar los " + CODIGO_MAX + " caracteres.");
         }
+
+        Optional<Producto> existente = dto.getId() == null
+                ? productoRepository.findFirstByCodigoIgnoreCase(dto.getCodigo())
+                : productoRepository.findFirstByCodigoIgnoreCaseAndIdNot(dto.getCodigo(), dto.getId());
+
+        existente.ifPresent(producto -> result.addError(
+                "codigo",
+                producto.getEstadoRegistro() == EstadoRegistro.ACTIVO
+                        ? "Ya existe un producto con ese código interno."
+                        : "Ya existe un producto dado de baja con ese código interno. Puede volver a habilitarlo desde el listado de productos."
+        ));
     }
 
     private void validarCodigoBarras(ProductoDto dto, ValidationResult result) {
@@ -50,47 +85,85 @@ public class ProductoValidator implements Validator<ProductoDto> {
             return;
         }
 
-        boolean existe = dto.getId() == null
-                ? productoRepository.existsByCodigoBarras(dto.getCodigo())
-                : productoRepository.existsByCodigoBarrasAndIdNot(dto.getCodigoBarras(), dto.getId());
-
-        if (existe) {
-            result.addError("codigoBarras", "Ya existe un producto con ese código de barras.");
+        if (dto.getCodigoBarras().length() > CODIGO_BARRAS_MAX) {
+            result.addError("codigoBarras",
+                    "El código de barras no puede superar los " + CODIGO_BARRAS_MAX + " caracteres.");
         }
+
+        if (dto.getCodigoBarras().chars().anyMatch(Character::isWhitespace)) {
+            result.addError("codigoBarras", "El código de barras no puede contener espacios.");
+        }
+
+        Optional<Producto> existente = dto.getId() == null
+                ? productoRepository.findByCodigoBarras(dto.getCodigoBarras())
+                : productoRepository.findByCodigoBarrasAndIdNot(dto.getCodigoBarras(), dto.getId());
+
+        existente.ifPresent(producto -> result.addError(
+                "codigoBarras",
+                producto.getEstadoRegistro() == EstadoRegistro.ACTIVO
+                        ? "Ya existe un producto con ese código de barras (" + producto.getNombre() + ")."
+                        : "Ya existe un producto dado de baja con ese código de barras (" + producto.getNombre() + ")."
+        ));
     }
 
     private void validarNombre(ProductoDto dto, ValidationResult result) {
 
         ValidationUtils.required(dto.getNombre(), "nombre", "El nombre es obligatorio.", result);
 
-        if (dto.getNombre() != null && dto.getNombre().length() > 100) {
-            result.addError("nombre", "El nombre no puede superar los 100 caracteres.");
+        if (dto.getNombre() != null && dto.getNombre().length() > NOMBRE_MAX) {
+            result.addError("nombre",
+                    "El nombre no puede superar los " + NOMBRE_MAX + " caracteres.");
         }
     }
 
     private void validarDescripcion(ProductoDto dto, ValidationResult result) {
 
-        if (dto.getDescripcion() != null && dto.getDescripcion().length() > 255) {
-            result.addError("descripcion", "La descripción no puede superar los 255 caracteres.");
+        if (dto.getDescripcion() != null && dto.getDescripcion().length() > DESCRIPCION_MAX) {
+            result.addError("descripcion",
+                    "La descripción no puede superar los " + DESCRIPCION_MAX + " caracteres.");
         }
     }
 
     private void validarPrecios(ProductoDto dto, ValidationResult result) {
 
-        ValidationUtils.notNull(dto.getPrecioCompra(), "precioCompra", "El precio de compra es obligatorio.", result);
-        ValidationUtils.notNull(dto.getPrecioVenta(), "precioVenta", "El precio de venta es obligatorio.", result);
+        boolean compraValido = validarPrecio(dto.getPrecioCompra(), "precioCompra", "precio de compra", result);
+        boolean ventaValido = validarPrecio(dto.getPrecioVenta(), "precioVenta", "precio de venta", result);
 
-        ValidationUtils.nonNegative(dto.getPrecioCompra(), "precioCompra", "El precio de compra debe ser mayor o igual a cero.", result);
-        ValidationUtils.nonNegative(dto.getPrecioVenta(), "precioVenta", "El precio de venta debe ser mayor o igual a cero.", result);
-
-        if (dto.getPrecioCompra() != null
-                && dto.getPrecioVenta() != null
+        if (compraValido && ventaValido
                 && dto.getPrecioVenta().compareTo(dto.getPrecioCompra()) < 0) {
 
-            result.addError(
-                    "precioVenta",
+            result.addError("precioVenta",
                     "El precio de venta no puede ser menor al precio de compra.");
         }
+    }
+
+    /** @return true si el precio no tiene errores. */
+    private boolean validarPrecio(BigDecimal precio, String campo, String nombre, ValidationResult result) {
+
+        if (precio == null) {
+            result.addError(campo, "El " + nombre + " es obligatorio.");
+            return false;
+        }
+
+        if (precio.signum() < 0) {
+            result.addError(campo, "El " + nombre + " no puede ser negativo.");
+            return false;
+        }
+
+        BigDecimal sinCeros = precio.stripTrailingZeros();
+
+        if (sinCeros.scale() > PRECIO_DECIMALES_MAX) {
+            result.addError(campo,
+                    "El " + nombre + " no puede tener más de " + PRECIO_DECIMALES_MAX + " decimales.");
+            return false;
+        }
+
+        if (sinCeros.precision() - sinCeros.scale() > PRECIO_ENTEROS_MAX) {
+            result.addError(campo, "El " + nombre + " es demasiado grande.");
+            return false;
+        }
+
+        return true;
     }
 
     private void validarStock(ProductoDto dto, ValidationResult result) {
@@ -99,24 +172,69 @@ public class ProductoValidator implements Validator<ProductoDto> {
             return;
         }
 
-        ValidationUtils.notNull(dto.getStock(), "stock", "El stock es obligatorio.", result);
-        ValidationUtils.notNull(dto.getStockMinimo(), "stockMinimo", "El stock mínimo es obligatorio.", result);
-
-        ValidationUtils.nonNegative(dto.getStock(), "stock", "El stock debe ser mayor o igual a cero.", result);
-        ValidationUtils.nonNegative(dto.getStockMinimo(), "stockMinimo", "El stock mínimo debe ser mayor o igual a cero.", result);
+        if (dto.getStockMinimo() == null) {
+            result.addError("stockMinimo", "El stock mínimo es obligatorio.");
+        } else if (dto.getStockMinimo() < 0) {
+            result.addError("stockMinimo", "El stock mínimo no puede ser negativo.");
+        }
     }
 
+    private void validarClasificacionFiscal(ProductoDto dto, ValidationResult result) {
+
+        ValidationUtils.notNull(dto.getUnidadMedida(), "unidadMedida",
+                "Debe seleccionar una unidad de medida.", result);
+
+        ValidationUtils.notNull(dto.getAlicuotaIVA(), "alicuotaIVA",
+                "Debe seleccionar una alícuota de IVA.", result);
+    }
+
+    /**
+     * La categoría tiene que estar vigente siempre. La marca y el proveedor
+     * también, salvo que el producto ya los tuviera asignados: una marca o un
+     * proveedor dados de baja no obligan a cambiarlos al editar el producto.
+     */
     private void validarRelaciones(ProductoDto dto, ValidationResult result) {
 
-        ValidationUtils.notNull(dto.getCategoriaId(), "categoriaId", "Debe seleccionar una categoría.", result);
+        Producto actual = dto.getId() == null
+                ? null
+                : productoRepository.findById(dto.getId()).orElse(null);
 
-        ValidationUtils.notNull(dto.getMarcaId(), "marcaId", "Debe seleccionar una marca.", result);
+        if (dto.getCategoriaId() == null) {
+            result.addError("categoriaId", "Debe seleccionar una categoría.");
+        } else if (categoriaRepository
+                .findByIdAndEstadoRegistro(dto.getCategoriaId(), EstadoRegistro.ACTIVO)
+                .isEmpty()) {
+            result.addError("categoriaId", "La categoría seleccionada no existe o fue eliminada.");
+        }
 
-        ValidationUtils.notNull(dto.getProveedorId(), "proveedorId", "Debe seleccionar un proveedor.", result);
+        if (dto.getMarcaId() == null) {
+            result.addError("marcaId", "Debe seleccionar una marca.");
+        } else if (!esMarcaActual(actual, dto.getMarcaId())
+                && marcaRepository
+                .findByIdAndEstadoRegistro(dto.getMarcaId(), EstadoRegistro.ACTIVO)
+                .isEmpty()) {
+            result.addError("marcaId", "La marca seleccionada no existe o fue dada de baja.");
+        }
 
-        ValidationUtils.notNull(dto.getUnidadMedida(), "unidadMedida", "Debe seleccionar una unidad de medida.", result);
-
-        ValidationUtils.notNull(dto.getAlicuotaIVA(), "alicuotaIVA", "Debe seleccionar una alícuota de IVA.", result);
+        if (dto.getProveedorId() == null) {
+            result.addError("proveedorId", "Debe seleccionar un proveedor.");
+        } else if (!esProveedorActual(actual, dto.getProveedorId())
+                && proveedorRepository
+                .findByIdAndEstadoRegistro(dto.getProveedorId(), EstadoRegistro.ACTIVO)
+                .isEmpty()) {
+            result.addError("proveedorId", "El proveedor seleccionado no existe o fue dado de baja.");
+        }
     }
 
+    private boolean esMarcaActual(Producto actual, Long marcaId) {
+        return actual != null
+                && actual.getMarca() != null
+                && Objects.equals(actual.getMarca().getId(), marcaId);
+    }
+
+    private boolean esProveedorActual(Producto actual, Long proveedorId) {
+        return actual != null
+                && actual.getProveedor() != null
+                && Objects.equals(actual.getProveedor().getId(), proveedorId);
+    }
 }
