@@ -36,7 +36,7 @@ public interface ProductoMapper extends BaseMapper<ProductoDto, Producto> {
     @Mapping(target = "proveedor", ignore = true)
     @Mapping(target = "detallesVenta", ignore = true)
     @Mapping(target = "detallesCompra", ignore = true)
-    @Mapping(target = "movimientosStock", ignore = true)
+    @Mapping(target = "movimientosInventario", ignore = true)
     Producto toEntity(ProductoDto dto);
 
     /*
@@ -55,7 +55,7 @@ public interface ProductoMapper extends BaseMapper<ProductoDto, Producto> {
     @Mapping(target = "proveedor", ignore = true)
     @Mapping(target = "detallesVenta", ignore = true)
     @Mapping(target = "detallesCompra", ignore = true)
-    @Mapping(target = "movimientosStock", ignore = true)
+    @Mapping(target = "movimientosInventario", ignore = true)
     void updateEntity(
             ProductoDto dto,
             @MappingTarget Producto entity
