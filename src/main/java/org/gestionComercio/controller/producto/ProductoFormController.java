@@ -1,18 +1,17 @@
 package org.gestionComercio.controller.producto;
 
-import javafx.beans.value.ObservableValue;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import lombok.RequiredArgsConstructor;
 import org.gestionComercio.controller.base.AbstractController;
+import org.gestionComercio.controller.base.ErroresPorCampo;
 import org.gestionComercio.dto.producto.ProductoDto;
 import org.gestionComercio.enums.AlicuotaIVA;
 import org.gestionComercio.enums.UnidadMedida;
@@ -26,24 +25,18 @@ import org.gestionComercio.service.ProductoService;
 import org.gestionComercio.service.ProveedorService;
 import org.gestionComercio.util.CantidadUtils;
 import org.gestionComercio.util.NumberUtils;
-import org.gestionComercio.util.dialog.ValidationDialog;
-import org.gestionComercio.validation.ValidationError;
 import org.gestionComercio.validation.ValidationResult;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Objects;
 
 @Controller
 @RequiredArgsConstructor
 @Scope("prototype")
 public class ProductoFormController extends AbstractController implements DataReceiver<ProductoDto> {
-
-    private static final String CLASE_INVALIDO = "field-invalid";
 
     private final ProductoService productoService;
     private final CategoriaService categoriaService;
@@ -153,11 +146,7 @@ public class ProductoFormController extends AbstractController implements DataRe
     /** null = alta; distinto de null = edición. */
     private ProductoDto productoActual;
 
-    /** Campo del DTO → control y etiqueta donde se muestra su error. */
-    private final Map<String, CampoConError> campos = new LinkedHashMap<>();
-
-    private record CampoConError(Control control, Label lblError) {
-    }
+    private final ErroresPorCampo errores = new ErroresPorCampo();
 
     /** Elemento de los combos de categoría, marca y proveedor. */
     private record Opcion(Long id, String texto) {
@@ -171,18 +160,19 @@ public class ProductoFormController extends AbstractController implements DataRe
     @Override
     protected void initializeComponents() {
 
-        registrarCampo("codigo", txtCodigo, lblErrorCodigo, txtCodigo.textProperty());
-        registrarCampo("codigoBarras", txtCodigoBarras, lblErrorCodigoBarras, txtCodigoBarras.textProperty());
-        registrarCampo("nombre", txtNombre, lblErrorNombre, txtNombre.textProperty());
-        registrarCampo("descripcion", txtDescripcion, lblErrorDescripcion, txtDescripcion.textProperty());
-        registrarCampo("categoriaId", cmbCategoria, lblErrorCategoria, cmbCategoria.valueProperty());
-        registrarCampo("marcaId", cmbMarca, lblErrorMarca, cmbMarca.valueProperty());
-        registrarCampo("proveedorId", cmbProveedor, lblErrorProveedor, cmbProveedor.valueProperty());
-        registrarCampo("precioCompra", txtPrecioCompra, lblErrorPrecioCompra, txtPrecioCompra.textProperty());
-        registrarCampo("precioVenta", txtPrecioVenta, lblErrorPrecioVenta, txtPrecioVenta.textProperty());
-        registrarCampo("unidadMedida", cmbUnidadMedida, lblErrorUnidadMedida, cmbUnidadMedida.valueProperty());
-        registrarCampo("alicuotaIVA", cmbAlicuotaIva, lblErrorAlicuotaIva, cmbAlicuotaIva.valueProperty());
-        registrarCampo("stockMinimo", txtStockMinimo, lblErrorStockMinimo, txtStockMinimo.textProperty());
+        errores
+                .registrar("codigo", txtCodigo, lblErrorCodigo, txtCodigo.textProperty())
+                .registrar("codigoBarras", txtCodigoBarras, lblErrorCodigoBarras, txtCodigoBarras.textProperty())
+                .registrar("nombre", txtNombre, lblErrorNombre, txtNombre.textProperty())
+                .registrar("descripcion", txtDescripcion, lblErrorDescripcion, txtDescripcion.textProperty())
+                .registrar("categoriaId", cmbCategoria, lblErrorCategoria, cmbCategoria.valueProperty())
+                .registrar("marcaId", cmbMarca, lblErrorMarca, cmbMarca.valueProperty())
+                .registrar("proveedorId", cmbProveedor, lblErrorProveedor, cmbProveedor.valueProperty())
+                .registrar("precioCompra", txtPrecioCompra, lblErrorPrecioCompra, txtPrecioCompra.textProperty())
+                .registrar("precioVenta", txtPrecioVenta, lblErrorPrecioVenta, txtPrecioVenta.textProperty())
+                .registrar("unidadMedida", cmbUnidadMedida, lblErrorUnidadMedida, cmbUnidadMedida.valueProperty())
+                .registrar("alicuotaIVA", cmbAlicuotaIva, lblErrorAlicuotaIva, cmbAlicuotaIva.valueProperty())
+                .registrar("stockMinimo", txtStockMinimo, lblErrorStockMinimo, txtStockMinimo.textProperty());
 
         cargarCombos();
 
@@ -294,10 +284,8 @@ public class ProductoFormController extends AbstractController implements DataRe
         }
 
         if (producto.getCategoriaId() != null) {
-            ValidationResult result = new ValidationResult();
-            result.addError("categoriaId", "La categoría \"" + producto.getCategoriaNombre()
+            errores.mostrar("categoriaId", "La categoría \"" + producto.getCategoriaNombre()
                     + "\" fue eliminada. Seleccione otra.");
-            marcarErrores(result);
         }
     }
 
@@ -327,7 +315,7 @@ public class ProductoFormController extends AbstractController implements DataRe
 
     private void guardar() {
 
-        limpiarErrores();
+        errores.limpiar();
 
         // Primero se revisa que los números se puedan interpretar; el resto lo
         // valida el servicio.
@@ -335,7 +323,7 @@ public class ProductoFormController extends AbstractController implements DataRe
         ProductoDto dto = construirDto(erroresDeFormato);
 
         if (erroresDeFormato.hasErrors()) {
-            mostrarErrores(erroresDeFormato);
+            errores.mostrar(erroresDeFormato);
             return;
         }
 
@@ -352,7 +340,7 @@ public class ProductoFormController extends AbstractController implements DataRe
                 }
 
             } catch (ValidationException ex) {
-                mostrarErrores(ex.getValidationResult());
+                errores.mostrar(ex.getValidationResult());
                 return;
             }
 
@@ -360,7 +348,7 @@ public class ProductoFormController extends AbstractController implements DataRe
         });
     }
 
-    private ProductoDto construirDto(ValidationResult errores) {
+    private ProductoDto construirDto(ValidationResult erroresDeFormato) {
 
         return ProductoDto.builder()
                 .id(productoActual != null ? productoActual.getId() : null)
@@ -372,13 +360,13 @@ public class ProductoFormController extends AbstractController implements DataRe
                 .categoriaId(idSeleccionado(cmbCategoria))
                 .marcaId(idSeleccionado(cmbMarca))
                 .proveedorId(idSeleccionado(cmbProveedor))
-                .precioCompra(leerPrecio(txtPrecioCompra, "precioCompra", "precio de compra", errores))
-                .precioVenta(leerPrecio(txtPrecioVenta, "precioVenta", "precio de venta", errores))
+                .precioCompra(leerPrecio(txtPrecioCompra, "precioCompra", "precio de compra", erroresDeFormato))
+                .precioVenta(leerPrecio(txtPrecioVenta, "precioVenta", "precio de venta", erroresDeFormato))
                 .unidadMedida(cmbUnidadMedida.getValue())
                 .alicuotaIVA(cmbAlicuotaIva.getValue())
                 .manejaStock(chkManejaStock.isSelected())
                 .permiteStockNegativo(chkPermiteStockNegativo.isSelected())
-                .stockMinimo(leerStockMinimo(errores))
+                .stockMinimo(leerStockMinimo(erroresDeFormato))
                 .build();
     }
 
@@ -386,18 +374,18 @@ public class ProductoFormController extends AbstractController implements DataRe
         return combo.getValue() == null ? null : combo.getValue().id();
     }
 
-    private BigDecimal leerPrecio(TextField campo, String field, String nombre, ValidationResult errores) {
+    private BigDecimal leerPrecio(TextField campo, String field, String nombre, ValidationResult erroresDeFormato) {
 
         try {
             return NumberUtils.parseDecimal(campo.getText());
         } catch (NumberFormatException ex) {
-            errores.addError(field, "Ingrese un " + nombre + " válido. Ej.: 1234,50");
+            erroresDeFormato.addError(field, "Ingrese un " + nombre + " válido. Ej.: 1234,50");
             return null;
         }
     }
 
     /** Si la unidad admite decimales o no lo valida el servicio. */
-    private BigDecimal leerStockMinimo(ValidationResult errores) {
+    private BigDecimal leerStockMinimo(ValidationResult erroresDeFormato) {
 
         if (!chkManejaStock.isSelected()) {
             return BigDecimal.ZERO;
@@ -406,7 +394,7 @@ public class ProductoFormController extends AbstractController implements DataRe
         try {
             return NumberUtils.parseDecimal(txtStockMinimo.getText());
         } catch (NumberFormatException ex) {
-            errores.addError("stockMinimo", "Ingrese un número válido. Ej.: 10 o 2,5");
+            erroresDeFormato.addError("stockMinimo", "Ingrese un número válido. Ej.: 10 o 2,5");
             return null;
         }
     }
@@ -444,86 +432,8 @@ public class ProductoFormController extends AbstractController implements DataRe
         chkPermiteStockNegativo.setDisable(!manejaStock);
 
         if (!manejaStock) {
-            limpiarError("stockMinimo");
+            errores.limpiar("stockMinimo");
         }
-    }
-
-    // ------------------------------------------------------------------
-    // Errores por campo
-    // ------------------------------------------------------------------
-
-    private void registrarCampo(String field, Control control, Label lblError, ObservableValue<?> valor) {
-
-        campos.put(field, new CampoConError(control, lblError));
-
-        // El error de un campo se borra en cuanto el usuario lo corrige.
-        valor.addListener((obs, o, n) -> limpiarError(field));
-    }
-
-    /**
-     * Muestra cada error debajo de su campo. Si alguno no corresponde a un campo
-     * del formulario, se muestran todos en la ventana de validación habitual.
-     */
-    private void mostrarErrores(ValidationResult result) {
-
-        boolean todosUbicados = marcarErrores(result);
-
-        if (!todosUbicados) {
-            ValidationDialog.show(result);
-        }
-
-        result.getErrors().stream()
-                .map(error -> campos.get(error.getField()))
-                .filter(Objects::nonNull)
-                .findFirst()
-                .ifPresent(campo -> campo.control().requestFocus());
-    }
-
-    /** @return true si todos los errores corresponden a un campo del formulario. */
-    private boolean marcarErrores(ValidationResult result) {
-
-        boolean todosUbicados = true;
-
-        for (ValidationError error : result.getErrors()) {
-
-            CampoConError campo = campos.get(error.getField());
-
-            if (campo == null) {
-                todosUbicados = false;
-                continue;
-            }
-
-            // Si un campo tiene varios errores, se muestran todos.
-            String anterior = campo.lblError().getText();
-            campo.lblError().setText(anterior == null || anterior.isEmpty()
-                    ? error.getMessage()
-                    : anterior + "\n" + error.getMessage());
-            mostrar(campo.lblError(), true);
-
-            Control control = campo.control();
-            if (!control.getStyleClass().contains(CLASE_INVALIDO)) {
-                control.getStyleClass().add(CLASE_INVALIDO);
-            }
-        }
-
-        return todosUbicados;
-    }
-
-    private void limpiarErrores() {
-        campos.keySet().forEach(this::limpiarError);
-    }
-
-    private void limpiarError(String field) {
-
-        CampoConError campo = campos.get(field);
-
-        if (campo == null) {
-            return;
-        }
-
-        campo.lblError().setText("");
-        mostrar(campo.lblError(), false);
-        campo.control().getStyleClass().remove(CLASE_INVALIDO);
     }
 
     private void mostrar(Node nodo, boolean visible) {
