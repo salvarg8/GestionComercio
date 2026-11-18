@@ -11,4 +11,7 @@ public interface EmpresaRepository extends JpaRepository<Empresa, Long> {
 
     Optional<Empresa> findByCuit(String cuit);
 
+    /** Hay un único registro de empresa: se toma el primero. */
+    Optional<Empresa> findFirstByOrderByIdAsc();
+
 }

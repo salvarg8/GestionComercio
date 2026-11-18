@@ -53,15 +53,19 @@ public class DataInitializer implements CommandLineRunner {
         crearUsuarioAdminSiNoExiste(empresa, rolAdmin);
     }
 
+    /**
+     * Existe un único registro de empresa. Se busca cualquiera (no por CUIT):
+     * si el usuario edita los datos de la empresa, no tiene que crearse otra.
+     */
     private Empresa crearEmpresaSiNoExiste() {
 
-        return empresaRepository.findByCuit("30000000001")
+        return empresaRepository.findFirstByOrderByIdAsc()
                 .orElseGet(() -> {
 
                     Empresa empresa = Empresa.builder()
                             .razonSocial("Empresa Demo")
                             .nombreFantasia("Gestión Comercio")
-                            .cuit("30000000001")
+                            .cuit("30000000007")
                             .direccion("Av. Siempre Viva 123")
                             .telefono("3510000000")
                             .email("admin@gestioncomercio.com")
