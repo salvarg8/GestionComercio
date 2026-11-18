@@ -8,8 +8,9 @@ public interface CategoriaService extends CrudService<CategoriaDto, Long> {
 
     /**
      * Categorías activas para elegir en otros formularios (por ejemplo, el de productos).
-     * Acepta CATEGORIA_VER, PRODUCTO_CREAR o PRODUCTO_EDITAR, para que quien carga
-     * productos pueda elegir la categoría sin tener acceso al ABM de categorías.
+     * Acepta CATEGORIA_VER, PRODUCTO_CREAR, PRODUCTO_EDITAR o INVENTARIO_VER, para que
+     * quien carga productos o consulta el stock pueda elegir la categoría sin tener
+     * acceso al ABM de categorías.
      */
     List<CategoriaDto> findParaSeleccion();
 

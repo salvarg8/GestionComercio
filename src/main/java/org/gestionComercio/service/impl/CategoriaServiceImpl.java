@@ -133,7 +133,8 @@ public class CategoriaServiceImpl implements CategoriaService {
         sesionUsuario.requerirAlgunPermiso(
                 PermisoCodigo.CATEGORIA_VER,
                 PermisoCodigo.PRODUCTO_CREAR,
-                PermisoCodigo.PRODUCTO_EDITAR);
+                PermisoCodigo.PRODUCTO_EDITAR,
+                PermisoCodigo.INVENTARIO_VER);
 
         return listarActivas();
     }
