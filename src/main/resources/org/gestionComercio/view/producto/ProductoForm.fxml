@@ -1,0 +1,394 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="org.gestionComercio.controller.producto.ProductoFormController"
+            fitToWidth="true"
+            styleClass="form-scroll">
+
+    <content>
+
+        <VBox spacing="15.0"
+              prefWidth="820"
+              maxWidth="820">
+
+            <padding>
+                <Insets top="30" right="30" bottom="30" left="30"/>
+            </padding>
+
+            <children>
+
+                <Label fx:id="lblTitulo"
+                       text="Nuevo producto"
+                       style="-fx-font-size: 22px; -fx-font-weight: bold;"/>
+
+                <Label fx:id="lblAvisoDadoDeBaja"
+                       styleClass="form-warning"
+                       wrapText="true"
+                       maxWidth="Infinity"/>
+
+                <!-- ============================================= -->
+                <!-- DATOS GENERALES -->
+                <!-- ============================================= -->
+
+                <HBox spacing="15">
+
+                    <children>
+
+                        <VBox spacing="5.0" prefWidth="200" minWidth="200">
+
+                            <children>
+
+                                <Label text="Código interno *"/>
+
+                                <TextField fx:id="txtCodigo"
+                                           promptText="Ej.: BEB-001"/>
+
+                                <Label fx:id="lblErrorCodigo"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                            </children>
+
+                        </VBox>
+
+                        <VBox spacing="5.0" prefWidth="230" minWidth="230">
+
+                            <children>
+
+                                <Label text="Código de barras"/>
+
+                                <TextField fx:id="txtCodigoBarras"
+                                           promptText="Opcional. Escanee o escriba"/>
+
+                                <Label fx:id="lblErrorCodigoBarras"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                            </children>
+
+                        </VBox>
+
+                    </children>
+
+                </HBox>
+
+                <VBox spacing="5.0">
+
+                    <children>
+
+                        <Label text="Nombre *"/>
+
+                        <TextField fx:id="txtNombre"
+                                   promptText="Ej.: Gaseosa cola 1,5 L"/>
+
+                        <Label fx:id="lblErrorNombre"
+                               styleClass="field-error-label"
+                               wrapText="true"
+                               visible="false"
+                               managed="false"/>
+
+                    </children>
+
+                </VBox>
+
+                <VBox spacing="5.0">
+
+                    <children>
+
+                        <Label text="Descripción"/>
+
+                        <TextArea fx:id="txtDescripcion"
+                                  promptText="Opcional"
+                                  prefRowCount="3"
+                                  wrapText="true"/>
+
+                        <Label fx:id="lblErrorDescripcion"
+                               styleClass="field-error-label"
+                               wrapText="true"
+                               visible="false"
+                               managed="false"/>
+
+                    </children>
+
+                </VBox>
+
+                <!-- ============================================= -->
+                <!-- CLASIFICACIÓN -->
+                <!-- ============================================= -->
+
+                <Separator/>
+
+                <Label text="Clasificación" styleClass="subtitle"/>
+
+                <HBox spacing="15">
+
+                    <children>
+
+                        <VBox spacing="5.0" HBox.hgrow="ALWAYS" prefWidth="240">
+
+                            <children>
+
+                                <Label text="Categoría *"/>
+
+                                <ComboBox fx:id="cmbCategoria"
+                                          promptText="Seleccione..."
+                                          maxWidth="Infinity"/>
+
+                                <Label fx:id="lblErrorCategoria"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                            </children>
+
+                        </VBox>
+
+                        <VBox spacing="5.0" HBox.hgrow="ALWAYS" prefWidth="240">
+
+                            <children>
+
+                                <Label text="Marca *"/>
+
+                                <ComboBox fx:id="cmbMarca"
+                                          promptText="Seleccione..."
+                                          maxWidth="Infinity"/>
+
+                                <Label fx:id="lblErrorMarca"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                            </children>
+
+                        </VBox>
+
+                        <VBox spacing="5.0" HBox.hgrow="ALWAYS" prefWidth="240">
+
+                            <children>
+
+                                <Label text="Proveedor *"/>
+
+                                <ComboBox fx:id="cmbProveedor"
+                                          promptText="Seleccione..."
+                                          maxWidth="Infinity"/>
+
+                                <Label fx:id="lblErrorProveedor"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                            </children>
+
+                        </VBox>
+
+                    </children>
+
+                </HBox>
+
+                <!-- ============================================= -->
+                <!-- PRECIOS -->
+                <!-- ============================================= -->
+
+                <Separator/>
+
+                <Label text="Precios" styleClass="subtitle"/>
+
+                <HBox spacing="15">
+
+                    <children>
+
+                        <VBox spacing="5.0" prefWidth="180" minWidth="180">
+
+                            <children>
+
+                                <Label text="Precio de compra *"/>
+
+                                <TextField fx:id="txtPrecioCompra"
+                                           promptText="Ej.: 1234,50"
+                                           alignment="CENTER_RIGHT"/>
+
+                                <Label fx:id="lblErrorPrecioCompra"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                            </children>
+
+                        </VBox>
+
+                        <VBox spacing="5.0" prefWidth="180" minWidth="180">
+
+                            <children>
+
+                                <Label text="Precio de venta *"/>
+
+                                <TextField fx:id="txtPrecioVenta"
+                                           promptText="Ej.: 1850,00"
+                                           alignment="CENTER_RIGHT"/>
+
+                                <Label fx:id="lblErrorPrecioVenta"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                                <Label fx:id="lblMargen"
+                                       styleClass="form-hint"/>
+
+                            </children>
+
+                        </VBox>
+
+                        <VBox spacing="5.0" prefWidth="160" minWidth="160">
+
+                            <children>
+
+                                <Label text="Alícuota de IVA *"/>
+
+                                <ComboBox fx:id="cmbAlicuotaIva"
+                                          maxWidth="Infinity"/>
+
+                                <Label fx:id="lblErrorAlicuotaIva"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                            </children>
+
+                        </VBox>
+
+                    </children>
+
+                </HBox>
+
+                <!-- ============================================= -->
+                <!-- STOCK -->
+                <!-- ============================================= -->
+
+                <Separator/>
+
+                <Label text="Stock" styleClass="subtitle"/>
+
+                <HBox spacing="15" alignment="TOP_LEFT">
+
+                    <children>
+
+                        <VBox spacing="5.0" prefWidth="180" minWidth="180">
+
+                            <children>
+
+                                <Label text="Unidad de medida *"/>
+
+                                <ComboBox fx:id="cmbUnidadMedida"
+                                          maxWidth="Infinity"/>
+
+                                <Label fx:id="lblErrorUnidadMedida"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                            </children>
+
+                        </VBox>
+
+                        <VBox spacing="5.0" prefWidth="180" minWidth="180">
+
+                            <children>
+
+                                <Label text="Stock mínimo"/>
+
+                                <TextField fx:id="txtStockMinimo"
+                                           alignment="CENTER_RIGHT"/>
+
+                                <Label fx:id="lblErrorStockMinimo"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                            </children>
+
+                        </VBox>
+
+                        <VBox fx:id="boxStockActual" spacing="5.0" prefWidth="160" minWidth="160">
+
+                            <children>
+
+                                <Label text="Stock actual"/>
+
+                                <Label fx:id="lblStockActual"
+                                       style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+                                <Label text="Se modifica con compras, ventas y ajustes."
+                                       styleClass="form-hint"
+                                       wrapText="true"/>
+
+                            </children>
+
+                        </VBox>
+
+                    </children>
+
+                </HBox>
+
+                <CheckBox fx:id="chkManejaStock"
+                          text="Controlar el stock de este producto"/>
+
+                <CheckBox fx:id="chkPermiteStockNegativo"
+                          text="Permitir vender sin stock (stock negativo)"/>
+
+                <!-- ============================================= -->
+                <!-- BOTONES -->
+                <!-- ============================================= -->
+
+                <HBox spacing="10"
+                      alignment="CENTER_RIGHT">
+
+                    <padding>
+                        <Insets top="10"/>
+                    </padding>
+
+                    <children>
+
+                        <Button fx:id="btnCancelar" styleClass="btn-secondary"
+                                cancelButton="true"
+                                text="Cancelar"/>
+
+                        <Button fx:id="btnGuardar" styleClass="btn-primary"
+                                defaultButton="true"
+                                text="Guardar"/>
+
+                    </children>
+
+                </HBox>
+
+            </children>
+
+        </VBox>
+
+    </content>
+
+</ScrollPane>

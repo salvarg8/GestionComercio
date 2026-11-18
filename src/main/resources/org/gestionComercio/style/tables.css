@@ -3,14 +3,16 @@
     -fx-background-radius: 8;
 
 }
-.table-view .column-header {
+.table-view .column-header,
+.table-view .filler {
 
-     -fx-background-color: -fx-primary;
+     -fx-background-color: #E3EAF3;
 
  }
 .table-view .column-header .label {
 
-    -fx-text-fill: white;
+    -fx-text-fill: black;
+    -fx-font-weight: bold;
 
 }
 
@@ -44,5 +46,15 @@
 
     -fx-background-color: #F3F4F6;
     -fx-text-fill: #6B7280;
+
+}
+
+
+/* Productos con stock en el mínimo o por debajo */
+
+.estado-badge.stock-bajo {
+
+    -fx-background-color: #FDECEA;
+    -fx-text-fill: #C62828;
 
 }

@@ -36,7 +36,8 @@ public enum PermisoCodigo {
     PRODUCTO_VER("Productos", "Ver productos"),
     PRODUCTO_CREAR("Productos", "Crear productos"),
     PRODUCTO_EDITAR("Productos", "Editar productos"),
-    PRODUCTO_ELIMINAR("Productos", "Eliminar productos"),
+    PRODUCTO_DAR_BAJA("Productos", "Dar de baja productos"),
+    PRODUCTO_HABILITAR("Productos", "Volver a habilitar productos dados de baja"),
 
     // Categorías
     CATEGORIA_VER("Categorías", "Ver categorías"),

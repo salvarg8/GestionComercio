@@ -1,0 +1,534 @@
+package org.gestionComercio.controller.producto;
+
+import javafx.beans.value.ObservableValue;
+import javafx.fxml.FXML;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Control;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.VBox;
+import lombok.RequiredArgsConstructor;
+import org.gestionComercio.controller.base.AbstractController;
+import org.gestionComercio.dto.producto.ProductoDto;
+import org.gestionComercio.enums.AlicuotaIVA;
+import org.gestionComercio.enums.UnidadMedida;
+import org.gestionComercio.exception.ValidationException;
+import org.gestionComercio.navigation.AppView;
+import org.gestionComercio.navigation.DataReceiver;
+import org.gestionComercio.navigation.Navigator;
+import org.gestionComercio.service.CategoriaService;
+import org.gestionComercio.service.MarcaService;
+import org.gestionComercio.service.ProductoService;
+import org.gestionComercio.service.ProveedorService;
+import org.gestionComercio.util.NumberUtils;
+import org.gestionComercio.util.dialog.ValidationDialog;
+import org.gestionComercio.validation.ValidationError;
+import org.gestionComercio.validation.ValidationResult;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Controller;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
+
+@Controller
+@RequiredArgsConstructor
+@Scope("prototype")
+public class ProductoFormController extends AbstractController implements DataReceiver<ProductoDto> {
+
+    private static final String CLASE_INVALIDO = "field-invalid";
+
+    private final ProductoService productoService;
+    private final CategoriaService categoriaService;
+    private final MarcaService marcaService;
+    private final ProveedorService proveedorService;
+    private final Navigator navigator;
+
+    @FXML
+    private Label lblTitulo;
+
+    @FXML
+    private Label lblAvisoDadoDeBaja;
+
+    @FXML
+    private TextField txtCodigo;
+
+    @FXML
+    private Label lblErrorCodigo;
+
+    @FXML
+    private TextField txtCodigoBarras;
+
+    @FXML
+    private Label lblErrorCodigoBarras;
+
+    @FXML
+    private TextField txtNombre;
+
+    @FXML
+    private Label lblErrorNombre;
+
+    @FXML
+    private TextArea txtDescripcion;
+
+    @FXML
+    private Label lblErrorDescripcion;
+
+    @FXML
+    private ComboBox<Opcion> cmbCategoria;
+
+    @FXML
+    private Label lblErrorCategoria;
+
+    @FXML
+    private ComboBox<Opcion> cmbMarca;
+
+    @FXML
+    private Label lblErrorMarca;
+
+    @FXML
+    private ComboBox<Opcion> cmbProveedor;
+
+    @FXML
+    private Label lblErrorProveedor;
+
+    @FXML
+    private TextField txtPrecioCompra;
+
+    @FXML
+    private Label lblErrorPrecioCompra;
+
+    @FXML
+    private TextField txtPrecioVenta;
+
+    @FXML
+    private Label lblErrorPrecioVenta;
+
+    @FXML
+    private Label lblMargen;
+
+    @FXML
+    private ComboBox<UnidadMedida> cmbUnidadMedida;
+
+    @FXML
+    private Label lblErrorUnidadMedida;
+
+    @FXML
+    private ComboBox<AlicuotaIVA> cmbAlicuotaIva;
+
+    @FXML
+    private Label lblErrorAlicuotaIva;
+
+    @FXML
+    private CheckBox chkManejaStock;
+
+    @FXML
+    private TextField txtStockMinimo;
+
+    @FXML
+    private Label lblErrorStockMinimo;
+
+    @FXML
+    private CheckBox chkPermiteStockNegativo;
+
+    @FXML
+    private VBox boxStockActual;
+
+    @FXML
+    private Label lblStockActual;
+
+    @FXML
+    private Button btnGuardar;
+
+    @FXML
+    private Button btnCancelar;
+
+    /** null = alta; distinto de null = edición. */
+    private ProductoDto productoActual;
+
+    /** Campo del DTO → control y etiqueta donde se muestra su error. */
+    private final Map<String, CampoConError> campos = new LinkedHashMap<>();
+
+    private record CampoConError(Control control, Label lblError) {
+    }
+
+    /** Elemento de los combos de categoría, marca y proveedor. */
+    private record Opcion(Long id, String texto) {
+
+        @Override
+        public String toString() {
+            return texto;
+        }
+    }
+
+    @Override
+    protected void initializeComponents() {
+
+        registrarCampo("codigo", txtCodigo, lblErrorCodigo, txtCodigo.textProperty());
+        registrarCampo("codigoBarras", txtCodigoBarras, lblErrorCodigoBarras, txtCodigoBarras.textProperty());
+        registrarCampo("nombre", txtNombre, lblErrorNombre, txtNombre.textProperty());
+        registrarCampo("descripcion", txtDescripcion, lblErrorDescripcion, txtDescripcion.textProperty());
+        registrarCampo("categoriaId", cmbCategoria, lblErrorCategoria, cmbCategoria.valueProperty());
+        registrarCampo("marcaId", cmbMarca, lblErrorMarca, cmbMarca.valueProperty());
+        registrarCampo("proveedorId", cmbProveedor, lblErrorProveedor, cmbProveedor.valueProperty());
+        registrarCampo("precioCompra", txtPrecioCompra, lblErrorPrecioCompra, txtPrecioCompra.textProperty());
+        registrarCampo("precioVenta", txtPrecioVenta, lblErrorPrecioVenta, txtPrecioVenta.textProperty());
+        registrarCampo("unidadMedida", cmbUnidadMedida, lblErrorUnidadMedida, cmbUnidadMedida.valueProperty());
+        registrarCampo("alicuotaIVA", cmbAlicuotaIva, lblErrorAlicuotaIva, cmbAlicuotaIva.valueProperty());
+        registrarCampo("stockMinimo", txtStockMinimo, lblErrorStockMinimo, txtStockMinimo.textProperty());
+
+        cargarCombos();
+
+        lblTitulo.setText("Nuevo producto");
+        cmbUnidadMedida.setValue(UnidadMedida.UNIDAD);
+        cmbAlicuotaIva.setValue(AlicuotaIVA.IVA_21);
+        chkManejaStock.setSelected(true);
+        txtStockMinimo.setText("0");
+
+        mostrar(lblAvisoDadoDeBaja, false);
+        mostrar(boxStockActual, false);
+        actualizarMargen();
+
+        txtCodigo.requestFocus();
+    }
+
+    @Override
+    protected void initializeEvents() {
+
+        btnGuardar.setOnAction(e -> guardar());
+
+        btnCancelar.setOnAction(e -> volver());
+
+        // Los lectores de código de barras terminan con Enter: en vez de guardar
+        // el formulario (botón por defecto), se pasa al campo siguiente.
+        txtCodigoBarras.setOnAction(e -> {
+            e.consume();
+            txtNombre.requestFocus();
+        });
+
+        txtPrecioCompra.textProperty().addListener((obs, o, n) -> actualizarMargen());
+        txtPrecioVenta.textProperty().addListener((obs, o, n) -> actualizarMargen());
+
+        chkManejaStock.selectedProperty().addListener((obs, o, n) -> actualizarControlesStock());
+        actualizarControlesStock();
+    }
+
+    /**
+     * Los combos ofrecen sólo categorías, marcas y proveedores vigentes. Los
+     * servicios aceptan PRODUCTO_CREAR o PRODUCTO_EDITAR, así que no hace falta
+     * tener acceso a esos ABM.
+     */
+    private void cargarCombos() {
+
+        execute(() -> {
+
+            cmbCategoria.getItems().setAll(categoriaService.findParaSeleccion().stream()
+                    .map(c -> new Opcion(c.getId(), c.getNombre()))
+                    .toList());
+
+            cmbMarca.getItems().setAll(marcaService.findParaSeleccion().stream()
+                    .map(m -> new Opcion(m.getId(), m.getNombre()))
+                    .toList());
+
+            cmbProveedor.getItems().setAll(proveedorService.findParaSeleccion().stream()
+                    .map(p -> new Opcion(p.getId(), p.getRazonSocial()))
+                    .toList());
+        });
+
+        cmbUnidadMedida.getItems().setAll(UnidadMedida.values());
+        cmbAlicuotaIva.getItems().setAll(AlicuotaIVA.values());
+    }
+
+    @Override
+    public void setData(ProductoDto producto) {
+
+        productoActual = producto;
+
+        lblTitulo.setText("Editar producto");
+        txtCodigo.setText(producto.getCodigo());
+        txtCodigoBarras.setText(producto.getCodigoBarras());
+        txtNombre.setText(producto.getNombre());
+        txtDescripcion.setText(producto.getDescripcion());
+        txtPrecioCompra.setText(NumberUtils.formatDecimalEditable(producto.getPrecioCompra()));
+        txtPrecioVenta.setText(NumberUtils.formatDecimalEditable(producto.getPrecioVenta()));
+        cmbUnidadMedida.setValue(producto.getUnidadMedida());
+        cmbAlicuotaIva.setValue(producto.getAlicuotaIVA());
+        chkManejaStock.setSelected(Boolean.TRUE.equals(producto.getManejaStock()));
+        chkPermiteStockNegativo.setSelected(Boolean.TRUE.equals(producto.getPermiteStockNegativo()));
+        txtStockMinimo.setText(producto.getStockMinimo() == null ? "" : producto.getStockMinimo().toString());
+
+        seleccionarCategoria(producto);
+
+        // Una marca o un proveedor dados de baja se conservan: se agregan al combo
+        // para que el producto pueda guardarse sin cambiarlos.
+        seleccionar(cmbMarca, producto.getMarcaId(), producto.getMarcaNombre(), "dada de baja");
+        seleccionar(cmbProveedor, producto.getProveedorId(), producto.getProveedorNombre(), "dado de baja");
+
+        lblStockActual.setText(Boolean.TRUE.equals(producto.getManejaStock())
+                ? String.valueOf(producto.getStock() == null ? 0 : producto.getStock())
+                : "No maneja stock");
+        mostrar(boxStockActual, true);
+
+        if (!producto.isActivo()) {
+            lblAvisoDadoDeBaja.setText("Este producto está dado de baja. Guardar los cambios no lo "
+                    + "habilita: para eso use \"Volver a habilitar\" en el listado.");
+            mostrar(lblAvisoDadoDeBaja, true);
+        }
+    }
+
+    /** Una categoría eliminada no se puede conservar: se avisa para que elija otra. */
+    private void seleccionarCategoria(ProductoDto producto) {
+
+        Opcion opcion = buscarOpcion(cmbCategoria, producto.getCategoriaId());
+
+        if (opcion != null) {
+            cmbCategoria.setValue(opcion);
+            return;
+        }
+
+        if (producto.getCategoriaId() != null) {
+            ValidationResult result = new ValidationResult();
+            result.addError("categoriaId", "La categoría \"" + producto.getCategoriaNombre()
+                    + "\" fue eliminada. Seleccione otra.");
+            marcarErrores(result);
+        }
+    }
+
+    private void seleccionar(ComboBox<Opcion> combo, Long id, String nombre, String sufijoBaja) {
+
+        if (id == null) {
+            return;
+        }
+
+        Opcion opcion = buscarOpcion(combo, id);
+
+        if (opcion == null) {
+            opcion = new Opcion(id, nombre + " (" + sufijoBaja + ")");
+            combo.getItems().add(0, opcion);
+        }
+
+        combo.setValue(opcion);
+    }
+
+    private Opcion buscarOpcion(ComboBox<Opcion> combo, Long id) {
+
+        return combo.getItems().stream()
+                .filter(o -> Objects.equals(o.id(), id))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private void guardar() {
+
+        limpiarErrores();
+
+        // Primero se revisa que los números se puedan interpretar; el resto lo
+        // valida el servicio.
+        ValidationResult erroresDeFormato = new ValidationResult();
+        ProductoDto dto = construirDto(erroresDeFormato);
+
+        if (erroresDeFormato.hasErrors()) {
+            mostrarErrores(erroresDeFormato);
+            return;
+        }
+
+        execute(() -> {
+
+            try {
+
+                if (productoActual == null) {
+                    productoService.save(dto);
+                    success("Producto creado correctamente.");
+                } else {
+                    productoService.update(dto);
+                    success("Producto actualizado correctamente.");
+                }
+
+            } catch (ValidationException ex) {
+                mostrarErrores(ex.getValidationResult());
+                return;
+            }
+
+            volver();
+        });
+    }
+
+    private ProductoDto construirDto(ValidationResult errores) {
+
+        return ProductoDto.builder()
+                .id(productoActual != null ? productoActual.getId() : null)
+                .codigo(txtCodigo.getText())
+                .codigoBarras(txtCodigoBarras.getText())
+                .nombre(txtNombre.getText())
+                .descripcion(txtDescripcion.getText())
+                .categoriaId(idSeleccionado(cmbCategoria))
+                .marcaId(idSeleccionado(cmbMarca))
+                .proveedorId(idSeleccionado(cmbProveedor))
+                .precioCompra(leerPrecio(txtPrecioCompra, "precioCompra", "precio de compra", errores))
+                .precioVenta(leerPrecio(txtPrecioVenta, "precioVenta", "precio de venta", errores))
+                .unidadMedida(cmbUnidadMedida.getValue())
+                .alicuotaIVA(cmbAlicuotaIva.getValue())
+                .manejaStock(chkManejaStock.isSelected())
+                .permiteStockNegativo(chkPermiteStockNegativo.isSelected())
+                .stockMinimo(leerStockMinimo(errores))
+                .build();
+    }
+
+    private Long idSeleccionado(ComboBox<Opcion> combo) {
+        return combo.getValue() == null ? null : combo.getValue().id();
+    }
+
+    private BigDecimal leerPrecio(TextField campo, String field, String nombre, ValidationResult errores) {
+
+        try {
+            return NumberUtils.parseDecimal(campo.getText());
+        } catch (NumberFormatException ex) {
+            errores.addError(field, "Ingrese un " + nombre + " válido. Ej.: 1234,50");
+            return null;
+        }
+    }
+
+    private Integer leerStockMinimo(ValidationResult errores) {
+
+        if (!chkManejaStock.isSelected()) {
+            return 0;
+        }
+
+        try {
+            return NumberUtils.parseEntero(txtStockMinimo.getText());
+        } catch (NumberFormatException ex) {
+            errores.addError("stockMinimo", "Ingrese un número entero, sin decimales.");
+            return null;
+        }
+    }
+
+    /** Muestra el margen sobre el precio de compra mientras se escriben los precios. */
+    private void actualizarMargen() {
+
+        try {
+
+            BigDecimal compra = NumberUtils.parseDecimal(txtPrecioCompra.getText());
+            BigDecimal venta = NumberUtils.parseDecimal(txtPrecioVenta.getText());
+
+            if (compra == null || venta == null || compra.signum() <= 0) {
+                lblMargen.setText("");
+                return;
+            }
+
+            BigDecimal margen = venta.subtract(compra)
+                    .multiply(BigDecimal.valueOf(100))
+                    .divide(compra, 1, RoundingMode.HALF_UP);
+
+            lblMargen.setText("Margen sobre el costo: "
+                    + margen.toPlainString().replace('.', ',') + " %");
+
+        } catch (NumberFormatException ex) {
+            lblMargen.setText("");
+        }
+    }
+
+    private void actualizarControlesStock() {
+
+        boolean manejaStock = chkManejaStock.isSelected();
+
+        txtStockMinimo.setDisable(!manejaStock);
+        chkPermiteStockNegativo.setDisable(!manejaStock);
+
+        if (!manejaStock) {
+            limpiarError("stockMinimo");
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Errores por campo
+    // ------------------------------------------------------------------
+
+    private void registrarCampo(String field, Control control, Label lblError, ObservableValue<?> valor) {
+
+        campos.put(field, new CampoConError(control, lblError));
+
+        // El error de un campo se borra en cuanto el usuario lo corrige.
+        valor.addListener((obs, o, n) -> limpiarError(field));
+    }
+
+    /**
+     * Muestra cada error debajo de su campo. Si alguno no corresponde a un campo
+     * del formulario, se muestran todos en la ventana de validación habitual.
+     */
+    private void mostrarErrores(ValidationResult result) {
+
+        boolean todosUbicados = marcarErrores(result);
+
+        if (!todosUbicados) {
+            ValidationDialog.show(result);
+        }
+
+        result.getErrors().stream()
+                .map(error -> campos.get(error.getField()))
+                .filter(Objects::nonNull)
+                .findFirst()
+                .ifPresent(campo -> campo.control().requestFocus());
+    }
+
+    /** @return true si todos los errores corresponden a un campo del formulario. */
+    private boolean marcarErrores(ValidationResult result) {
+
+        boolean todosUbicados = true;
+
+        for (ValidationError error : result.getErrors()) {
+
+            CampoConError campo = campos.get(error.getField());
+
+            if (campo == null) {
+                todosUbicados = false;
+                continue;
+            }
+
+            // Si un campo tiene varios errores, se muestran todos.
+            String anterior = campo.lblError().getText();
+            campo.lblError().setText(anterior == null || anterior.isEmpty()
+                    ? error.getMessage()
+                    : anterior + "\n" + error.getMessage());
+            mostrar(campo.lblError(), true);
+
+            Control control = campo.control();
+            if (!control.getStyleClass().contains(CLASE_INVALIDO)) {
+                control.getStyleClass().add(CLASE_INVALIDO);
+            }
+        }
+
+        return todosUbicados;
+    }
+
+    private void limpiarErrores() {
+        campos.keySet().forEach(this::limpiarError);
+    }
+
+    private void limpiarError(String field) {
+
+        CampoConError campo = campos.get(field);
+
+        if (campo == null) {
+            return;
+        }
+
+        campo.lblError().setText("");
+        mostrar(campo.lblError(), false);
+        campo.control().getStyleClass().remove(CLASE_INVALIDO);
+    }
+
+    private void mostrar(Node nodo, boolean visible) {
+        nodo.setVisible(visible);
+        nodo.setManaged(visible);
+    }
+
+    private void volver() {
+        navigator.navigate(AppView.PRODUCTO_LIST);
+    }
+}
