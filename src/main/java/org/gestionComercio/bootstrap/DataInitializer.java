@@ -34,11 +34,13 @@ public class DataInitializer implements CommandLineRunner {
     private final PermisoRepository permisoRepository;
     private final JdbcTemplate jdbcTemplate;
     private final ProveedorTablaMigracion proveedorTablaMigracion;
+    private final ClienteTablaMigracion clienteTablaMigracion;
 
     @Override
     public void run(String... args) {
 
         proveedorTablaMigracion.migrarSiCorresponde();
+        clienteTablaMigracion.migrarSiCorresponde();
 
         Empresa empresa = crearEmpresaSiNoExiste();
 
