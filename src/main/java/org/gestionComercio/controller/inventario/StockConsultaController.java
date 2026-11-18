@@ -43,8 +43,9 @@ import java.util.function.Function;
 /**
  * Consulta de las existencias actuales de los productos activos: por producto
  * (búsqueda por nombre o código), por categoría y por situación (stock bajo,
- * sin stock). Con el permiso INVENTARIO_AJUSTAR permite además corregir el
- * stock de un producto indicando el stock real ({@link AjusteStockDialog}). Desde cada producto se
+ * sin stock). Según los permisos del usuario permite además registrar
+ * entradas y salidas ({@link MovimientoStockDialog}) y corregir el stock
+ * indicando el stock real ({@link AjusteStockDialog}). Desde cada producto se
  * puede abrir su historial de movimientos.
  */
 @Controller
@@ -235,7 +236,8 @@ public class StockConsultaController extends AbstractController {
 
     /**
      * Ver movimientos está siempre disponible (la pantalla ya exige INVENTARIO_VER).
-     * Ajustar sólo aparece con permiso y en productos que manejan stock.
+     * Entrada, salida y ajuste sólo aparecen con su permiso y en productos que
+     * manejan stock.
      */
     private void configurarAcciones() {
 
@@ -245,6 +247,18 @@ public class StockConsultaController extends AbstractController {
 
         acciones.add(new Accion<StockProductoDto>(FontAwesomeSolid.HISTORY, "Ver movimientos", "btn-icon-edit",
                 stock -> true, this::verMovimientos));
+
+        if (sesionUsuario.tienePermiso(PermisoCodigo.INVENTARIO_REGISTRAR_ENTRADA)) {
+            acciones.add(new Accion<StockProductoDto>(FontAwesomeSolid.PLUS_CIRCLE, "Registrar entrada",
+                    "btn-icon-enable", stock -> Boolean.TRUE.equals(stock.manejaStock()),
+                    stock -> registrarMovimiento(stock, MovimientoStockDialog.Operacion.ENTRADA)));
+        }
+
+        if (sesionUsuario.tienePermiso(PermisoCodigo.INVENTARIO_REGISTRAR_SALIDA)) {
+            acciones.add(new Accion<StockProductoDto>(FontAwesomeSolid.MINUS_CIRCLE, "Registrar salida",
+                    "btn-icon-delete", stock -> Boolean.TRUE.equals(stock.manejaStock()),
+                    stock -> registrarMovimiento(stock, MovimientoStockDialog.Operacion.SALIDA)));
+        }
 
         if (puedeAjustar) {
             acciones.add(new Accion<StockProductoDto>(FontAwesomeSolid.SLIDERS_H, "Ajustar stock", "btn-icon-edit",
@@ -299,6 +313,26 @@ public class StockConsultaController extends AbstractController {
                     + "Stock resultante: " + CantidadUtils.formatear(m.getStockResultante()) + "\n"
                     + "Motivo: " + m.getMotivoAjuste().getDescripcion()
                     + (m.getMotivo().equals(m.getMotivoAjuste().getDescripcion()) ? "" : " — " + m.getMotivo()));
+        });
+    }
+
+    /** Abre la entrada o salida del producto; si se registra, informa el resultado y refresca la tabla. */
+    private void registrarMovimiento(StockProductoDto stock, MovimientoStockDialog.Operacion operacion) {
+
+        Optional<MovimientoInventarioDto> movimiento =
+                new MovimientoStockDialog(inventarioService, stock, operacion).mostrar();
+
+        movimiento.ifPresent(m -> {
+
+            cargar();
+
+            success("Se registró la " + (operacion == MovimientoStockDialog.Operacion.ENTRADA ? "entrada" : "salida")
+                    + " de \"" + stock.nombre() + "\".\n\n"
+                    + "Stock anterior: " + CantidadUtils.formatear(m.getStockAnterior()) + "\n"
+                    + "Cantidad: " + (m.getCantidad().signum() > 0 ? "+" : "")
+                    + CantidadUtils.formatear(m.getCantidad()) + "\n"
+                    + "Stock resultante: " + CantidadUtils.formatear(m.getStockResultante()) + "\n"
+                    + "Motivo: " + m.getMotivo());
         });
     }
 

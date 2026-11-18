@@ -73,7 +73,7 @@ public interface ProductoRepository extends BaseRepository<Producto, Long> {
             select new org.gestionComercio.dto.inventario.StockProductoDto(
                 p.id, p.codigo, p.codigoBarras, p.nombre,
                 c.id, c.nombre, m.nombre,
-                p.unidadMedida, p.stock, p.stockMinimo, p.manejaStock, p.estadoRegistro)
+                p.unidadMedida, p.stock, p.stockMinimo, p.manejaStock, p.permiteStockNegativo, p.estadoRegistro)
             from Producto p
               join p.categoria c
               join p.marca m
@@ -99,7 +99,7 @@ public interface ProductoRepository extends BaseRepository<Producto, Long> {
             select new org.gestionComercio.dto.inventario.StockProductoDto(
                 p.id, p.codigo, p.codigoBarras, p.nombre,
                 c.id, c.nombre, m.nombre,
-                p.unidadMedida, p.stock, p.stockMinimo, p.manejaStock, p.estadoRegistro)
+                p.unidadMedida, p.stock, p.stockMinimo, p.manejaStock, p.permiteStockNegativo, p.estadoRegistro)
             from Producto p
               join p.categoria c
               join p.marca m
@@ -115,7 +115,7 @@ public interface ProductoRepository extends BaseRepository<Producto, Long> {
             select new org.gestionComercio.dto.inventario.StockProductoDto(
                 p.id, p.codigo, p.codigoBarras, p.nombre,
                 c.id, c.nombre, m.nombre,
-                p.unidadMedida, p.stock, p.stockMinimo, p.manejaStock, p.estadoRegistro)
+                p.unidadMedida, p.stock, p.stockMinimo, p.manejaStock, p.permiteStockNegativo, p.estadoRegistro)
             from Producto p
               join p.categoria c
               join p.marca m
