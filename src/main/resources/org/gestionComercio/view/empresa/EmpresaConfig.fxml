@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="org.gestionComercio.controller.empresa.EmpresaConfigController"
+            fitToWidth="true"
+            styleClass="form-scroll">
+
+    <content>
+
+        <VBox spacing="15.0"
+              prefWidth="820"
+              maxWidth="820">
+
+            <padding>
+                <Insets top="30" right="30" bottom="30" left="30"/>
+            </padding>
+
+            <children>
+
+                <Label text="Configuración de la empresa"
+                       style="-fx-font-size: 22px; -fx-font-weight: bold;"/>
+
+                <Label text="Estos datos se imprimen en los comprobantes y reportes."
+                       styleClass="form-hint"/>
+
+                <Label fx:id="lblSoloLectura"
+                       text="Sólo lectura: no tiene permiso para editar los datos de la empresa."
+                       styleClass="form-warning"
+                       wrapText="true"
+                       maxWidth="Infinity"
+                       visible="false"
+                       managed="false"/>
+
+                <HBox spacing="30">
+
+                    <children>
+
+                        <!-- ============================================= -->
+                        <!-- DATOS -->
+                        <!-- ============================================= -->
+
+                        <VBox spacing="15.0" HBox.hgrow="ALWAYS">
+
+                            <children>
+
+                                <!-- Razón social -->
+
+                                <VBox spacing="5.0">
+
+                                    <children>
+
+                                        <Label text="Razón social *"/>
+
+                                        <TextField fx:id="txtRazonSocial"
+                                                   promptText="Ej.: Distribuidora del Centro S.A."/>
+
+                                        <Label fx:id="lblErrorRazonSocial"
+                                               styleClass="field-error-label"
+                                               wrapText="true"
+                                               visible="false"
+                                               managed="false"/>
+
+                                    </children>
+
+                                </VBox>
+
+                                <!-- Nombre de fantasía -->
+
+                                <VBox spacing="5.0">
+
+                                    <children>
+
+                                        <Label text="Nombre de fantasía"/>
+
+                                        <TextField fx:id="txtNombreFantasia"
+                                                   promptText="Opcional. Ej.: El Centro"/>
+
+                                        <Label fx:id="lblErrorNombreFantasia"
+                                               styleClass="field-error-label"
+                                               wrapText="true"
+                                               visible="false"
+                                               managed="false"/>
+
+                                    </children>
+
+                                </VBox>
+
+                                <!-- CUIT e ingresos brutos -->
+
+                                <HBox spacing="15">
+
+                                    <children>
+
+                                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+
+                                            <children>
+
+                                                <Label text="CUIT *"/>
+
+                                                <TextField fx:id="txtCuit"
+                                                           promptText="Ej.: 30-71234567-1"/>
+
+                                                <Label fx:id="lblErrorCuit"
+                                                       styleClass="field-error-label"
+                                                       wrapText="true"
+                                                       visible="false"
+                                                       managed="false"/>
+
+                                            </children>
+
+                                        </VBox>
+
+                                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+
+                                            <children>
+
+                                                <Label text="Ingresos brutos"/>
+
+                                                <TextField fx:id="txtIngresosBrutos"
+                                                           promptText="Opcional"/>
+
+                                                <Label fx:id="lblErrorIngresosBrutos"
+                                                       styleClass="field-error-label"
+                                                       wrapText="true"
+                                                       visible="false"
+                                                       managed="false"/>
+
+                                            </children>
+
+                                        </VBox>
+
+                                    </children>
+
+                                </HBox>
+
+                                <!-- Condición frente al IVA -->
+
+                                <VBox spacing="5.0" prefWidth="260" maxWidth="260">
+
+                                    <children>
+
+                                        <Label text="Condición frente al IVA *"/>
+
+                                        <ComboBox fx:id="cmbCondicionIva"
+                                                  maxWidth="Infinity"/>
+
+                                        <Label fx:id="lblErrorCondicionIva"
+                                               styleClass="field-error-label"
+                                               wrapText="true"
+                                               visible="false"
+                                               managed="false"/>
+
+                                    </children>
+
+                                </VBox>
+
+                                <Separator/>
+
+                                <!-- Teléfono y email -->
+
+                                <HBox spacing="15">
+
+                                    <children>
+
+                                        <VBox spacing="5.0" prefWidth="180" minWidth="180">
+
+                                            <children>
+
+                                                <Label text="Teléfono"/>
+
+                                                <TextField fx:id="txtTelefono"
+                                                           promptText="Opcional"/>
+
+                                                <Label fx:id="lblErrorTelefono"
+                                                       styleClass="field-error-label"
+                                                       wrapText="true"
+                                                       visible="false"
+                                                       managed="false"/>
+
+                                            </children>
+
+                                        </VBox>
+
+                                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+
+                                            <children>
+
+                                                <Label text="Email"/>
+
+                                                <TextField fx:id="txtEmail"
+                                                           promptText="Opcional. Ej.: ventas@empresa.com"/>
+
+                                                <Label fx:id="lblErrorEmail"
+                                                       styleClass="field-error-label"
+                                                       wrapText="true"
+                                                       visible="false"
+                                                       managed="false"/>
+
+                                            </children>
+
+                                        </VBox>
+
+                                    </children>
+
+                                </HBox>
+
+                                <!-- Dirección -->
+
+                                <VBox spacing="5.0">
+
+                                    <children>
+
+                                        <Label text="Dirección"/>
+
+                                        <TextField fx:id="txtDireccion"
+                                                   promptText="Opcional"/>
+
+                                        <Label fx:id="lblErrorDireccion"
+                                               styleClass="field-error-label"
+                                               wrapText="true"
+                                               visible="false"
+                                               managed="false"/>
+
+                                    </children>
+
+                                </VBox>
+
+                            </children>
+
+                        </VBox>
+
+                        <!-- ============================================= -->
+                        <!-- LOGO -->
+                        <!-- ============================================= -->
+
+                        <VBox spacing="8.0" prefWidth="220" minWidth="220" maxWidth="220">
+
+                            <children>
+
+                                <Label text="Logo"/>
+
+                                <StackPane prefWidth="220" prefHeight="180" minHeight="180" maxHeight="180"
+                                           style="-fx-border-color: #D1D5DB; -fx-border-radius: 6; -fx-background-color: #F9FAFB; -fx-background-radius: 6;">
+
+                                    <children>
+
+                                        <Label fx:id="lblSinLogo"
+                                               text="Sin logo"
+                                               styleClass="form-hint"/>
+
+                                        <ImageView fx:id="imgLogo"
+                                                   fitWidth="200"
+                                                   fitHeight="160"
+                                                   preserveRatio="true"
+                                                   smooth="true"/>
+
+                                    </children>
+
+                                </StackPane>
+
+                                <HBox spacing="8">
+
+                                    <children>
+
+                                        <Button fx:id="btnSeleccionarLogo"
+                                                styleClass="btn-secondary"
+                                                text="Seleccionar…"/>
+
+                                        <Button fx:id="btnQuitarLogo"
+                                                styleClass="btn-secondary"
+                                                text="Quitar"/>
+
+                                    </children>
+
+                                </HBox>
+
+                                <Label text="PNG, JPG, GIF o BMP, hasta 2 MB."
+                                       styleClass="form-hint"
+                                       wrapText="true"/>
+
+                                <Label fx:id="lblErrorLogo"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                            </children>
+
+                        </VBox>
+
+                    </children>
+
+                </HBox>
+
+                <HBox spacing="10"
+                      alignment="CENTER_RIGHT">
+
+                    <children>
+
+                        <Button fx:id="btnDescartar" styleClass="btn-secondary"
+                                cancelButton="true"
+                                text="Descartar cambios"/>
+
+                        <Button fx:id="btnGuardar" styleClass="btn-primary"
+                                defaultButton="true"
+                                text="Guardar"/>
+
+                    </children>
+
+                </HBox>
+
+            </children>
+
+        </VBox>
+
+    </content>
+
+</ScrollPane>

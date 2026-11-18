@@ -186,6 +186,16 @@ public enum AppView {
             PermisoCodigo.INVENTARIO_VER
     ),
 
+    /** Se ve con EMPRESA_VER; sin EMPRESA_EDITAR el formulario es de sólo lectura. */
+    EMPRESA_CONFIG(
+            "/org/gestionComercio/view/empresa/EmpresaConfig.fxml",
+            "Configuración de la empresa",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.EMPRESA_VER
+    ),
+
     /** Disponible para cualquier usuario con sesión iniciada. */
     CAMBIAR_PASSWORD(
             "/org/gestionComercio/view/perfil/CambiarPassword.fxml",
