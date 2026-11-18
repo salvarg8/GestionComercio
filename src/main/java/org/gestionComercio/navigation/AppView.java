@@ -148,6 +148,15 @@ public enum AppView {
             PermisoCodigo.PRODUCTO_EDITAR
     ),
 
+    STOCK_CONSULTA(
+            "/org/gestionComercio/view/inventario/StockConsulta.fxml",
+            "Consulta de stock",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.INVENTARIO_VER
+    ),
+
     /** Disponible para cualquier usuario con sesión iniciada. */
     CAMBIAR_PASSWORD(
             "/org/gestionComercio/view/perfil/CambiarPassword.fxml",

@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="org.gestionComercio.controller.inventario.StockConsultaController">
+
+    <!-- ===================================================== -->
+    <!-- CABECERA -->
+    <!-- ===================================================== -->
+
+    <top>
+
+        <VBox spacing="10">
+
+            <padding>
+                <Insets top="15" right="15" bottom="15" left="15"/>
+            </padding>
+
+            <HBox spacing="10"
+                  alignment="CENTER_LEFT">
+
+                <Label text="Consulta de stock"
+                       styleClass="page-title"/>
+
+                <Region HBox.hgrow="ALWAYS"/>
+
+                <ComboBox fx:id="cmbCategoria"
+                          prefWidth="200"/>
+
+                <ComboBox fx:id="cmbSituacion"
+                          prefWidth="190"/>
+
+                <TextField fx:id="txtBuscar"
+                           promptText="Buscar por nombre, código o código de barras..."
+                           prefWidth="320"/>
+
+            </HBox>
+
+            <!-- Resumen: un clic filtra por esa situación -->
+            <HBox spacing="10"
+                  alignment="CENTER_LEFT">
+
+                <Label fx:id="lblResumenTotal"
+                       styleClass="estado-badge,estado-inactivo">
+                    <tooltip>
+                        <Tooltip text="Mostrar todos los productos"/>
+                    </tooltip>
+                </Label>
+
+                <Label fx:id="lblResumenStockBajo"
+                       styleClass="estado-badge,stock-bajo">
+                    <tooltip>
+                        <Tooltip text="Mostrar sólo los productos en el stock mínimo o por debajo"/>
+                    </tooltip>
+                </Label>
+
+                <Label fx:id="lblResumenSinStock"
+                       styleClass="estado-badge,sin-stock">
+                    <tooltip>
+                        <Tooltip text="Mostrar sólo los productos sin stock"/>
+                    </tooltip>
+                </Label>
+
+            </HBox>
+
+        </VBox>
+
+    </top>
+
+    <!-- ===================================================== -->
+    <!-- TABLA -->
+    <!-- ===================================================== -->
+
+    <center>
+
+        <TableView fx:id="tblStock">
+
+            <columnResizePolicy>
+                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+            </columnResizePolicy>
+
+            <placeholder>
+                <Label fx:id="lblSinResultados" text="No hay productos cargados."/>
+            </placeholder>
+
+            <columns>
+
+                <TableColumn fx:id="colCodigo"
+                             text="Código"
+                             prefWidth="90"/>
+
+                <TableColumn fx:id="colNombre"
+                             text="Producto"
+                             prefWidth="260"/>
+
+                <TableColumn fx:id="colCategoria"
+                             text="Categoría"
+                             prefWidth="140"/>
+
+                <TableColumn fx:id="colMarca"
+                             text="Marca"
+                             prefWidth="120"/>
+
+                <TableColumn fx:id="colUnidad"
+                             text="Unidad"
+                             prefWidth="100"/>
+
+                <TableColumn fx:id="colStock"
+                             text="Stock actual"
+                             prefWidth="110"
+                             style="-fx-alignment: CENTER-RIGHT;"/>
+
+                <TableColumn fx:id="colStockMinimo"
+                             text="Stock mínimo"
+                             prefWidth="110"
+                             style="-fx-alignment: CENTER-RIGHT;"/>
+
+                <TableColumn fx:id="colSituacion"
+                             text="Situación"
+                             prefWidth="130"
+                             style="-fx-alignment: CENTER;"/>
+
+            </columns>
+
+            <BorderPane.margin>
+                <Insets left="15" right="15"/>
+            </BorderPane.margin>
+
+        </TableView>
+
+    </center>
+
+    <!-- ===================================================== -->
+    <!-- PIE -->
+    <!-- ===================================================== -->
+
+    <bottom>
+
+        <HBox spacing="20"
+              alignment="CENTER_LEFT">
+
+            <padding>
+                <Insets top="10" right="15" bottom="15" left="15"/>
+            </padding>
+
+            <Label fx:id="lblTotal"
+                   text="Total: 0 registros"/>
+
+        </HBox>
+
+    </bottom>
+
+</BorderPane>

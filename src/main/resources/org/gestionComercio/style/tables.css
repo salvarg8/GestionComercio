@@ -58,3 +58,13 @@
     -fx-text-fill: #C62828;
 
 }
+
+
+/* Productos sin stock (cero o negativo) */
+
+.estado-badge.sin-stock {
+
+    -fx-background-color: #C62828;
+    -fx-text-fill: white;
+
+}

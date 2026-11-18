@@ -40,7 +40,7 @@ public enum PermisoCodigo {
     PRODUCTO_HABILITAR("Productos", "Volver a habilitar productos dados de baja"),
 
     // Inventario
-    INVENTARIO_VER("Inventario", "Ver movimientos de stock"),
+    INVENTARIO_VER("Inventario", "Consultar stock y ver movimientos de stock"),
     INVENTARIO_REGISTRAR_ENTRADA("Inventario", "Registrar entradas de stock"),
     INVENTARIO_REGISTRAR_SALIDA("Inventario", "Registrar salidas de stock"),
     INVENTARIO_AJUSTAR("Inventario", "Registrar ajustes de stock"),
