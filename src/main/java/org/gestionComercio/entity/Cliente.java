@@ -22,7 +22,7 @@ import java.util.List;
 
 /**
  * Los clientes se dan de baja con {@code estadoRegistro} (ver {@link BaseEntity})
- * y se pueden volver a habilitar. Sólo se pueden borrar de la base si no tienen ventas.
+ * y se pueden volver a habilitar; nunca se borran de la base.
  */
 @Getter
 @Setter

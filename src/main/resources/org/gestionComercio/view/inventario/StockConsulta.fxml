@@ -85,7 +85,7 @@
 
     <center>
 
-        <TableView fx:id="tblStock">
+        <TableView fx:id="tblStock" styleClass="tabla-centrada">
 
             <columnResizePolicy>
                 <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
@@ -119,13 +119,11 @@
 
                 <TableColumn fx:id="colStock"
                              text="Stock actual"
-                             prefWidth="110"
-                             style="-fx-alignment: CENTER-RIGHT;"/>
+                             prefWidth="110"/>
 
                 <TableColumn fx:id="colStockMinimo"
                              text="Stock mínimo"
-                             prefWidth="110"
-                             style="-fx-alignment: CENTER-RIGHT;"/>
+                             prefWidth="110"/>
 
                 <TableColumn fx:id="colSituacion"
                              text="Situación"

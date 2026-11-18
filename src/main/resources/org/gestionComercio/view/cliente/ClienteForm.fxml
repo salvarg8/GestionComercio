@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<AnchorPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="org.gestionComercio.controller.cliente.ClienteFormController">
+
+    <children>
+
+        <VBox spacing="15.0"
+              prefWidth="640"
+              maxWidth="640"
+              AnchorPane.topAnchor="20.0"
+              AnchorPane.leftAnchor="20.0">
+
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+
+            <children>
+
+                <Label fx:id="lblTitulo"
+                       text="Nuevo cliente"
+                       style="-fx-font-size: 22px; -fx-font-weight: bold;"/>
+
+                <!-- Documento -->
+
+                <HBox spacing="15">
+
+                    <children>
+
+                        <VBox spacing="5.0" prefWidth="200" minWidth="200">
+
+                            <children>
+
+                                <Label text="Tipo de documento *"/>
+
+                                <ComboBox fx:id="cmbTipoDocumento"
+                                          maxWidth="Infinity"/>
+
+                                <Label fx:id="lblErrorTipoDocumento"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                            </children>
+
+                        </VBox>
+
+                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+
+                            <children>
+
+                                <Label text="Número de documento *"/>
+
+                                <TextField fx:id="txtNumeroDocumento"/>
+
+                                <Label fx:id="lblErrorNumeroDocumento"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                            </children>
+
+                        </VBox>
+
+                    </children>
+
+                </HBox>
+
+                <!-- Nombre y apellido -->
+
+                <HBox spacing="15">
+
+                    <children>
+
+                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+
+                            <children>
+
+                                <Label fx:id="lblNombre" text="Nombre *"/>
+
+                                <TextField fx:id="txtNombre"/>
+
+                                <Label fx:id="lblErrorNombre"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                            </children>
+
+                        </VBox>
+
+                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+
+                            <children>
+
+                                <Label fx:id="lblApellido" text="Apellido *"/>
+
+                                <TextField fx:id="txtApellido"
+                                           promptText="Ej.: Pérez"/>
+
+                                <Label fx:id="lblErrorApellido"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                            </children>
+
+                        </VBox>
+
+                    </children>
+
+                </HBox>
+
+                <!-- Condición frente al IVA -->
+
+                <VBox spacing="5.0" prefWidth="300" maxWidth="300">
+
+                    <children>
+
+                        <Label text="Condición frente al IVA *"/>
+
+                        <ComboBox fx:id="cmbCondicionIva"
+                                  maxWidth="Infinity"/>
+
+                        <Label fx:id="lblErrorCondicionIva"
+                               styleClass="field-error-label"
+                               wrapText="true"
+                               visible="false"
+                               managed="false"/>
+
+                    </children>
+
+                </VBox>
+
+                <!-- Teléfono y email -->
+
+                <HBox spacing="15">
+
+                    <children>
+
+                        <VBox spacing="5.0" prefWidth="200" minWidth="200">
+
+                            <children>
+
+                                <Label text="Teléfono"/>
+
+                                <TextField fx:id="txtTelefono"
+                                           promptText="Opcional"/>
+
+                                <Label fx:id="lblErrorTelefono"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                            </children>
+
+                        </VBox>
+
+                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+
+                            <children>
+
+                                <Label text="Email"/>
+
+                                <TextField fx:id="txtEmail"
+                                           promptText="Opcional. Ej.: cliente@mail.com"/>
+
+                                <Label fx:id="lblErrorEmail"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+
+                            </children>
+
+                        </VBox>
+
+                    </children>
+
+                </HBox>
+
+                <!-- Dirección -->
+
+                <VBox spacing="5.0">
+
+                    <children>
+
+                        <Label text="Dirección"/>
+
+                        <TextField fx:id="txtDireccion"
+                                   promptText="Opcional"/>
+
+                        <Label fx:id="lblErrorDireccion"
+                               styleClass="field-error-label"
+                               wrapText="true"
+                               visible="false"
+                               managed="false"/>
+
+                    </children>
+
+                </VBox>
+
+                <HBox spacing="10"
+                      alignment="CENTER_RIGHT">
+
+                    <children>
+
+                        <Button fx:id="btnCancelar" styleClass="btn-secondary"
+                                cancelButton="true"
+                                text="Cancelar"/>
+
+                        <Button fx:id="btnGuardar" styleClass="btn-primary"
+                                defaultButton="true"
+                                text="Guardar"/>
+
+                    </children>
+
+                </HBox>
+
+            </children>
+
+        </VBox>
+
+    </children>
+
+</AnchorPane>

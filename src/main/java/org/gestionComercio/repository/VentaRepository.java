@@ -6,7 +6,4 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface VentaRepository extends JpaRepository<Venta, Long> {
-
-    /** Cuenta ventas de cualquier estado (incluidas las anuladas). */
-    boolean existsByClienteId(Long clienteId);
 }

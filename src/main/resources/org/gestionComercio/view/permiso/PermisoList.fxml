@@ -36,7 +36,7 @@
     <!-- ==================== TABLA ==================== -->
 
     <center>
-        <TableView fx:id="tblPermisos"
+        <TableView fx:id="tblPermisos" styleClass="tabla-centrada"
                    BorderPane.alignment="CENTER">
 
             <columnResizePolicy>

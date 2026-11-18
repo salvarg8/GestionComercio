@@ -9,12 +9,10 @@ import org.gestionComercio.enums.FiltroEstado;
 import org.gestionComercio.enums.PermisoCodigo;
 import org.gestionComercio.enums.TipoDocumento;
 import org.gestionComercio.exception.AuthorizationException;
-import org.gestionComercio.exception.BusinessException;
 import org.gestionComercio.exception.EntityNotFoundException;
 import org.gestionComercio.exception.ValidationException;
 import org.gestionComercio.mapper.ClienteMapper;
 import org.gestionComercio.repository.ClienteRepository;
-import org.gestionComercio.repository.VentaRepository;
 import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.validation.ClienteValidator;
 import org.gestionComercio.validation.ValidationResult;
@@ -46,9 +44,6 @@ class ClienteServiceImplTest {
     private ClienteRepository clienteRepository;
 
     @Mock
-    private VentaRepository ventaRepository;
-
-    @Mock
     private ClienteMapper clienteMapper;
 
     @Mock
@@ -64,7 +59,7 @@ class ClienteServiceImplTest {
         loguearCon(EnumSet.allOf(PermisoCodigo.class));
 
         clienteService = new ClienteServiceImpl(
-                clienteRepository, ventaRepository, clienteMapper, clienteValidator, sesionUsuario);
+                clienteRepository, clienteMapper, clienteValidator, sesionUsuario);
 
         lenient().when(clienteValidator.validate(any())).thenReturn(new ValidationResult());
     }
@@ -286,7 +281,7 @@ class ClienteServiceImplTest {
     @DisplayName("darDeBaja() sin CLIENTE_DAR_BAJA lanza AuthorizationException")
     void darDeBajaSinPermiso() {
         loguearCon(EnumSet.of(PermisoCodigo.CLIENTE_VER, PermisoCodigo.CLIENTE_EDITAR,
-                PermisoCodigo.CLIENTE_HABILITAR, PermisoCodigo.CLIENTE_ELIMINAR));
+                PermisoCodigo.CLIENTE_HABILITAR));
 
         assertThrows(AuthorizationException.class, () -> clienteService.darDeBaja(1L));
         assertThrows(AuthorizationException.class, () -> clienteService.delete(1L));
@@ -328,54 +323,6 @@ class ClienteServiceImplTest {
         assertThrows(AuthorizationException.class, () -> clienteService.habilitar(1L));
 
         verifyNoInteractions(clienteRepository);
-    }
-
-    // ------------------------------------------------------------------
-    // Eliminación física
-    // ------------------------------------------------------------------
-
-    @Test
-    @DisplayName("eliminar() borra de la base un cliente sin ventas")
-    void eliminarSinVentas() {
-        Cliente existente = cliente(1L, "Juan");
-
-        when(clienteRepository.findById(1L)).thenReturn(Optional.of(existente));
-        when(ventaRepository.existsByClienteId(1L)).thenReturn(false);
-
-        clienteService.eliminar(1L);
-
-        verify(clienteRepository).delete(existente);
-    }
-
-    @Test
-    @DisplayName("eliminar() de un cliente con ventas lanza BusinessException y no borra")
-    void eliminarConVentas() {
-        when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente(1L, "Juan")));
-        when(ventaRepository.existsByClienteId(1L)).thenReturn(true);
-
-        assertThrows(BusinessException.class, () -> clienteService.eliminar(1L));
-
-        verify(clienteRepository, never()).delete(any());
-    }
-
-    @Test
-    @DisplayName("eliminar() de un cliente inexistente lanza EntityNotFoundException")
-    void eliminarInexistente() {
-        when(clienteRepository.findById(9L)).thenReturn(Optional.empty());
-
-        assertThrows(EntityNotFoundException.class, () -> clienteService.eliminar(9L));
-
-        verify(clienteRepository, never()).delete(any());
-    }
-
-    @Test
-    @DisplayName("eliminar() sin CLIENTE_ELIMINAR lanza AuthorizationException")
-    void eliminarSinPermiso() {
-        loguearCon(EnumSet.of(PermisoCodigo.CLIENTE_VER, PermisoCodigo.CLIENTE_DAR_BAJA));
-
-        assertThrows(AuthorizationException.class, () -> clienteService.eliminar(1L));
-
-        verifyNoInteractions(clienteRepository, ventaRepository);
     }
 
     // ------------------------------------------------------------------

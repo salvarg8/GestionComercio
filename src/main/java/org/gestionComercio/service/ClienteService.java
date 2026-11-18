@@ -6,8 +6,8 @@ import org.gestionComercio.enums.FiltroEstado;
 import java.util.List;
 
 /**
- * Los clientes se dan de baja (baja lógica) y se pueden volver a habilitar.
- * Sólo se pueden eliminar de la base si no tienen ventas asociadas.
+ * Los clientes no se eliminan: se dan de baja (baja lógica) y se pueden volver
+ * a habilitar. Las ventas que ya tienen los conservan.
  */
 public interface ClienteService extends CrudService<ClienteDto, Long> {
 
@@ -24,15 +24,7 @@ public interface ClienteService extends CrudService<ClienteDto, Long> {
     void habilitar(Long id);
 
     /**
-     * Borra el cliente de la base (esté activo o dado de baja). Requiere
-     * CLIENTE_ELIMINAR y falla con BusinessException si tiene ventas asociadas:
-     * en ese caso sólo se puede dar de baja.
-     */
-    void eliminar(Long id);
-
-    /**
-     * Equivale a {@link #darDeBaja(Long)}: para borrar de la base hay que usar
-     * {@link #eliminar(Long)} explícitamente.
+     * Equivale a {@link #darDeBaja(Long)}: los clientes nunca se borran de la base.
      */
     @Override
     void delete(Long id);
