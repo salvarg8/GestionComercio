@@ -5,6 +5,7 @@ import org.gestionComercio.dto.caja.MovimientoCajaDto;
 import org.gestionComercio.enums.TipoMovimientoCaja;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,6 +46,16 @@ public interface CajaService {
      *         abierta, el tipo no es manual o el egreso supera el saldo
      */
     MovimientoCajaDto registrarMovimiento(TipoMovimientoCaja tipo, BigDecimal importe, String descripcion);
+
+    /**
+     * Cajas cerradas de todos los usuarios, de la más reciente a la más
+     * antigua según la fecha de cierre, con sus totales. Requiere CAJA_VER.
+     *
+     * @param desde fecha de cierre mínima (incluida); null para no limitar
+     * @param hasta fecha de cierre máxima (incluida); null para no limitar
+     * @throws org.gestionComercio.exception.BusinessException si desde es posterior a hasta
+     */
+    List<CajaDto> listarCajasCerradas(LocalDate desde, LocalDate hasta);
 
     /** Movimientos de una caja, en el orden en que se registraron. Requiere CAJA_VER. */
     List<MovimientoCajaDto> listarMovimientos(Long cajaId);

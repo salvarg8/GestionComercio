@@ -87,3 +87,44 @@
     -fx-alignment: CENTER;
 
 }
+
+
+/* Caja: tarjetas con los totales de la caja abierta */
+
+.tarjeta-resumen {
+
+    -fx-background-color: white;
+    -fx-background-radius: 8;
+    -fx-border-color: #E5E7EB;
+    -fx-border-radius: 8;
+    -fx-padding: 12 16 12 16;
+    -fx-spacing: 4;
+
+}
+
+.tarjeta-resumen-titulo {
+
+    -fx-text-fill: #6B7280;
+    -fx-font-size: 12px;
+
+}
+
+.tarjeta-resumen-valor {
+
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+
+}
+
+.tarjeta-resumen.tarjeta-destacada {
+
+    -fx-background-color: derive(-fx-primary, 90%);
+    -fx-border-color: -fx-primary-light;
+
+}
+
+.tarjeta-resumen.tarjeta-destacada .tarjeta-resumen-valor {
+
+    -fx-text-fill: -fx-primary-dark;
+
+}

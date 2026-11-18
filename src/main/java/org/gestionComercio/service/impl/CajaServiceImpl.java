@@ -22,9 +22,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Cualquier excepción revierte la transacción completa.
@@ -130,6 +134,34 @@ public class CajaServiceImpl implements CajaService {
                 .build());
 
         return movimientoCajaMapper.toDto(movimiento);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<CajaDto> listarCajasCerradas(LocalDate desde, LocalDate hasta) {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.CAJA_VER);
+
+        if (desde != null && hasta != null && desde.isAfter(hasta)) {
+            throw new BusinessException("La fecha desde no puede ser posterior a la fecha hasta.");
+        }
+
+        List<Caja> cajas = cajaRepository.findCerradas(
+                desde == null ? null : desde.atStartOfDay(),
+                hasta == null ? null : hasta.atTime(LocalTime.MAX));
+
+        if (cajas.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, List<MovimientoCaja>> movimientosPorCaja = movimientoCajaRepository
+                .findByCajaIdIn(cajas.stream().map(Caja::getId).toList())
+                .stream()
+                .collect(Collectors.groupingBy(m -> m.getCaja().getId()));
+
+        return cajas.stream()
+                .map(caja -> conResumen(caja, movimientosPorCaja.getOrDefault(caja.getId(), List.of())))
+                .toList();
     }
 
     @Transactional(readOnly = true)
