@@ -1,0 +1,458 @@
+package org.gestionComercio.service.impl;
+
+import org.gestionComercio.dto.caja.CajaDto;
+import org.gestionComercio.dto.caja.MovimientoCajaDto;
+import org.gestionComercio.entity.Caja;
+import org.gestionComercio.entity.MovimientoCaja;
+import org.gestionComercio.entity.Usuario;
+import org.gestionComercio.enums.EstadoCaja;
+import org.gestionComercio.enums.PermisoCodigo;
+import org.gestionComercio.enums.TipoMovimientoCaja;
+import org.gestionComercio.exception.AuthorizationException;
+import org.gestionComercio.exception.BusinessException;
+import org.gestionComercio.exception.EntityNotFoundException;
+import org.gestionComercio.mapper.CajaMapper;
+import org.gestionComercio.mapper.MovimientoCajaMapper;
+import org.gestionComercio.repository.CajaRepository;
+import org.gestionComercio.repository.MovimientoCajaRepository;
+import org.gestionComercio.security.SesionUsuario;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class CajaServiceImplTest {
+
+    private static final Long USUARIO_ID = 7L;
+    private static final Long CAJA_ID = 1L;
+
+    @Mock
+    private CajaRepository cajaRepository;
+
+    @Mock
+    private MovimientoCajaRepository movimientoCajaRepository;
+
+    @Mock
+    private CajaMapper cajaMapper;
+
+    @Mock
+    private MovimientoCajaMapper movimientoCajaMapper;
+
+    private SesionUsuario sesionUsuario;
+
+    private CajaServiceImpl cajaService;
+
+    @BeforeEach
+    void setUp() {
+        sesionUsuario = new SesionUsuario();
+        loguearCon(EnumSet.allOf(PermisoCodigo.class));
+
+        cajaService = new CajaServiceImpl(
+                cajaRepository, movimientoCajaRepository, cajaMapper, movimientoCajaMapper, sesionUsuario);
+
+        lenient().when(cajaRepository.save(any())).thenAnswer(inv -> {
+            Caja caja = inv.getArgument(0);
+            if (caja.getId() == null) {
+                caja.setId(CAJA_ID);
+            }
+            return caja;
+        });
+        lenient().when(movimientoCajaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        lenient().when(cajaMapper.toDto(any())).thenAnswer(inv -> {
+            Caja caja = inv.getArgument(0);
+            return CajaDto.builder()
+                    .id(caja.getId())
+                    .estadoCaja(caja.getEstadoCaja())
+                    .saldoInicial(caja.getSaldoInicial())
+                    .saldoEsperado(caja.getSaldoEsperado())
+                    .saldoFinal(caja.getSaldoFinal())
+                    .diferencia(caja.getDiferencia())
+                    .fechaCierre(caja.getFechaCierre())
+                    .build();
+        });
+        lenient().when(movimientoCajaMapper.toDto(any())).thenAnswer(inv -> {
+            MovimientoCaja m = inv.getArgument(0);
+            return MovimientoCajaDto.builder().tipo(m.getTipo()).importe(m.getImporte())
+                    .descripcion(m.getDescripcion()).build();
+        });
+    }
+
+    private void loguearCon(EnumSet<PermisoCodigo> permisos) {
+        Usuario usuario = new Usuario();
+        usuario.setId(USUARIO_ID);
+        sesionUsuario.iniciarSesion(usuario, permisos);
+    }
+
+    private void loguearSin(PermisoCodigo permiso) {
+        EnumSet<PermisoCodigo> permisos = EnumSet.allOf(PermisoCodigo.class);
+        permisos.remove(permiso);
+        loguearCon(permisos);
+    }
+
+    private Caja cajaAbierta(String saldoInicial) {
+        Caja caja = Caja.builder()
+                .saldoInicial(new BigDecimal(saldoInicial))
+                .estadoCaja(EstadoCaja.ABIERTA)
+                .usuario(sesionUsuario.getUsuario())
+                .build();
+        caja.setId(CAJA_ID);
+        return caja;
+    }
+
+    private MovimientoCaja movimiento(TipoMovimientoCaja tipo, String importe) {
+        return MovimientoCaja.builder().tipo(tipo).importe(new BigDecimal(importe)).build();
+    }
+
+    /** Caja abierta del usuario con los movimientos indicados. */
+    private Caja conCajaAbierta(String saldoInicial, MovimientoCaja... movimientos) {
+        Caja caja = cajaAbierta(saldoInicial);
+        List<MovimientoCaja> lista = new ArrayList<>();
+        lista.add(movimiento(TipoMovimientoCaja.APERTURA, saldoInicial));
+        lista.addAll(List.of(movimientos));
+        lenient().when(cajaRepository.findFirstByUsuarioIdAndEstadoCajaOrderByFechaAperturaDesc(
+                USUARIO_ID, EstadoCaja.ABIERTA)).thenReturn(Optional.of(caja));
+        lenient().when(movimientoCajaRepository.findByCajaIdOrderByFechaAscIdAsc(CAJA_ID)).thenReturn(lista);
+        return caja;
+    }
+
+    private void sinCajaAbierta() {
+        when(cajaRepository.findFirstByUsuarioIdAndEstadoCajaOrderByFechaAperturaDesc(
+                USUARIO_ID, EstadoCaja.ABIERTA)).thenReturn(Optional.empty());
+    }
+
+    // ------------------------------------------------------------------
+    // Apertura
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("abrir crea la caja abierta y el movimiento de apertura con el saldo inicial")
+    void abrirCreaCajaYMovimientoApertura() {
+
+        CajaDto dto = cajaService.abrir(new BigDecimal("1500"));
+
+        ArgumentCaptor<Caja> caja = ArgumentCaptor.forClass(Caja.class);
+        verify(cajaRepository).save(caja.capture());
+        assertEquals(EstadoCaja.ABIERTA, caja.getValue().getEstadoCaja());
+        assertEquals(new BigDecimal("1500.00"), caja.getValue().getSaldoInicial());
+        assertSame(sesionUsuario.getUsuario(), caja.getValue().getUsuario());
+        assertNotNull(caja.getValue().getFechaApertura());
+
+        ArgumentCaptor<MovimientoCaja> mov = ArgumentCaptor.forClass(MovimientoCaja.class);
+        verify(movimientoCajaRepository).save(mov.capture());
+        assertEquals(TipoMovimientoCaja.APERTURA, mov.getValue().getTipo());
+        assertEquals(new BigDecimal("1500.00"), mov.getValue().getImporte());
+        assertSame(caja.getValue(), mov.getValue().getCaja());
+
+        assertEquals(new BigDecimal("1500.00"), dto.getSaldoEsperado());
+        assertEquals(new BigDecimal("0.00"), dto.getTotalIngresos());
+        assertEquals(new BigDecimal("0.00"), dto.getTotalEgresos());
+    }
+
+    @Test
+    @DisplayName("abrir admite saldo inicial cero")
+    void abrirConSaldoCero() {
+
+        CajaDto dto = cajaService.abrir(BigDecimal.ZERO);
+
+        assertEquals(new BigDecimal("0.00"), dto.getSaldoEsperado());
+    }
+
+    @Test
+    @DisplayName("un usuario no puede tener más de una caja abierta")
+    void abrirConCajaYaAbiertaFalla() {
+
+        when(cajaRepository.existsByUsuarioIdAndEstadoCaja(USUARIO_ID, EstadoCaja.ABIERTA)).thenReturn(true);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> cajaService.abrir(new BigDecimal("100")));
+
+        assertTrue(ex.getMessage().contains("Ya tiene una caja abierta"));
+        verify(cajaRepository, never()).save(any());
+        verify(movimientoCajaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("abrir rechaza saldo inicial nulo, negativo o con más de dos decimales")
+    void abrirValidaSaldoInicial() {
+
+        assertThrows(BusinessException.class, () -> cajaService.abrir(null));
+        assertThrows(BusinessException.class, () -> cajaService.abrir(new BigDecimal("-1")));
+        assertThrows(BusinessException.class, () -> cajaService.abrir(new BigDecimal("10.555")));
+        assertThrows(BusinessException.class, () -> cajaService.abrir(new BigDecimal("10000000000")));
+
+        verify(cajaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("abrir requiere CAJA_ABRIR")
+    void abrirSinPermiso() {
+
+        loguearSin(PermisoCodigo.CAJA_ABRIR);
+
+        assertThrows(AuthorizationException.class, () -> cajaService.abrir(BigDecimal.TEN));
+        verifyNoInteractions(cajaRepository, movimientoCajaRepository);
+    }
+
+    // ------------------------------------------------------------------
+    // Consulta
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("obtenerCajaAbierta calcula saldo inicial + ingresos − egresos")
+    void obtenerCajaAbiertaCalculaSaldoEsperado() {
+
+        conCajaAbierta("1000",
+                movimiento(TipoMovimientoCaja.VENTA, "500"),
+                movimiento(TipoMovimientoCaja.INGRESO_MANUAL, "250.50"),
+                movimiento(TipoMovimientoCaja.GASTO, "100"),
+                movimiento(TipoMovimientoCaja.RETIRO, "300"),
+                movimiento(TipoMovimientoCaja.PAGO_PROVEEDOR, "50.25"));
+
+        CajaDto dto = cajaService.obtenerCajaAbierta().orElseThrow();
+
+        assertEquals(new BigDecimal("750.50"), dto.getTotalIngresos());
+        assertEquals(new BigDecimal("450.25"), dto.getTotalEgresos());
+        assertEquals(new BigDecimal("1300.25"), dto.getSaldoEsperado());
+    }
+
+    @Test
+    @DisplayName("obtenerCajaAbierta devuelve vacío si el usuario no tiene caja abierta")
+    void obtenerCajaAbiertaVacia() {
+
+        sinCajaAbierta();
+
+        assertTrue(cajaService.obtenerCajaAbierta().isEmpty());
+    }
+
+    @Test
+    @DisplayName("obtenerCajaAbierta requiere CAJA_VER")
+    void obtenerCajaAbiertaSinPermiso() {
+
+        loguearSin(PermisoCodigo.CAJA_VER);
+
+        assertThrows(AuthorizationException.class, () -> cajaService.obtenerCajaAbierta());
+        verifyNoInteractions(cajaRepository);
+    }
+
+    @Test
+    @DisplayName("listarMovimientos devuelve los movimientos de la caja")
+    void listarMovimientos() {
+
+        List<MovimientoCaja> movimientos = List.of(movimiento(TipoMovimientoCaja.APERTURA, "10"));
+        List<MovimientoCajaDto> dtos = List.of(new MovimientoCajaDto());
+        when(cajaRepository.existsById(CAJA_ID)).thenReturn(true);
+        when(movimientoCajaRepository.findByCajaIdOrderByFechaAscIdAsc(CAJA_ID)).thenReturn(movimientos);
+        when(movimientoCajaMapper.toDtoList(movimientos)).thenReturn(dtos);
+
+        assertSame(dtos, cajaService.listarMovimientos(CAJA_ID));
+    }
+
+    @Test
+    @DisplayName("listarMovimientos falla si la caja no existe")
+    void listarMovimientosCajaInexistente() {
+
+        when(cajaRepository.existsById(99L)).thenReturn(false);
+
+        assertThrows(EntityNotFoundException.class, () -> cajaService.listarMovimientos(99L));
+    }
+
+    @Test
+    @DisplayName("listarMovimientos requiere CAJA_VER")
+    void listarMovimientosSinPermiso() {
+
+        loguearSin(PermisoCodigo.CAJA_VER);
+
+        assertThrows(AuthorizationException.class, () -> cajaService.listarMovimientos(CAJA_ID));
+    }
+
+    // ------------------------------------------------------------------
+    // Movimientos
+    // ------------------------------------------------------------------
+
+    @ParameterizedTest
+    @EnumSource(value = TipoMovimientoCaja.class, names = {"INGRESO_MANUAL", "EGRESO_MANUAL", "GASTO", "RETIRO"})
+    @DisplayName("registrarMovimiento guarda ingresos, egresos, gastos y retiros manuales")
+    void registrarMovimientoManual(TipoMovimientoCaja tipo) {
+
+        Caja caja = conCajaAbierta("1000");
+
+        MovimientoCajaDto dto = cajaService.registrarMovimiento(tipo, new BigDecimal("200"), "  Motivo  ");
+
+        ArgumentCaptor<MovimientoCaja> mov = ArgumentCaptor.forClass(MovimientoCaja.class);
+        verify(movimientoCajaRepository).save(mov.capture());
+        assertEquals(tipo, mov.getValue().getTipo());
+        assertEquals(new BigDecimal("200.00"), mov.getValue().getImporte());
+        assertEquals("Motivo", mov.getValue().getDescripcion());
+        assertSame(caja, mov.getValue().getCaja());
+        assertSame(sesionUsuario.getUsuario(), mov.getValue().getUsuario());
+        assertNotNull(mov.getValue().getFecha());
+        assertEquals(tipo, dto.getTipo());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = TipoMovimientoCaja.class, names = {"APERTURA", "VENTA", "COBRO", "PAGO_PROVEEDOR", "CIERRE"})
+    @DisplayName("registrarMovimiento rechaza los tipos que no son manuales")
+    void registrarMovimientoNoManual(TipoMovimientoCaja tipo) {
+
+        assertThrows(BusinessException.class,
+                () -> cajaService.registrarMovimiento(tipo, BigDecimal.TEN, "x"));
+        verify(movimientoCajaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("no se registran movimientos sin caja abierta (por ejemplo, ya cerrada)")
+    void registrarMovimientoSinCajaAbierta() {
+
+        sinCajaAbierta();
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> cajaService.registrarMovimiento(
+                TipoMovimientoCaja.INGRESO_MANUAL, BigDecimal.TEN, "x"));
+
+        assertTrue(ex.getMessage().contains("No tiene una caja abierta"));
+        verify(movimientoCajaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("un egreso no puede superar el saldo disponible")
+    void egresoSuperaSaldo() {
+
+        conCajaAbierta("100", movimiento(TipoMovimientoCaja.GASTO, "30"));
+
+        assertThrows(BusinessException.class, () -> cajaService.registrarMovimiento(
+                TipoMovimientoCaja.RETIRO, new BigDecimal("70.01"), "Retiro"));
+        verify(movimientoCajaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("un egreso puede dejar la caja exactamente en cero")
+    void egresoIgualAlSaldo() {
+
+        conCajaAbierta("100", movimiento(TipoMovimientoCaja.GASTO, "30"));
+
+        cajaService.registrarMovimiento(TipoMovimientoCaja.RETIRO, new BigDecimal("70"), "Retiro");
+
+        verify(movimientoCajaRepository).save(any());
+    }
+
+    @Test
+    @DisplayName("registrarMovimiento valida importe, descripción y tipo")
+    void registrarMovimientoValida() {
+
+        TipoMovimientoCaja t = TipoMovimientoCaja.INGRESO_MANUAL;
+
+        assertThrows(BusinessException.class, () -> cajaService.registrarMovimiento(null, BigDecimal.TEN, "x"));
+        assertThrows(BusinessException.class, () -> cajaService.registrarMovimiento(t, null, "x"));
+        assertThrows(BusinessException.class, () -> cajaService.registrarMovimiento(t, BigDecimal.ZERO, "x"));
+        assertThrows(BusinessException.class, () -> cajaService.registrarMovimiento(t, new BigDecimal("-5"), "x"));
+        assertThrows(BusinessException.class, () -> cajaService.registrarMovimiento(t, new BigDecimal("1.001"), "x"));
+        assertThrows(BusinessException.class, () -> cajaService.registrarMovimiento(t, BigDecimal.TEN, "   "));
+        assertThrows(BusinessException.class, () -> cajaService.registrarMovimiento(t, BigDecimal.TEN, "a".repeat(256)));
+
+        verify(movimientoCajaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("registrarMovimiento requiere CAJA_REGISTRAR_MOVIMIENTO")
+    void registrarMovimientoSinPermiso() {
+
+        loguearSin(PermisoCodigo.CAJA_REGISTRAR_MOVIMIENTO);
+
+        assertThrows(AuthorizationException.class, () -> cajaService.registrarMovimiento(
+                TipoMovimientoCaja.INGRESO_MANUAL, BigDecimal.TEN, "x"));
+        verifyNoInteractions(cajaRepository, movimientoCajaRepository);
+    }
+
+    // ------------------------------------------------------------------
+    // Cierre
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("cerrar registra fecha, saldo esperado, saldo final y diferencia (faltante)")
+    void cerrarConFaltante() {
+
+        Caja caja = conCajaAbierta("1000",
+                movimiento(TipoMovimientoCaja.VENTA, "500"),
+                movimiento(TipoMovimientoCaja.GASTO, "200"));
+
+        CajaDto dto = cajaService.cerrar(new BigDecimal("1250"), "  Faltan 50  ");
+
+        assertEquals(EstadoCaja.CERRADA, caja.getEstadoCaja());
+        assertNotNull(caja.getFechaCierre());
+        assertEquals(new BigDecimal("1300.00"), caja.getSaldoEsperado());
+        assertEquals(new BigDecimal("1250.00"), caja.getSaldoFinal());
+        assertEquals(new BigDecimal("-50.00"), caja.getDiferencia());
+        assertEquals("Faltan 50", caja.getObservacionCierre());
+        verify(cajaRepository).save(caja);
+
+        assertEquals(EstadoCaja.CERRADA, dto.getEstadoCaja());
+        assertEquals(new BigDecimal("1300.00"), dto.getSaldoEsperado());
+        assertEquals(new BigDecimal("500.00"), dto.getTotalIngresos());
+        assertEquals(new BigDecimal("200.00"), dto.getTotalEgresos());
+    }
+
+    @Test
+    @DisplayName("cerrar con sobrante deja diferencia positiva y observación opcional")
+    void cerrarConSobrante() {
+
+        Caja caja = conCajaAbierta("100");
+
+        cajaService.cerrar(new BigDecimal("120"), "   ");
+
+        assertEquals(new BigDecimal("20.00"), caja.getDiferencia());
+        assertEquals(null, caja.getObservacionCierre());
+    }
+
+    @Test
+    @DisplayName("cerrar sin caja abierta falla")
+    void cerrarSinCajaAbierta() {
+
+        sinCajaAbierta();
+
+        assertThrows(BusinessException.class, () -> cajaService.cerrar(BigDecimal.TEN, null));
+        verify(cajaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("cerrar valida el saldo contado")
+    void cerrarValidaSaldoContado() {
+
+        assertThrows(BusinessException.class, () -> cajaService.cerrar(null, null));
+        assertThrows(BusinessException.class, () -> cajaService.cerrar(new BigDecimal("-1"), null));
+        verify(cajaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("cerrar requiere CAJA_CERRAR")
+    void cerrarSinPermiso() {
+
+        loguearSin(PermisoCodigo.CAJA_CERRAR);
+
+        assertThrows(AuthorizationException.class, () -> cajaService.cerrar(BigDecimal.TEN, null));
+        verifyNoInteractions(cajaRepository, movimientoCajaRepository);
+    }
+
+}

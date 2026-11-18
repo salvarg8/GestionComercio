@@ -1,15 +1,60 @@
 package org.gestionComercio.enums;
 
-public enum TipoMovimientoCaja {
+/**
+ * Tipos de movimiento de caja. Los importes se guardan siempre positivos: el
+ * tipo indica si el movimiento suma o resta al saldo ({@link #getSigno()}).
+ *
+ * <p>APERTURA registra el saldo inicial y CIERRE queda reservado; ninguno de
+ * los dos cuenta como ingreso o egreso al calcular el saldo esperado.
+ */
+public enum TipoMovimientoCaja implements Descriptible {
 
-    APERTURA,
-    VENTA,
-    COBRO,
-    PAGO_PROVEEDOR,
-    GASTO,
-    RETIRO,
-    INGRESO_MANUAL,
-    EGRESO_MANUAL,
-    CIERRE
+    APERTURA("Apertura", 0, false),
+    VENTA("Venta", 1, false),
+    COBRO("Cobro", 1, false),
+    PAGO_PROVEEDOR("Pago a proveedor", -1, false),
+    GASTO("Gasto", -1, true),
+    RETIRO("Retiro", -1, true),
+    INGRESO_MANUAL("Ingreso manual", 1, true),
+    EGRESO_MANUAL("Egreso manual", -1, true),
+    CIERRE("Cierre", 0, false);
+
+    private final String descripcion;
+    private final int signo;
+    private final boolean manual;
+
+    TipoMovimientoCaja(String descripcion, int signo, boolean manual) {
+        this.descripcion = descripcion;
+        this.signo = signo;
+        this.manual = manual;
+    }
+
+    @Override
+    public String getDescripcion() {
+        return descripcion;
+    }
+
+    /** @return 1 si suma al saldo, -1 si resta, 0 si no lo afecta. */
+    public int getSigno() {
+        return signo;
+    }
+
+    public boolean esIngreso() {
+        return signo > 0;
+    }
+
+    public boolean esEgreso() {
+        return signo < 0;
+    }
+
+    /** @return true si el usuario puede registrarlo a mano desde la pantalla de caja. */
+    public boolean esManual() {
+        return manual;
+    }
+
+    @Override
+    public String toString() {
+        return descripcion;
+    }
 
 }
