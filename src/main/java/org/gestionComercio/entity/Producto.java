@@ -107,6 +107,6 @@ public class Producto extends BaseEntity {
 
     @Builder.Default
     @OneToMany(mappedBy = "producto", fetch = FetchType.LAZY)
-    private List<MovimientoStock> movimientosStock = new ArrayList<>();
+    private List<MovimientoInventario> movimientosInventario = new ArrayList<>();
 
 }
