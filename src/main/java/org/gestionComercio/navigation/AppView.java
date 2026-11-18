@@ -157,6 +157,16 @@ public enum AppView {
             PermisoCodigo.INVENTARIO_VER
     ),
 
+    /** Acepta como dato el ID de un producto, para abrir con su historial filtrado. */
+    MOVIMIENTO_HISTORIAL(
+            "/org/gestionComercio/view/inventario/MovimientoHistorial.fxml",
+            "Historial de movimientos",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.INVENTARIO_VER
+    ),
+
     /** Disponible para cualquier usuario con sesión iniciada. */
     CAMBIAR_PASSWORD(
             "/org/gestionComercio/view/perfil/CambiarPassword.fxml",

@@ -60,6 +60,16 @@
 }
 
 
+/* Movimientos de inventario de tipo ajuste */
+
+.estado-badge.movimiento-ajuste {
+
+    -fx-background-color: #E3F2FD;
+    -fx-text-fill: #1565C0;
+
+}
+
+
 /* Productos sin stock (cero o negativo) */
 
 .estado-badge.sin-stock {

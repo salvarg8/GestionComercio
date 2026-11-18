@@ -32,6 +32,13 @@ public interface ConsultaStockService {
      */
     StockProductoDto consultarProducto(Long productoId);
 
+    /**
+     * Stock actual de los productos, activos o dados de baja, que tienen
+     * movimientos de inventario, ordenados por nombre. Para elegir el producto
+     * en el historial de movimientos.
+     */
+    List<StockProductoDto> consultarProductosConMovimientos();
+
     /** Contadores de productos con control de stock, con stock bajo y sin stock. */
     ResumenStock resumen();
 

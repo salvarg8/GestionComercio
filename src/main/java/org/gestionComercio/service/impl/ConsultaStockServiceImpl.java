@@ -49,6 +49,14 @@ public class ConsultaStockServiceImpl implements ConsultaStockService {
     }
 
     @Override
+    public List<StockProductoDto> consultarProductosConMovimientos() {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.INVENTARIO_VER);
+
+        return productoRepository.consultarStockConMovimientos();
+    }
+
+    @Override
     public ResumenStock resumen() {
 
         sesionUsuario.requerirPermiso(PermisoCodigo.INVENTARIO_VER);

@@ -2,6 +2,7 @@ package org.gestionComercio.repository;
 
 import org.gestionComercio.entity.MovimientoInventario;
 import org.gestionComercio.enums.OrigenMovimientoInventario;
+import org.gestionComercio.enums.TipoMovimientoInventario;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
@@ -33,21 +34,24 @@ public interface MovimientoInventarioRepository extends Repository<MovimientoInv
     List<MovimientoInventario> findHistorialPorProducto(@Param("productoId") Long productoId);
 
     /**
-     * Movimientos entre dos fechas (ambas incluidas), del más reciente al más
-     * antiguo. Con productoId null trae los de todos los productos.
+     * Historial de movimientos, del más reciente al más antiguo. Cada criterio
+     * null no filtra; las fechas incluyen ambos extremos.
      */
     @Query("""
             select m from MovimientoInventario m
               join fetch m.producto
               join fetch m.usuario
-            where m.fecha between :desde and :hasta
-              and (:productoId is null or m.producto.id = :productoId)
+            where (:productoId is null or m.producto.id = :productoId)
+              and (:tipo is null or m.tipo = :tipo)
+              and (:desde is null or m.fecha >= :desde)
+              and (:hasta is null or m.fecha <= :hasta)
             order by m.fecha desc, m.id desc
             """)
-    List<MovimientoInventario> buscar(
+    List<MovimientoInventario> consultar(
+            @Param("productoId") Long productoId,
+            @Param("tipo") TipoMovimientoInventario tipo,
             @Param("desde") LocalDateTime desde,
-            @Param("hasta") LocalDateTime hasta,
-            @Param("productoId") Long productoId);
+            @Param("hasta") LocalDateTime hasta);
 
     /** Último movimiento del producto, para controlar que el historial esté alineado con su stock. */
     Optional<MovimientoInventario> findFirstByProductoIdOrderByFechaDescIdDesc(Long productoId);

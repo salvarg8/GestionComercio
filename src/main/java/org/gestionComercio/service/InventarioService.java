@@ -1,5 +1,6 @@
 package org.gestionComercio.service;
 
+import org.gestionComercio.dto.inventario.FiltroMovimientos;
 import org.gestionComercio.dto.inventario.MovimientoInventarioDto;
 import org.gestionComercio.enums.MotivoAjusteInventario;
 
@@ -81,5 +82,17 @@ public interface InventarioService {
      * @param productoId null para incluir todos los productos
      */
     List<MovimientoInventarioDto> buscarMovimientos(LocalDate desde, LocalDate hasta, Long productoId);
+
+    /**
+     * Historial de movimientos según los criterios indicados (todos opcionales),
+     * del más reciente al más antiguo. Cada movimiento informa el stock anterior
+     * y el resultante, así que el historial de un producto reconstruye la
+     * evolución de su stock. Requiere INVENTARIO_VER.
+     *
+     * @param filtro null equivale a {@link FiltroMovimientos#todos()}
+     * @throws org.gestionComercio.exception.BusinessException si la fecha desde
+     *         es posterior a la fecha hasta
+     */
+    List<MovimientoInventarioDto> consultarMovimientos(FiltroMovimientos filtro);
 
 }

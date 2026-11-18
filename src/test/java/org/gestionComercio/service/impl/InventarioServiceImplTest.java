@@ -1,5 +1,6 @@
 package org.gestionComercio.service.impl;
 
+import org.gestionComercio.dto.inventario.FiltroMovimientos;
 import org.gestionComercio.dto.inventario.MovimientoInventarioDto;
 import org.gestionComercio.entity.MovimientoInventario;
 import org.gestionComercio.entity.Producto;
@@ -43,6 +44,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -479,8 +481,61 @@ class InventarioServiceImplTest {
 
         inventarioService.buscarMovimientos(desde, hasta, null);
 
-        verify(movimientoInventarioRepository).buscar(
-                LocalDateTime.of(2026, 11, 1, 0, 0), LocalDateTime.of(hasta, LocalTime.MAX), null);
+        verify(movimientoInventarioRepository).consultar(
+                null, null, LocalDateTime.of(2026, 11, 1, 0, 0), LocalDateTime.of(hasta, LocalTime.MAX));
+    }
+
+    @Test
+    @DisplayName("consultarMovimientos() pasa todos los filtros al repositorio, con los días completos")
+    void consultarMovimientosConFiltros() {
+        LocalDate desde = LocalDate.of(2026, 11, 1);
+        LocalDate hasta = LocalDate.of(2026, 11, 17);
+
+        inventarioService.consultarMovimientos(
+                new FiltroMovimientos(7L, TipoMovimientoInventario.SALIDA, desde, hasta));
+
+        verify(movimientoInventarioRepository).consultar(
+                7L, TipoMovimientoInventario.SALIDA,
+                LocalDateTime.of(2026, 11, 1, 0, 0), LocalDateTime.of(hasta, LocalTime.MAX));
+    }
+
+    @Test
+    @DisplayName("consultarMovimientos() sin filtros trae todos los movimientos")
+    void consultarMovimientosSinFiltros() {
+        inventarioService.consultarMovimientos(FiltroMovimientos.todos());
+        inventarioService.consultarMovimientos(null);
+
+        verify(movimientoInventarioRepository, times(2)).consultar(null, null, null, null);
+    }
+
+    @Test
+    @DisplayName("consultarMovimientos() admite una sola de las fechas")
+    void consultarMovimientosConUnaSolaFecha() {
+        LocalDate dia = LocalDate.of(2026, 11, 10);
+
+        inventarioService.consultarMovimientos(new FiltroMovimientos(null, null, dia, null));
+        inventarioService.consultarMovimientos(new FiltroMovimientos(null, null, null, dia));
+
+        verify(movimientoInventarioRepository).consultar(null, null, dia.atStartOfDay(), null);
+        verify(movimientoInventarioRepository).consultar(null, null, null, dia.atTime(LocalTime.MAX));
+    }
+
+    @Test
+    @DisplayName("consultarMovimientos() rechaza un rango invertido y exige INVENTARIO_VER")
+    void consultarMovimientosValidaYExigePermiso() {
+        LocalDate hoy = LocalDate.of(2026, 11, 17);
+
+        assertThatThrownBy(() -> inventarioService.consultarMovimientos(
+                new FiltroMovimientos(null, null, hoy, hoy.minusDays(1))))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("posterior");
+
+        sesionUsuario.iniciarSesion(usuario, EnumSet.of(PermisoCodigo.INVENTARIO_AJUSTAR));
+
+        assertThatThrownBy(() -> inventarioService.consultarMovimientos(FiltroMovimientos.todos()))
+                .isInstanceOf(AuthorizationException.class);
+
+        verifyNoInteractions(movimientoInventarioRepository);
     }
 
     @Test
