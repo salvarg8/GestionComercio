@@ -27,6 +27,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -256,6 +258,67 @@ class CajaServiceImplTest {
 
         assertThrows(AuthorizationException.class, () -> cajaService.obtenerCajaAbierta());
         verifyNoInteractions(cajaRepository);
+    }
+
+    @Test
+    @DisplayName("listarCajasCerradas devuelve cada caja con sus totales y conserva el saldo esperado del cierre")
+    void listarCajasCerradas() {
+
+        Caja c1 = cajaAbierta("100");
+        c1.setId(1L);
+        c1.setEstadoCaja(EstadoCaja.CERRADA);
+        c1.setSaldoEsperado(new BigDecimal("150.00"));
+        Caja c2 = cajaAbierta("50");
+        c2.setId(2L);
+        c2.setEstadoCaja(EstadoCaja.CERRADA);
+        c2.setSaldoEsperado(new BigDecimal("50.00"));
+
+        MovimientoCaja venta = movimiento(TipoMovimientoCaja.VENTA, "80");
+        venta.setCaja(c1);
+        MovimientoCaja gasto = movimiento(TipoMovimientoCaja.GASTO, "30");
+        gasto.setCaja(c1);
+
+        LocalDate desde = LocalDate.of(2026, 11, 1);
+        LocalDate hasta = LocalDate.of(2026, 11, 18);
+        when(cajaRepository.findCerradas(desde.atStartOfDay(), hasta.atTime(LocalTime.MAX)))
+                .thenReturn(List.of(c1, c2));
+        when(movimientoCajaRepository.findByCajaIdIn(List.of(1L, 2L))).thenReturn(List.of(venta, gasto));
+
+        List<CajaDto> cajas = cajaService.listarCajasCerradas(desde, hasta);
+
+        assertEquals(2, cajas.size());
+        assertEquals(new BigDecimal("80.00"), cajas.get(0).getTotalIngresos());
+        assertEquals(new BigDecimal("30.00"), cajas.get(0).getTotalEgresos());
+        assertEquals(new BigDecimal("150.00"), cajas.get(0).getSaldoEsperado());
+        assertEquals(new BigDecimal("0.00"), cajas.get(1).getTotalIngresos());
+    }
+
+    @Test
+    @DisplayName("listarCajasCerradas sin fechas no filtra y sin resultados no consulta movimientos")
+    void listarCajasCerradasSinFiltros() {
+
+        when(cajaRepository.findCerradas(null, null)).thenReturn(List.of());
+
+        assertTrue(cajaService.listarCajasCerradas(null, null).isEmpty());
+        verifyNoInteractions(movimientoCajaRepository);
+    }
+
+    @Test
+    @DisplayName("listarCajasCerradas rechaza un rango con desde posterior a hasta")
+    void listarCajasCerradasRangoInvalido() {
+
+        assertThrows(BusinessException.class, () -> cajaService.listarCajasCerradas(
+                LocalDate.of(2026, 11, 18), LocalDate.of(2026, 11, 1)));
+        verifyNoInteractions(cajaRepository);
+    }
+
+    @Test
+    @DisplayName("listarCajasCerradas requiere CAJA_VER")
+    void listarCajasCerradasSinPermiso() {
+
+        loguearSin(PermisoCodigo.CAJA_VER);
+
+        assertThrows(AuthorizationException.class, () -> cajaService.listarCajasCerradas(null, null));
     }
 
     @Test

@@ -186,6 +186,28 @@ public enum AppView {
             PermisoCodigo.INVENTARIO_VER
     ),
 
+    /**
+     * Caja del usuario de la sesión. Abrir, registrar movimientos y cerrar se
+     * habilitan según CAJA_ABRIR, CAJA_REGISTRAR_MOVIMIENTO y CAJA_CERRAR.
+     */
+    CAJA(
+            "/org/gestionComercio/view/caja/Caja.fxml",
+            "Caja",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.CAJA_VER
+    ),
+
+    CAJA_HISTORIAL(
+            "/org/gestionComercio/view/caja/CajaHistorial.fxml",
+            "Historial de cajas",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.CAJA_VER
+    ),
+
     /** Se ve con EMPRESA_VER; sin EMPRESA_EDITAR el formulario es de sólo lectura. */
     EMPRESA_CONFIG(
             "/org/gestionComercio/view/empresa/EmpresaConfig.fxml",

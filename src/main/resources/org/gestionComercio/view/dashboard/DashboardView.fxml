@@ -93,6 +93,8 @@
 
             <Button fx:id="btnClientes" maxWidth="Infinity" styleClass="menu-button" text="Clientes" />
 
+            <Button fx:id="btnCaja" maxWidth="Infinity" styleClass="menu-button" text="Caja" />
+
             <Button fx:id="btnVentas" maxWidth="Infinity" styleClass="menu-button" text="Ventas" />
 
             <Button fx:id="btnCompras" maxWidth="Infinity" styleClass="menu-button" text="Compras" />
