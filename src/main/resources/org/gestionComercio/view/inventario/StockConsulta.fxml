@@ -132,10 +132,10 @@
                              prefWidth="130"
                              style="-fx-alignment: CENTER;"/>
 
-                <!-- Ver movimientos; con permiso INVENTARIO_AJUSTAR también ajustar (doble clic en la fila hace lo mismo) -->
+                <!-- Ver movimientos; según los permisos también entrada, salida y ajuste (doble clic en la fila = ajustar) -->
                 <TableColumn fx:id="colAcciones"
                              text="Acciones"
-                             prefWidth="90"
+                             prefWidth="150"
                              sortable="false"
                              style="-fx-alignment: CENTER;"/>
 

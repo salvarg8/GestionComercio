@@ -56,7 +56,7 @@ class ConsultaStockServiceImplTest {
 
     private static StockProductoDto stock(Long id) {
         return new StockProductoDto(id, "P" + id, null, "Producto " + id, 1L, "Almacén", "Marca",
-                UnidadMedida.UNIDAD, BigDecimal.ONE, BigDecimal.ZERO, true, EstadoRegistro.ACTIVO);
+                UnidadMedida.UNIDAD, BigDecimal.ONE, BigDecimal.ZERO, true, false, EstadoRegistro.ACTIVO);
     }
 
     @Test

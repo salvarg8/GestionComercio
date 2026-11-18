@@ -57,7 +57,7 @@ public class MovimientoHistorialController extends AbstractController implements
 
     /** Opción "todos los productos" del combo (productoId null = sin filtro). */
     private static final StockProductoDto TODOS_LOS_PRODUCTOS = new StockProductoDto(
-            null, null, null, "Todos los productos", null, null, null, null, null, null, null, null);
+            null, null, null, "Todos los productos", null, null, null, null, null, null, null, null, null);
 
     private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
