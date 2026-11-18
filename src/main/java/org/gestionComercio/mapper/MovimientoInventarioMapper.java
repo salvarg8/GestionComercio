@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * Sólo convierte de entidad a DTO. A diferencia del resto de los mappers no
  * extiende {@link BaseMapper}: los movimientos son inmutables y se crean con
- * {@link MovimientoInventario#registrar}, así que no hay toEntity ni updateEntity.
+ * {@link MovimientoInventario#nuevo()}, así que no hay toEntity ni updateEntity.
  */
 @Mapper(
         componentModel = "spring",
@@ -22,6 +22,8 @@ public interface MovimientoInventarioMapper {
     @Mapping(target = "productoId", source = "producto.id")
     @Mapping(target = "productoCodigo", source = "producto.codigo")
     @Mapping(target = "productoNombre", source = "producto.nombre")
+    @Mapping(target = "productoUnidadMedida", source = "producto.unidadMedida")
+    @Mapping(target = "movimientoRevertidoId", source = "movimientoRevertido.id")
     @Mapping(target = "usuarioId", source = "usuario.id")
     @Mapping(target = "usuarioNombre", source = "usuario.usuario")
     @Mapping(target = "usuarioNombreCompleto",

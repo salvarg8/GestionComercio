@@ -73,7 +73,7 @@ class ProductoValidatorTest {
                 .nombre("Gaseosa cola 1,5 L")
                 .precioCompra(new BigDecimal("1000.00"))
                 .precioVenta(new BigDecimal("1500.00"))
-                .stockMinimo(5)
+                .stockMinimo(BigDecimal.valueOf(5))
                 .manejaStock(true)
                 .permiteStockNegativo(false)
                 .unidadMedida(UnidadMedida.UNIDAD)
@@ -284,9 +284,25 @@ class ProductoValidatorTest {
     @DisplayName("el stock mínimo no puede ser negativo")
     void stockMinimoNegativo() {
         ProductoDto dto = valido();
-        dto.setStockMinimo(-1);
+        dto.setStockMinimo(BigDecimal.valueOf(-1));
 
         assertTrue(tieneError(validator.validate(dto), "stockMinimo", "negativo"));
+    }
+
+    @Test
+    @DisplayName("el stock mínimo admite decimales sólo si la unidad es fraccionable")
+    void stockMinimoConDecimales() {
+        ProductoDto dto = valido();
+        dto.setStockMinimo(new BigDecimal("2.5"));
+
+        dto.setUnidadMedida(UnidadMedida.UNIDAD);
+        assertTrue(tieneError(validator.validate(dto), "stockMinimo", "no admite decimales"));
+
+        dto.setUnidadMedida(UnidadMedida.KILOGRAMO);
+        assertFalse(validator.validate(dto).hasErrors());
+
+        dto.setStockMinimo(new BigDecimal("2.5001"));
+        assertTrue(tieneError(validator.validate(dto), "stockMinimo", "3 decimales"));
     }
 
     // ------------------------------------------------------------------

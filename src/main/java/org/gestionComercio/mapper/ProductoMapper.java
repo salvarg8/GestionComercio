@@ -11,7 +11,7 @@ import org.mapstruct.ReportingPolicy;
 
 /**
  * Las relaciones (categoría, marca, proveedor) las resuelve el servicio a partir
- * de los IDs; el estado y el stock nunca se copian desde el DTO.
+ * de los IDs; el estado, el stock y la versión nunca se copian desde el DTO.
  */
 @Mapper(
         componentModel = "spring",
@@ -31,6 +31,7 @@ public interface ProductoMapper extends BaseMapper<ProductoDto, Producto> {
     @Override
     @Mapping(target = "estadoRegistro", ignore = true)
     @Mapping(target = "stock", ignore = true)
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "categoria", ignore = true)
     @Mapping(target = "marca", ignore = true)
     @Mapping(target = "proveedor", ignore = true)
@@ -50,6 +51,7 @@ public interface ProductoMapper extends BaseMapper<ProductoDto, Producto> {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "estadoRegistro", ignore = true)
     @Mapping(target = "stock", ignore = true)
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "categoria", ignore = true)
     @Mapping(target = "marca", ignore = true)
     @Mapping(target = "proveedor", ignore = true)

@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
+import org.gestionComercio.util.CantidadUtils;
+
 import java.math.BigDecimal;
 
 @Getter
@@ -23,8 +25,8 @@ import java.math.BigDecimal;
 @Table(name = "detalle_ventas")
 public class DetalleVenta extends BaseEntity {
 
-    @Column(nullable = false)
-    private Integer cantidad;
+    @Column(nullable = false, precision = CantidadUtils.PRECISION, scale = CantidadUtils.ESCALA)
+    private BigDecimal cantidad;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal precioUnitario;

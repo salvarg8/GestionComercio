@@ -9,8 +9,10 @@ import org.gestionComercio.entity.Usuario;
 import org.gestionComercio.enums.EstadoRegistro;
 import org.gestionComercio.enums.FiltroEstado;
 import org.gestionComercio.enums.PermisoCodigo;
+import org.gestionComercio.enums.UnidadMedida;
 import org.gestionComercio.exception.AuthorizationException;
 import org.gestionComercio.exception.BusinessException;
+import org.gestionComercio.exception.ConcurrencyException;
 import org.gestionComercio.exception.EntityNotFoundException;
 import org.gestionComercio.exception.ValidationException;
 import org.gestionComercio.mapper.ProductoMapper;
@@ -27,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import java.math.BigDecimal;
 import java.util.EnumSet;
@@ -114,7 +117,7 @@ class ProductoServiceImplTest {
                 .descripcion("  ")
                 .precioCompra(new BigDecimal("100"))
                 .precioVenta(new BigDecimal("150"))
-                .stockMinimo(5)
+                .stockMinimo(BigDecimal.valueOf(5))
                 .categoriaId(1L)
                 .marcaId(2L)
                 .proveedorId(3L)
@@ -136,7 +139,7 @@ class ProductoServiceImplTest {
     @DisplayName("save() normaliza, carga las relaciones y guarda activo con stock 0")
     void saveNormalizaYGuarda() {
         ProductoDto dto = dto(null);
-        Producto entidad = Producto.builder().stock(99).build();
+        Producto entidad = Producto.builder().stock(new BigDecimal("99")).build();
         entidad.setEstadoRegistro(EstadoRegistro.INACTIVO);
 
         when(productoMapper.toEntity(dto)).thenReturn(entidad);
@@ -152,7 +155,7 @@ class ProductoServiceImplTest {
         assertFalse(dto.getPermiteStockNegativo());
 
         assertEquals(EstadoRegistro.ACTIVO, entidad.getEstadoRegistro());
-        assertEquals(0, entidad.getStock());
+        assertEquals(0, entidad.getStock().signum());
         assertSame(categoria, entidad.getCategoria());
         assertSame(marca, entidad.getMarca());
         assertSame(proveedor, entidad.getProveedor());
@@ -171,7 +174,7 @@ class ProductoServiceImplTest {
 
         productoService.save(dto);
 
-        assertEquals(0, dto.getStockMinimo());
+        assertEquals(BigDecimal.ZERO, dto.getStockMinimo());
         assertFalse(dto.getPermiteStockNegativo());
     }
 
@@ -227,7 +230,7 @@ class ProductoServiceImplTest {
         dto.setMarcaId(7L);
 
         when(productoRepository.findById(1L)).thenReturn(Optional.of(existente));
-        when(productoRepository.save(existente)).thenReturn(existente);
+        when(productoRepository.saveAndFlush(existente)).thenReturn(existente);
 
         productoService.update(dto);
 
@@ -242,12 +245,57 @@ class ProductoServiceImplTest {
         Producto existente = producto(1L, EstadoRegistro.INACTIVO);
 
         when(productoRepository.findById(1L)).thenReturn(Optional.of(existente));
-        when(productoRepository.save(existente)).thenReturn(existente);
+        when(productoRepository.saveAndFlush(existente)).thenReturn(existente);
 
         productoService.update(dto(1L));
 
         assertEquals(EstadoRegistro.INACTIVO, existente.getEstadoRegistro());
         assertSame(categoria, existente.getCategoria());
+    }
+
+    @Test
+    @DisplayName("update() con una versión vieja lanza ConcurrencyException y no guarda")
+    void updateConVersionVieja() {
+        Producto existente = Producto.builder().nombre("Gaseosa").categoria(categoria).version(3L).build();
+        existente.setId(1L);
+        ProductoDto dto = dto(1L);
+        dto.setVersion(2L);
+
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(existente));
+
+        assertThrows(ConcurrencyException.class, () -> productoService.update(dto));
+
+        verify(productoMapper, never()).updateEntity(any(), any());
+        verify(productoRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("update() traduce un conflicto de @Version al guardar en ConcurrencyException")
+    void updateConflictoAlGuardar() {
+        Producto existente = producto(1L, EstadoRegistro.ACTIVO);
+
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(existente));
+        when(productoRepository.saveAndFlush(existente))
+                .thenThrow(new ObjectOptimisticLockingFailureException(Producto.class, 1L));
+
+        assertThrows(ConcurrencyException.class, () -> productoService.update(dto(1L)));
+    }
+
+    @Test
+    @DisplayName("update() no permite pasar a una unidad entera si el stock tiene decimales")
+    void updateUnidadEnteraConStockFraccionario() {
+        Producto existente = Producto.builder().nombre("Queso").categoria(categoria)
+                .unidadMedida(UnidadMedida.KILOGRAMO).stock(new BigDecimal("1.5")).build();
+        existente.setId(1L);
+        ProductoDto dto = dto(1L);
+        dto.setUnidadMedida(UnidadMedida.UNIDAD);
+
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(existente));
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> productoService.update(dto));
+
+        assertTrue(ex.getMessage().contains("tiene decimales"));
+        verify(productoRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -257,7 +305,7 @@ class ProductoServiceImplTest {
 
         assertThrows(EntityNotFoundException.class, () -> productoService.update(dto(1L)));
 
-        verify(productoRepository, never()).save(any());
+        verify(productoRepository, never()).saveAndFlush(any());
     }
 
     @Test
