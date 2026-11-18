@@ -25,6 +25,11 @@ public enum MotivoAjusteInventario implements Descriptible {
         return descripcion;
     }
 
+    /** @return true si la causa sola no explica el ajuste y hay que escribir el detalle. */
+    public boolean requiereDetalle() {
+        return this == OTRO;
+    }
+
     @Override
     public String toString() {
         return descripcion;

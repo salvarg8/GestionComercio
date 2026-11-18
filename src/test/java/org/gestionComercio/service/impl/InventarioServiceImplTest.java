@@ -315,6 +315,48 @@ class InventarioServiceImplTest {
         verificarSinCambios(producto, "10");
     }
 
+    @Test
+    @DisplayName("ajustarStock() no se puede hacer sin motivo: exige la causa, y el detalle si es \"Otro\"")
+    void ajustarStockSinMotivo() {
+        Producto producto = producto("10");
+        lenient().when(productoRepository.findAllById(List.of(1L))).thenReturn(List.of(producto));
+
+        assertThatThrownBy(() -> inventarioService.ajustarStock(1L, bd("7"), null, "Contado"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("causa");
+        assertThatThrownBy(() -> inventarioService.ajustarStock(
+                1L, bd("7"), MotivoAjusteInventario.OTRO, "   "))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("detallar");
+        assertThatThrownBy(() -> inventarioService.registrarAjuste(
+                1L, bd("-3"), MotivoAjusteInventario.OTRO, null))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("detallar");
+        assertThatThrownBy(() -> inventarioService.ajustarStock(
+                1L, bd("7"), MotivoAjusteInventario.ROTURA, "x".repeat(MovimientoInventario.MOTIVO_MAX + 1)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("superar");
+
+        verificarSinCambios(producto, "10");
+    }
+
+    @Test
+    @DisplayName("ajustarStock() con causa \"Otro\" y detalle usa el detalle como motivo")
+    void ajustarStockOtroConDetalle() {
+        Producto producto = producto("10");
+        existe(producto);
+
+        inventarioService.ajustarStock(1L, bd("12"), MotivoAjusteInventario.OTRO, "Devolución sin comprobante");
+
+        MovimientoInventario m = movimientoGuardado();
+        assertThat(m.getTipo()).isEqualTo(TipoMovimientoInventario.AJUSTE);
+        assertThat(m.getStockAnterior()).isEqualByComparingTo("10");
+        assertThat(m.getCantidad()).isEqualByComparingTo("2");
+        assertThat(m.getStockResultante()).isEqualByComparingTo("12");
+        assertThat(m.getMotivo()).isEqualTo("Devolución sin comprobante");
+        assertThat(m.getMotivoAjuste()).isEqualTo(MotivoAjusteInventario.OTRO);
+    }
+
     // ------------------------------------------------------------------
     // Validaciones comunes
     // ------------------------------------------------------------------

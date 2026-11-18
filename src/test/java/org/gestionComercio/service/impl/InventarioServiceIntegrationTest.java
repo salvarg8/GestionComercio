@@ -225,6 +225,26 @@ class InventarioServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("ajustarStock() guarda un movimiento AJUSTE con el stock anterior y el resultante")
+    void ajustePorRecuentoRegistraStocks() {
+        Long id = crearProducto("Yerba", UnidadMedida.UNIDAD);
+        inventarioService.registrarEntrada(id, bd("5"), "Compra");
+
+        MovimientoInventarioDto ajuste = inventarioService.ajustarStock(
+                id, bd("9"), MotivoAjusteInventario.OTRO, "Mercadería sin registrar");
+
+        MovimientoInventarioDto guardado = inventarioService.historial(id).get(0);
+
+        assertThat(guardado.getId()).isEqualTo(ajuste.getId());
+        assertThat(guardado.getTipo()).isEqualTo(TipoMovimientoInventario.AJUSTE);
+        assertThat(guardado.getStockAnterior()).isEqualByComparingTo("5");
+        assertThat(guardado.getCantidad()).isEqualByComparingTo("4");
+        assertThat(guardado.getStockResultante()).isEqualByComparingTo("9");
+        assertThat(guardado.getMotivo()).isEqualTo("Mercadería sin registrar");
+        assertThat(productoEnBase(id).getStock()).isEqualByComparingTo("9");
+    }
+
+    @Test
     @DisplayName("Si otra operación modificó el producto, falla con ConcurrencyException y no guarda nada")
     void conflictoDeVersion() {
         Long id = crearProducto("Arroz", UnidadMedida.UNIDAD);

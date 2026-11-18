@@ -50,7 +50,8 @@ public interface InventarioService {
      *
      * @param variacion   unidades a sumar (positiva) o a restar (negativa); distinta de cero
      * @param causa       causa del ajuste, para reportes
-     * @param observacion detalle opcional; si está vacío se usa la descripción de la causa
+     * @param observacion detalle del motivo; obligatorio si la causa es {@code OTRO}.
+     *                    Si está vacío se usa la descripción de la causa
      */
     MovimientoInventarioDto registrarAjuste(
             Long productoId, BigDecimal variacion, MotivoAjusteInventario causa, String observacion);
@@ -59,7 +60,12 @@ public interface InventarioService {
      * Ajuste por recuento: el usuario indica cuánto stock contó y se registra
      * la diferencia con el stock del sistema. Requiere INVENTARIO_AJUSTAR.
      *
+     * <p>El movimiento devuelto informa el stock anterior, el resultante y la
+     * diferencia aplicada ({@code cantidad}).
+     *
      * @param stockContado stock real contado (cero o más)
+     * @param causa        causa del ajuste (obligatoria)
+     * @param observacion  detalle del motivo; obligatorio si la causa es {@code OTRO}
      * @throws org.gestionComercio.exception.BusinessException si coincide con el stock actual
      */
     MovimientoInventarioDto ajustarStock(
