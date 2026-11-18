@@ -132,6 +132,13 @@
                              prefWidth="130"
                              style="-fx-alignment: CENTER;"/>
 
+                <!-- Sólo visible con permiso INVENTARIO_AJUSTAR; doble clic en la fila hace lo mismo -->
+                <TableColumn fx:id="colAcciones"
+                             text="Acciones"
+                             prefWidth="80"
+                             sortable="false"
+                             style="-fx-alignment: CENTER;"/>
+
             </columns>
 
             <BorderPane.margin>

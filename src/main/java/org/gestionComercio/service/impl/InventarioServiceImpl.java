@@ -78,7 +78,7 @@ public class InventarioServiceImpl implements InventarioService {
             throw new BusinessException("La cantidad del ajuste no puede ser cero.");
         }
 
-        requerirCausa(causa);
+        requerirMotivo(causa, observacion);
 
         return registrar(productoId, (producto, usuario) -> ajuste(producto, variacion, causa, observacion, usuario));
     }
@@ -97,7 +97,7 @@ public class InventarioServiceImpl implements InventarioService {
             throw new BusinessException("El stock contado no puede ser negativo.");
         }
 
-        requerirCausa(causa);
+        requerirMotivo(causa, observacion);
 
         return registrar(productoId, (producto, usuario) -> {
 
@@ -193,10 +193,24 @@ public class InventarioServiceImpl implements InventarioService {
         }
     }
 
-    private void requerirCausa(MotivoAjusteInventario causa) {
+    /**
+     * Un ajuste siempre tiene motivo: la causa es obligatoria y, si es
+     * {@code OTRO}, también el detalle, porque la causa sola no explica nada.
+     */
+    private void requerirMotivo(MotivoAjusteInventario causa, String observacion) {
 
         if (causa == null) {
             throw new BusinessException("Debe indicar la causa del ajuste.");
+        }
+
+        if (causa.requiereDetalle() && (observacion == null || observacion.isBlank())) {
+            throw new BusinessException("Debe detallar el motivo del ajuste cuando la causa es \""
+                    + causa.getDescripcion() + "\".");
+        }
+
+        if (observacion != null && observacion.trim().length() > MovimientoInventario.MOTIVO_MAX) {
+            throw new BusinessException("El detalle del ajuste no puede superar los "
+                    + MovimientoInventario.MOTIVO_MAX + " caracteres.");
         }
     }
 
