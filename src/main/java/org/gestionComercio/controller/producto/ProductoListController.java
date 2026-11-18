@@ -23,6 +23,7 @@ import org.gestionComercio.navigation.AppView;
 import org.gestionComercio.navigation.Navigator;
 import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.ProductoService;
+import org.gestionComercio.util.CantidadUtils;
 import org.gestionComercio.util.CurrencyUtils;
 import org.gestionComercio.util.dialog.Dialogs;
 import org.gestionComercio.view.component.table.RowActionsTableCell;
@@ -239,8 +240,8 @@ public class ProductoListController extends AbstractController {
                 setGraphic(badge);
             }
 
-            private String valor(Integer numero) {
-                return numero == null ? "0" : numero.toString();
+            private String valor(BigDecimal numero) {
+                return CantidadUtils.formatear(numero);
             }
         });
     }

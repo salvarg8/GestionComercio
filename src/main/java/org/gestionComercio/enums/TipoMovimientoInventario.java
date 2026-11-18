@@ -1,5 +1,7 @@
 package org.gestionComercio.enums;
 
+import java.math.BigDecimal;
+
 /**
  * Tipo de un movimiento de inventario. Define qué signo puede tener la cantidad
  * del movimiento (la variación de stock que produce).
@@ -27,11 +29,25 @@ public enum TipoMovimientoInventario implements Descriptible {
     }
 
     /** @return true si una variación de stock con este signo es válida para el tipo. */
-    public boolean admiteCantidad(int cantidad) {
+    public boolean admiteCantidad(BigDecimal cantidad) {
+
+        if (cantidad == null) {
+            return false;
+        }
+
         return switch (this) {
-            case ENTRADA -> cantidad > 0;
-            case SALIDA -> cantidad < 0;
-            case AJUSTE -> cantidad != 0;
+            case ENTRADA -> cantidad.signum() > 0;
+            case SALIDA -> cantidad.signum() < 0;
+            case AJUSTE -> cantidad.signum() != 0;
+        };
+    }
+
+    /** Tipo del movimiento que revierte a uno de este tipo. */
+    public TipoMovimientoInventario opuesto() {
+        return switch (this) {
+            case ENTRADA -> SALIDA;
+            case SALIDA -> ENTRADA;
+            case AJUSTE -> AJUSTE;
         };
     }
 

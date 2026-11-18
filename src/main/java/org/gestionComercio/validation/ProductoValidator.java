@@ -8,6 +8,7 @@ import org.gestionComercio.repository.CategoriaRepository;
 import org.gestionComercio.repository.MarcaRepository;
 import org.gestionComercio.repository.ProductoRepository;
 import org.gestionComercio.repository.ProveedorRepository;
+import org.gestionComercio.util.CantidadUtils;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -172,10 +173,22 @@ public class ProductoValidator implements Validator<ProductoDto> {
             return;
         }
 
-        if (dto.getStockMinimo() == null) {
+        BigDecimal minimo = dto.getStockMinimo();
+
+        if (minimo == null) {
             result.addError("stockMinimo", "El stock mínimo es obligatorio.");
-        } else if (dto.getStockMinimo() < 0) {
+        } else if (minimo.signum() < 0) {
             result.addError("stockMinimo", "El stock mínimo no puede ser negativo.");
+        } else if (!CantidadUtils.escalaValida(minimo)) {
+            result.addError("stockMinimo",
+                    "El stock mínimo admite como máximo " + CantidadUtils.ESCALA + " decimales.");
+        } else if (!CantidadUtils.dentroDelMaximo(minimo)) {
+            result.addError("stockMinimo", "El stock mínimo es demasiado grande.");
+        } else if (dto.getUnidadMedida() != null
+                && !dto.getUnidadMedida().isFraccionable()
+                && !CantidadUtils.esEntera(minimo)) {
+            result.addError("stockMinimo", "La unidad " + dto.getUnidadMedida().getDescripcion().toLowerCase()
+                    + " no admite decimales: ingrese un número entero.");
         }
     }
 

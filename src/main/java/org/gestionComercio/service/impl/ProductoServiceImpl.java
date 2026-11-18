@@ -10,6 +10,7 @@ import org.gestionComercio.enums.EstadoRegistro;
 import org.gestionComercio.enums.FiltroEstado;
 import org.gestionComercio.enums.PermisoCodigo;
 import org.gestionComercio.exception.BusinessException;
+import org.gestionComercio.exception.ConcurrencyException;
 import org.gestionComercio.exception.EntityNotFoundException;
 import org.gestionComercio.exception.ValidationException;
 import org.gestionComercio.mapper.ProductoMapper;
@@ -19,12 +20,16 @@ import org.gestionComercio.repository.ProductoRepository;
 import org.gestionComercio.repository.ProveedorRepository;
 import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.ProductoService;
+import org.gestionComercio.util.CantidadUtils;
 import org.gestionComercio.validation.ProductoValidator;
 import org.gestionComercio.validation.ValidationResult;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -53,7 +58,7 @@ public class ProductoServiceImpl implements ProductoService {
         Producto producto = productoMapper.toEntity(dto);
         producto.setId(null);
         producto.setEstadoRegistro(EstadoRegistro.ACTIVO);
-        producto.setStock(0);
+        producto.inicializarStock();
 
         cargarRelaciones(producto, dto);
 
@@ -64,6 +69,12 @@ public class ProductoServiceImpl implements ProductoService {
      * Se puede editar un producto activo o dado de baja (por ejemplo, para
      * asignarle una categoría vigente antes de habilitarlo). No cambia su estado
      * ni su stock.
+     *
+     * <p>El DTO tiene que traer la versión con la que se leyó el producto. Si
+     * no coincide con la actual, otro usuario lo modificó mientras tanto y la
+     * actualización se rechaza en lugar de pisar sus cambios. El flush inmediato
+     * cubre también el caso de que lo modifiquen entre esta comprobación y el
+     * guardado.
      */
     @Override
     public ProductoDto update(ProductoDto dto) {
@@ -75,11 +86,34 @@ public class ProductoServiceImpl implements ProductoService {
 
         Producto producto = buscar(dto.getId());
 
+        if (!Objects.equals(dto.getVersion(), producto.getVersion())) {
+            throw productoModificado(producto, null);
+        }
+
+        if (dto.getUnidadMedida() != null
+                && !dto.getUnidadMedida().isFraccionable()
+                && !CantidadUtils.esEntera(CantidadUtils.normalizar(producto.getStock()))) {
+            throw new BusinessException("No se puede cambiar la unidad a "
+                    + dto.getUnidadMedida().getDescripcion().toLowerCase() + " porque el stock actual ("
+                    + CantidadUtils.formatear(producto.getStock()) + ") tiene decimales. "
+                    + "Ajuste primero el stock a un número entero.");
+        }
+
         productoMapper.updateEntity(dto, producto);
 
         cargarRelaciones(producto, dto);
 
-        return productoMapper.toDto(productoRepository.save(producto));
+        try {
+            return productoMapper.toDto(productoRepository.saveAndFlush(producto));
+        } catch (OptimisticLockingFailureException e) {
+            throw productoModificado(producto, e);
+        }
+    }
+
+    private ConcurrencyException productoModificado(Producto producto, Throwable causa) {
+        return new ConcurrencyException("Otro usuario u operación modificó el producto \""
+                + producto.getNombre() + "\" mientras lo editaba. Vuelva a abrirlo para ver los "
+                + "datos actuales y repita los cambios.", causa);
     }
 
     /**
@@ -209,7 +243,7 @@ public class ProductoServiceImpl implements ProductoService {
         }
 
         if (!dto.getManejaStock()) {
-            dto.setStockMinimo(0);
+            dto.setStockMinimo(BigDecimal.ZERO);
             dto.setPermiteStockNegativo(false);
         }
     }

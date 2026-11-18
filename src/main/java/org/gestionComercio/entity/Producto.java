@@ -10,6 +10,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,11 +19,14 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.gestionComercio.enums.AlicuotaIVA;
+import org.hibernate.annotations.ColumnDefault;
 import org.gestionComercio.enums.UnidadMedida;
+import org.gestionComercio.util.CantidadUtils;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Getter
 @Setter
@@ -59,13 +64,35 @@ public class Producto extends BaseEntity {
     @Builder.Default
     private BigDecimal precioVenta = BigDecimal.ZERO;
 
-    @Column(nullable = false)
+    /**
+     * Sin setter a propósito: el stock sólo cambia al aplicar un movimiento de
+     * inventario ({@link #aplicarMovimiento}), que registra
+     * {@code InventarioService}. Así toda variación queda en el historial.
+     * Admite decimales si la unidad de medida es fraccionable.
+     */
+    @Column(nullable = false, precision = CantidadUtils.PRECISION, scale = CantidadUtils.ESCALA)
     @Builder.Default
-    private Integer stock = 0;
+    @Setter(AccessLevel.NONE)
+    private BigDecimal stock = BigDecimal.ZERO;
 
+    /**
+     * Control de concurrencia optimista: cada actualización incrementa la
+     * versión y Hibernate rechaza guardar un producto que otra transacción
+     * modificó después de que se leyó. Evita que dos operaciones simultáneas
+     * calculen el stock sobre el mismo valor y una pise a la otra.
+     *
+     * <p>El default 0 permite que ddl-auto agregue la columna NOT NULL en una
+     * base existente (SQLite no admite agregarla sin default).
+     */
+    @Version
+    @ColumnDefault("0")
     @Column(nullable = false)
+    @Setter(AccessLevel.NONE)
+    private Long version;
+
+    @Column(nullable = false, precision = CantidadUtils.PRECISION, scale = CantidadUtils.ESCALA)
     @Builder.Default
-    private Integer stockMinimo = 0;
+    private BigDecimal stockMinimo = BigDecimal.ZERO;
 
     @Column(nullable = false)
     @Builder.Default
@@ -108,5 +135,46 @@ public class Producto extends BaseEntity {
     @Builder.Default
     @OneToMany(mappedBy = "producto", fetch = FetchType.LAZY)
     private List<MovimientoInventario> movimientosInventario = new ArrayList<>();
+
+    /**
+     * Deja el stock en cero. Sólo se usa al dar de alta el producto: el stock de
+     * un producto ya guardado únicamente cambia con movimientos de inventario.
+     *
+     * @throws IllegalStateException si el producto ya está guardado
+     */
+    public void inicializarStock() {
+
+        if (getId() != null) {
+            throw new IllegalStateException(
+                    "El stock de un producto existente sólo se modifica con movimientos de inventario.");
+        }
+
+        this.stock = BigDecimal.ZERO;
+    }
+
+    /**
+     * Actualiza el stock con el resultado del movimiento. Verifica que el
+     * movimiento sea de este producto y que se haya calculado sobre su stock
+     * actual, para que el historial nunca quede desalineado.
+     *
+     * @throws IllegalStateException si el movimiento no corresponde al stock actual
+     */
+    public void aplicarMovimiento(MovimientoInventario movimiento) {
+
+        Objects.requireNonNull(movimiento, "El movimiento es obligatorio.");
+
+        if (movimiento.getProducto() != this) {
+            throw new IllegalStateException("El movimiento corresponde a otro producto.");
+        }
+
+        BigDecimal stockActual = stock == null ? BigDecimal.ZERO : stock;
+
+        if (movimiento.getStockAnterior().compareTo(stockActual) != 0) {
+            throw new IllegalStateException(
+                    "El stock del producto cambió desde que se calculó el movimiento.");
+        }
+
+        this.stock = movimiento.getStockResultante();
+    }
 
 }

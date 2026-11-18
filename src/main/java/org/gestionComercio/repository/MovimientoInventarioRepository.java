@@ -1,6 +1,7 @@
 package org.gestionComercio.repository;
 
 import org.gestionComercio.entity.MovimientoInventario;
+import org.gestionComercio.enums.OrigenMovimientoInventario;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
@@ -52,5 +53,26 @@ public interface MovimientoInventarioRepository extends Repository<MovimientoInv
     Optional<MovimientoInventario> findFirstByProductoIdOrderByFechaDescIdDesc(Long productoId);
 
     long countByProductoId(Long productoId);
+
+    /** true si el comprobante ya registró sus movimientos originales (sin contar reversiones). */
+    boolean existsByOrigenAndOrigenIdAndMovimientoRevertidoIsNull(
+            OrigenMovimientoInventario origen, Long origenId);
+
+    /** true si los movimientos del comprobante ya fueron revertidos. */
+    boolean existsByOrigenAndOrigenIdAndMovimientoRevertidoIsNotNull(
+            OrigenMovimientoInventario origen, Long origenId);
+
+    /** Movimientos originales de un comprobante (sin las reversiones), en el orden en que se registraron. */
+    @Query("""
+            select m from MovimientoInventario m
+              join fetch m.producto
+            where m.origen = :origen
+              and m.origenId = :origenId
+              and m.movimientoRevertido is null
+            order by m.id asc
+            """)
+    List<MovimientoInventario> findOriginalesDelComprobante(
+            @Param("origen") OrigenMovimientoInventario origen,
+            @Param("origenId") Long origenId);
 
 }

@@ -37,9 +37,9 @@ public class ProductoDto extends BaseDto {
      * Sólo lectura: el stock cambia con movimientos de stock (compras, ventas,
      * ajustes), nunca al guardar el producto.
      */
-    private Integer stock;
+    private BigDecimal stock;
 
-    private Integer stockMinimo;
+    private BigDecimal stockMinimo;
 
     private Boolean manejaStock;
 
@@ -67,6 +67,13 @@ public class ProductoDto extends BaseDto {
     /** Sólo lectura: el estado se cambia con darDeBaja/habilitar, nunca al guardar. */
     private EstadoRegistro estadoRegistro;
 
+    /**
+     * Versión del producto cuando se leyó. Hay que devolverla al actualizar: si
+     * otro usuario lo modificó mientras tanto, la actualización se rechaza en
+     * lugar de pisar sus cambios.
+     */
+    private Long version;
+
     public boolean isActivo() {
         return estadoRegistro == null || estadoRegistro == EstadoRegistro.ACTIVO;
     }
@@ -76,6 +83,6 @@ public class ProductoDto extends BaseDto {
         return Boolean.TRUE.equals(manejaStock)
                 && stock != null
                 && stockMinimo != null
-                && stock <= stockMinimo;
+                && stock.compareTo(stockMinimo) <= 0;
     }
 }

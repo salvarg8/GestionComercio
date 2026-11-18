@@ -24,6 +24,7 @@ import org.gestionComercio.service.CategoriaService;
 import org.gestionComercio.service.MarcaService;
 import org.gestionComercio.service.ProductoService;
 import org.gestionComercio.service.ProveedorService;
+import org.gestionComercio.util.CantidadUtils;
 import org.gestionComercio.util.NumberUtils;
 import org.gestionComercio.util.dialog.ValidationDialog;
 import org.gestionComercio.validation.ValidationError;
@@ -261,7 +262,7 @@ public class ProductoFormController extends AbstractController implements DataRe
         cmbAlicuotaIva.setValue(producto.getAlicuotaIVA());
         chkManejaStock.setSelected(Boolean.TRUE.equals(producto.getManejaStock()));
         chkPermiteStockNegativo.setSelected(Boolean.TRUE.equals(producto.getPermiteStockNegativo()));
-        txtStockMinimo.setText(producto.getStockMinimo() == null ? "" : producto.getStockMinimo().toString());
+        txtStockMinimo.setText(CantidadUtils.formatearEditable(producto.getStockMinimo()));
 
         seleccionarCategoria(producto);
 
@@ -271,7 +272,7 @@ public class ProductoFormController extends AbstractController implements DataRe
         seleccionar(cmbProveedor, producto.getProveedorId(), producto.getProveedorNombre(), "dado de baja");
 
         lblStockActual.setText(Boolean.TRUE.equals(producto.getManejaStock())
-                ? String.valueOf(producto.getStock() == null ? 0 : producto.getStock())
+                ? CantidadUtils.formatear(producto.getStock())
                 : "No maneja stock");
         mostrar(boxStockActual, true);
 
@@ -363,6 +364,7 @@ public class ProductoFormController extends AbstractController implements DataRe
 
         return ProductoDto.builder()
                 .id(productoActual != null ? productoActual.getId() : null)
+                .version(productoActual != null ? productoActual.getVersion() : null)
                 .codigo(txtCodigo.getText())
                 .codigoBarras(txtCodigoBarras.getText())
                 .nombre(txtNombre.getText())
@@ -394,16 +396,17 @@ public class ProductoFormController extends AbstractController implements DataRe
         }
     }
 
-    private Integer leerStockMinimo(ValidationResult errores) {
+    /** Si la unidad admite decimales o no lo valida el servicio. */
+    private BigDecimal leerStockMinimo(ValidationResult errores) {
 
         if (!chkManejaStock.isSelected()) {
-            return 0;
+            return BigDecimal.ZERO;
         }
 
         try {
-            return NumberUtils.parseEntero(txtStockMinimo.getText());
+            return NumberUtils.parseDecimal(txtStockMinimo.getText());
         } catch (NumberFormatException ex) {
-            errores.addError("stockMinimo", "Ingrese un número entero, sin decimales.");
+            errores.addError("stockMinimo", "Ingrese un número válido. Ej.: 10 o 2,5");
             return null;
         }
     }
