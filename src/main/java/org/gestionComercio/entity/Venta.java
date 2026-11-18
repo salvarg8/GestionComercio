@@ -49,8 +49,9 @@ public class Venta extends BaseEntity {
     @Column(nullable = false)
     private FormaPago formaPago;
 
+    /** Null si la venta es a consumidor final (sin cliente identificado). */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "cliente_id", nullable = false)
+    @JoinColumn(name = "cliente_id")
     private Cliente cliente;
 
     @ManyToOne(fetch = FetchType.LAZY)
