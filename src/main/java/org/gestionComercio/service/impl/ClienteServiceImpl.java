@@ -7,12 +7,10 @@ import org.gestionComercio.enums.EstadoRegistro;
 import org.gestionComercio.enums.FiltroEstado;
 import org.gestionComercio.enums.PermisoCodigo;
 import org.gestionComercio.enums.TipoDocumento;
-import org.gestionComercio.exception.BusinessException;
 import org.gestionComercio.exception.EntityNotFoundException;
 import org.gestionComercio.exception.ValidationException;
 import org.gestionComercio.mapper.ClienteMapper;
 import org.gestionComercio.repository.ClienteRepository;
-import org.gestionComercio.repository.VentaRepository;
 import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.ClienteService;
 import org.gestionComercio.validation.ClienteValidator;
@@ -30,7 +28,6 @@ import java.util.Optional;
 public class ClienteServiceImpl implements ClienteService {
 
     private final ClienteRepository clienteRepository;
-    private final VentaRepository ventaRepository;
 
     private final ClienteMapper clienteMapper;
     private final ClienteValidator clienteValidator;
@@ -94,24 +91,7 @@ public class ClienteServiceImpl implements ClienteService {
         clienteRepository.save(cliente);
     }
 
-    @Override
-    public void eliminar(Long id) {
-
-        sesionUsuario.requerirPermiso(PermisoCodigo.CLIENTE_ELIMINAR);
-
-        Cliente cliente = clienteRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "No existe un cliente con ID: " + id));
-
-        if (ventaRepository.existsByClienteId(id)) {
-            throw new BusinessException(
-                    "No se puede eliminar el cliente porque tiene ventas registradas. "
-                            + "Puede darlo de baja para que no se use en ventas nuevas.");
-        }
-
-        clienteRepository.delete(cliente);
-    }
-
+    /** Los clientes nunca se borran de la base: eliminar equivale a dar de baja. */
     @Override
     public void delete(Long id) {
         darDeBaja(id);

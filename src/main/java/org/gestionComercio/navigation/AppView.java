@@ -129,6 +129,25 @@ public enum AppView {
             PermisoCodigo.PROVEEDOR_EDITAR
     ),
 
+    CLIENTE_LIST(
+            "/org/gestionComercio/view/cliente/ClienteList.fxml",
+            "Clientes",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.CLIENTE_VER
+    ),
+
+    CLIENTE_FORM(
+            "/org/gestionComercio/view/cliente/ClienteForm.fxml",
+            "Cliente",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.CLIENTE_CREAR,
+            PermisoCodigo.CLIENTE_EDITAR
+    ),
+
     PRODUCTO_LIST(
             "/org/gestionComercio/view/producto/ProductoList.fxml",
             "Productos",

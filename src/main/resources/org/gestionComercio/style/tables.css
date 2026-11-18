@@ -78,3 +78,12 @@
     -fx-text-fill: white;
 
 }
+
+
+/* Tablas con el texto de todas las celdas centrado horizontalmente */
+
+.table-view.tabla-centrada .table-cell {
+
+    -fx-alignment: CENTER;
+
+}

@@ -56,6 +56,9 @@ public class DashboardController extends AbstractController {
     private Button btnProveedores;
 
     @FXML
+    private Button btnClientes;
+
+    @FXML
     private Button btnCambiarPassword;
 
     @FXML
@@ -79,6 +82,7 @@ public class DashboardController extends AbstractController {
         mostrarSiTieneAcceso(btnCategorias, AppView.CATEGORIA_LIST);
         mostrarSiTieneAcceso(btnMarcas, AppView.MARCA_LIST);
         mostrarSiTieneAcceso(btnProveedores, AppView.PROVEEDOR_LIST);
+        mostrarSiTieneAcceso(btnClientes, AppView.CLIENTE_LIST);
 
         // Opcional: vista inicial
         // navigator.navigate(AppView.INICIO);
@@ -105,6 +109,8 @@ public class DashboardController extends AbstractController {
         btnMarcas.setOnAction(e -> navigator.navigate(AppView.MARCA_LIST));
 
         btnProveedores.setOnAction(e -> navigator.navigate(AppView.PROVEEDOR_LIST));
+
+        btnClientes.setOnAction(e -> navigator.navigate(AppView.CLIENTE_LIST));
 
         btnCambiarPassword.setOnAction(e -> navigator.navigate(AppView.CAMBIAR_PASSWORD));
 
