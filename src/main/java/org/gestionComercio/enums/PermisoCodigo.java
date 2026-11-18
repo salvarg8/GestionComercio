@@ -30,7 +30,9 @@ public enum PermisoCodigo {
     CLIENTE_VER("Clientes", "Ver clientes"),
     CLIENTE_CREAR("Clientes", "Crear clientes"),
     CLIENTE_EDITAR("Clientes", "Editar clientes"),
-    CLIENTE_ELIMINAR("Clientes", "Eliminar clientes"),
+    CLIENTE_DAR_BAJA("Clientes", "Dar de baja clientes"),
+    CLIENTE_HABILITAR("Clientes", "Volver a habilitar clientes dados de baja"),
+    CLIENTE_ELIMINAR("Clientes", "Eliminar clientes sin ventas de la base"),
 
     // Productos
     PRODUCTO_VER("Productos", "Ver productos"),
