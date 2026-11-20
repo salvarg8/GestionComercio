@@ -2,6 +2,7 @@ package org.gestionComercio.mapper;
 
 import org.gestionComercio.dto.venta.VentaDto;
 import org.gestionComercio.entity.Cliente;
+import org.gestionComercio.entity.Usuario;
 import org.gestionComercio.entity.Venta;
 import org.mapstruct.IterableMapping;
 import org.mapstruct.Mapper;
@@ -29,9 +30,9 @@ public interface VentaMapper {
     @Mapping(target = "cajaId", source = "caja.id")
     @Mapping(target = "usuarioId", source = "usuario.id")
     @Mapping(target = "usuarioNombre", source = "usuario.usuario")
-    @Mapping(target = "usuarioNombreCompleto",
-            expression = "java(entity.getUsuario() == null ? null : "
-                    + "entity.getUsuario().getNombre() + \" \" + entity.getUsuario().getApellido())")
+    @Mapping(target = "usuarioNombreCompleto", expression = "java(nombreCompleto(entity.getUsuario()))")
+    @Mapping(target = "usuarioAnulacionNombreCompleto",
+            expression = "java(nombreCompleto(entity.getUsuarioAnulacion()))")
     VentaDto toDto(Venta entity);
 
     @Named("resumen")
@@ -41,9 +42,9 @@ public interface VentaMapper {
     @Mapping(target = "cajaId", source = "caja.id")
     @Mapping(target = "usuarioId", source = "usuario.id")
     @Mapping(target = "usuarioNombre", source = "usuario.usuario")
-    @Mapping(target = "usuarioNombreCompleto",
-            expression = "java(entity.getUsuario() == null ? null : "
-                    + "entity.getUsuario().getNombre() + \" \" + entity.getUsuario().getApellido())")
+    @Mapping(target = "usuarioNombreCompleto", expression = "java(nombreCompleto(entity.getUsuario()))")
+    @Mapping(target = "usuarioAnulacionNombreCompleto",
+            expression = "java(nombreCompleto(entity.getUsuarioAnulacion()))")
     VentaDto toResumen(Venta entity);
 
     @IterableMapping(qualifiedByName = "resumen")
@@ -59,6 +60,11 @@ public interface VentaMapper {
         return cliente.getApellido() == null || cliente.getApellido().isBlank()
                 ? cliente.getNombre()
                 : cliente.getApellido() + ", " + cliente.getNombre();
+    }
+
+    /** "Nombre Apellido" del usuario, o null si no hay usuario. */
+    default String nombreCompleto(Usuario usuario) {
+        return usuario == null ? null : usuario.getNombre() + " " + usuario.getApellido();
     }
 
 }

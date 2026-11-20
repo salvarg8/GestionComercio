@@ -17,6 +17,7 @@ import org.gestionComercio.entity.Producto;
 import org.gestionComercio.entity.Proveedor;
 import org.gestionComercio.entity.Rol;
 import org.gestionComercio.entity.Usuario;
+import org.gestionComercio.entity.Venta;
 import org.gestionComercio.enums.CondicionIVA;
 import org.gestionComercio.enums.EstadoCaja;
 import org.gestionComercio.enums.EstadoRegistro;
@@ -399,6 +400,199 @@ class VentaServiceIntegrationTest {
                 .isInstanceOf(AuthorizationException.class);
         assertThatThrownBy(() -> ventaService.obtener(1L)).isInstanceOf(AuthorizationException.class);
         assertThatThrownBy(() -> ventaService.listar(null, null, null)).isInstanceOf(AuthorizationException.class);
+    }
+
+    // ------------------------------------------------------------------
+    // Anulación
+    // ------------------------------------------------------------------
+
+    private void cerrarCaja(Long cajaId) {
+        transaccion.executeWithoutResult(status -> {
+            Caja caja = entityManager.find(Caja.class, cajaId);
+            caja.setEstadoCaja(EstadoCaja.CERRADA);
+            caja.setFechaCierre(LocalDateTime.now());
+        });
+    }
+
+    private void retirar(Long cajaId, String importe) {
+        transaccion.executeWithoutResult(status -> entityManager.persist(MovimientoCaja.builder()
+                .fecha(LocalDateTime.now())
+                .tipo(TipoMovimientoCaja.RETIRO)
+                .descripcion("Retiro")
+                .importe(new BigDecimal(importe))
+                .caja(entityManager.find(Caja.class, cajaId))
+                .usuario(entityManager.merge(usuario))
+                .build()));
+    }
+
+    private EstadoVenta estadoDe(Long ventaId) {
+        return transaccion.execute(status -> entityManager.find(Venta.class, ventaId).getEstadoVenta());
+    }
+
+    @Test
+    @DisplayName("Anular una venta en efectivo devuelve el stock, registra el egreso en caja y la deja anulada")
+    void anularVentaEnEfectivo() {
+        Long cajaId = abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+        Long servicio = crearProducto("Servicio", "500.00", "0", UnidadMedida.UNIDAD, false);
+        Long ventaId = ventaService.registrar(venta(FormaPago.EFECTIVO,
+                renglon(gaseosa, "2"), renglon(servicio, "1"))).getId();
+
+        VentaDto anulada = ventaService.anular(ventaId, "  Error en la carga  ");
+
+        assertThat(anulada.getEstadoVenta()).isEqualTo(EstadoVenta.ANULADA);
+        assertThat(anulada.getMotivoAnulacion()).isEqualTo("Error en la carga");
+        assertThat(anulada.getFechaAnulacion()).isNotNull();
+        assertThat(anulada.getUsuarioAnulacionNombreCompleto()).isEqualTo("Ana Pérez");
+        assertThat(anulada.getDetalles()).hasSize(2);
+
+        assertThat(stockDe(gaseosa)).isEqualByComparingTo("10");
+        assertThat(movimientoInventarioRepository.existsByOrigenAndOrigenIdAndMovimientoRevertidoIsNotNull(
+                OrigenMovimientoInventario.VENTA, ventaId)).isTrue();
+
+        List<MovimientoCaja> movimientos = movimientosDeCaja(cajaId);
+        assertThat(movimientos).extracting(MovimientoCaja::getTipo)
+                .containsExactly(TipoMovimientoCaja.VENTA, TipoMovimientoCaja.ANULACION_VENTA);
+        assertThat(movimientos.get(1).getImporte()).isEqualByComparingTo("3500");
+        assertThat(movimientos.get(1).getDescripcion()).isEqualTo("Anulación de venta N° " + ventaId);
+
+        // Sigue en el listado, marcada como anulada.
+        assertThat(ventaService.listar(null, null, EstadoVenta.ANULADA)).extracting(VentaDto::getId)
+                .contains(ventaId);
+        VentaDto leida = ventaService.obtener(ventaId);
+        assertThat(leida.getEstadoVenta()).isEqualTo(EstadoVenta.ANULADA);
+        assertThat(leida.getUsuarioAnulacionNombreCompleto()).isEqualTo("Ana Pérez");
+    }
+
+    @Test
+    @DisplayName("Anular una venta que no fue en efectivo devuelve el stock sin mover la caja")
+    void anularVentaConTarjeta() {
+        Long cajaId = abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+        Long ventaId = ventaService.registrar(venta(FormaPago.TARJETA_DEBITO, renglon(gaseosa, "3"))).getId();
+
+        ventaService.anular(ventaId, "Cliente arrepentido");
+
+        assertThat(stockDe(gaseosa)).isEqualByComparingTo("10");
+        assertThat(movimientosDeCaja(cajaId)).isEmpty();
+        assertThat(estadoDe(ventaId)).isEqualTo(EstadoVenta.ANULADA);
+    }
+
+    @Test
+    @DisplayName("Se puede anular una venta pendiente en cuenta corriente")
+    void anularVentaPendiente() {
+        abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+        VentaDto cc = venta(FormaPago.CUENTA_CORRIENTE, renglon(gaseosa, "1"));
+        cc.setClienteId(crearCliente(EstadoRegistro.ACTIVO));
+        Long ventaId = ventaService.registrar(cc).getId();
+
+        ventaService.anular(ventaId, "Venta duplicada");
+
+        assertThat(estadoDe(ventaId)).isEqualTo(EstadoVenta.ANULADA);
+        assertThat(stockDe(gaseosa)).isEqualByComparingTo("10");
+    }
+
+    @Test
+    @DisplayName("No se puede anular dos veces la misma venta")
+    void anularDosVeces() {
+        Long cajaId = abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+        Long ventaId = ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "1"))).getId();
+        ventaService.anular(ventaId, "Error");
+
+        assertThatThrownBy(() -> ventaService.anular(ventaId, "Otra vez"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("ya está anulada");
+
+        assertThat(stockDe(gaseosa)).isEqualByComparingTo("10");
+        assertThat(movimientosDeCaja(cajaId)).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("Anular exige un motivo")
+    void anularSinMotivo() {
+        abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+        Long ventaId = ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "1"))).getId();
+
+        assertThatThrownBy(() -> ventaService.anular(ventaId, "   "))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("motivo");
+        assertThatThrownBy(() -> ventaService.anular(ventaId, "x".repeat(256)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("255");
+
+        assertThat(estadoDe(ventaId)).isEqualTo(EstadoVenta.PAGADA);
+        assertThat(stockDe(gaseosa)).isEqualByComparingTo("9");
+    }
+
+    @Test
+    @DisplayName("Anular exige VENTA_ANULAR")
+    void anularSinPermiso() {
+        abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+        Long ventaId = ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "1"))).getId();
+
+        EnumSet<PermisoCodigo> sinAnular = EnumSet.allOf(PermisoCodigo.class);
+        sinAnular.remove(PermisoCodigo.VENTA_ANULAR);
+        sesionUsuario.iniciarSesion(usuario, sinAnular);
+
+        assertThatThrownBy(() -> ventaService.anular(ventaId, "Error"))
+                .isInstanceOf(AuthorizationException.class);
+        assertThat(estadoDe(ventaId)).isEqualTo(EstadoVenta.PAGADA);
+    }
+
+    @Test
+    @DisplayName("Si la caja de la venta ya se cerró, el egreso va a la caja abierta del usuario")
+    void anularConCajaDeLaVentaCerrada() {
+        Long cajaVenta = abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "800.00", "10", UnidadMedida.UNIDAD, true);
+        Long ventaId = ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "1"))).getId();
+        cerrarCaja(cajaVenta);
+        Long cajaNueva = abrirCaja();
+
+        ventaService.anular(ventaId, "Devolución");
+
+        assertThat(movimientosDeCaja(cajaVenta)).extracting(MovimientoCaja::getTipo)
+                .containsExactly(TipoMovimientoCaja.VENTA);
+        assertThat(movimientosDeCaja(cajaNueva)).extracting(MovimientoCaja::getTipo)
+                .containsExactly(TipoMovimientoCaja.ANULACION_VENTA);
+    }
+
+    @Test
+    @DisplayName("Una venta en efectivo sin caja abierta donde devolver el dinero no se anula y no toca el stock")
+    void anularEnEfectivoSinCajaAbierta() {
+        Long cajaVenta = abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+        Long ventaId = ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "1"))).getId();
+        cerrarCaja(cajaVenta);
+
+        assertThatThrownBy(() -> ventaService.anular(ventaId, "Devolución"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Abra una caja");
+
+        assertThat(estadoDe(ventaId)).isEqualTo(EstadoVenta.PAGADA);
+        assertThat(stockDe(gaseosa)).isEqualByComparingTo("9");
+        assertThat(movimientoInventarioRepository.existsByOrigenAndOrigenIdAndMovimientoRevertidoIsNotNull(
+                OrigenMovimientoInventario.VENTA, ventaId)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Si el efectivo de la caja no alcanza para devolver la venta, no se anula nada")
+    void anularSinEfectivoSuficiente() {
+        Long cajaId = abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+        Long ventaId = ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "1"))).getId();
+        retirar(cajaId, "2000.00"); // 1000 + 1500 − 2000 = 500
+
+        assertThatThrownBy(() -> ventaService.anular(ventaId, "Devolución"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("efectivo suficiente");
+
+        assertThat(estadoDe(ventaId)).isEqualTo(EstadoVenta.PAGADA);
+        assertThat(stockDe(gaseosa)).isEqualByComparingTo("9");
+        assertThat(movimientosDeCaja(cajaId)).hasSize(2);
     }
 
     // ------------------------------------------------------------------

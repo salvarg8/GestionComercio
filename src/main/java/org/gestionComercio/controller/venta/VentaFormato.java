@@ -2,6 +2,7 @@ package org.gestionComercio.controller.venta;
 
 import javafx.scene.control.Label;
 import org.gestionComercio.enums.EstadoVenta;
+import org.gestionComercio.enums.FormaPago;
 import org.gestionComercio.util.CurrencyUtils;
 import org.gestionComercio.util.NumberUtils;
 
@@ -17,6 +18,9 @@ final class VentaFormato {
 
     /** Mayor importe que acepta el servicio (columna precision 12, scale 2). */
     static final BigDecimal IMPORTE_MAXIMO = new BigDecimal("9999999999.99");
+
+    /** Largo máximo del motivo de anulación (columna varchar 255). */
+    static final int MOTIVO_MAX = 255;
 
     private VentaFormato() {
     }
@@ -51,8 +55,31 @@ final class VentaFormato {
         return switch (estado) {
             case PAGADA -> "estado-activo";
             case PENDIENTE -> "movimiento-ajuste";
-            case CANCELADA -> "stock-bajo";
+            case CANCELADA, ANULADA -> "stock-bajo";
         };
+    }
+
+    /** @return true si la venta todavía se puede anular (pagada o pendiente). */
+    static boolean anulable(EstadoVenta estado) {
+        return estado == EstadoVenta.PAGADA || estado == EstadoVenta.PENDIENTE;
+    }
+
+    /** @return true si la venta cuenta en el importe vendido (no anulada ni cancelada). */
+    static boolean sumaAlImporte(EstadoVenta estado) {
+        return estado != EstadoVenta.ANULADA && estado != EstadoVenta.CANCELADA;
+    }
+
+    /** Qué pasa al anular la venta, para avisarlo antes de confirmar. */
+    static String efectosAnulacion(FormaPago formaPago, BigDecimal total) {
+
+        String stock = "Los productos vendidos vuelven al stock.";
+
+        if (formaPago == FormaPago.EFECTIVO && total != null && total.signum() > 0) {
+            return stock + " Se registrará un egreso de " + importe(total)
+                    + " en caja para devolver el efectivo.";
+        }
+
+        return stock + " No se registra ningún movimiento de caja.";
     }
 
     static Label badgeEstado(EstadoVenta estado) {

@@ -17,8 +17,10 @@ import lombok.RequiredArgsConstructor;
 import org.gestionComercio.controller.base.AbstractController;
 import org.gestionComercio.dto.venta.VentaDto;
 import org.gestionComercio.enums.EstadoVenta;
+import org.gestionComercio.enums.PermisoCodigo;
 import org.gestionComercio.navigation.AppView;
 import org.gestionComercio.navigation.Navigator;
+import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.VentaService;
 import org.gestionComercio.util.DateUtils;
 import org.gestionComercio.view.component.ComboBoxBusqueda;
@@ -39,7 +41,8 @@ import java.util.Objects;
  * Listado de ventas de todos los vendedores. Se filtra por período y estado
  * en el servicio, y por cliente sobre lo ya consultado (por nombre, sin
  * distinguir mayúsculas ni acentos). Abre mostrando las ventas del día.
- * Desde la fila se ve el detalle ({@link VentaDetalleDialog}).
+ * Desde la fila se ve el detalle ({@link VentaDetalleDialog}) y se anula la
+ * venta ({@link AnularVentaDialog}); las anuladas siguen en el listado.
  */
 @Controller
 @RequiredArgsConstructor
@@ -102,6 +105,7 @@ public class VentaListController extends AbstractController {
 
     private final VentaService ventaService;
     private final Navigator navigator;
+    private final SesionUsuario sesionUsuario;
 
     /** Ventas del período y estado elegidos, antes de filtrar por cliente. */
     private List<VentaDto> consultadas = List.of();
@@ -184,12 +188,23 @@ public class VentaListController extends AbstractController {
         });
     }
 
-    /** Ver detalle desde el ícono de la fila o con doble clic. */
+    /**
+     * Ver detalle desde el ícono de la fila o con doble clic. Anular, sólo
+     * con VENTA_ANULAR y en ventas que todavía se pueden anular.
+     */
     private void configurarAcciones() {
 
-        colAcciones.setCellFactory(column -> new RowActionsTableCell<>(List.of(
-                new Accion<VentaDto>(FontAwesomeSolid.LIST, "Ver detalle", "btn-icon-edit",
-                        venta -> true, this::verDetalle))));
+        List<Accion<VentaDto>> acciones = new ArrayList<>();
+
+        acciones.add(new Accion<>(FontAwesomeSolid.LIST, "Ver detalle", "btn-icon-edit",
+                venta -> true, this::verDetalle));
+
+        if (sesionUsuario.tienePermiso(PermisoCodigo.VENTA_ANULAR)) {
+            acciones.add(new Accion<>(FontAwesomeSolid.BAN, "Anular", "btn-icon-delete",
+                    venta -> VentaFormato.anulable(venta.getEstadoVenta()), this::anular));
+        }
+
+        colAcciones.setCellFactory(column -> new RowActionsTableCell<>(acciones));
 
         tblVentas.setRowFactory(tabla -> {
 
@@ -207,6 +222,14 @@ public class VentaListController extends AbstractController {
 
     private void verDetalle(VentaDto venta) {
         execute(() -> new VentaDetalleDialog(ventaService.obtener(venta.getId())).mostrar());
+    }
+
+    private void anular(VentaDto venta) {
+
+        new AnularVentaDialog(ventaService, venta).mostrar().ifPresent(anulada -> {
+            cargar();
+            success("Venta " + VentaFormato.numero(anulada.getId()) + " anulada correctamente.");
+        });
     }
 
     private void limpiarFiltros() {
@@ -251,9 +274,9 @@ public class VentaListController extends AbstractController {
 
         lblCantidad.setText("Total: " + ventas.size() + (ventas.size() == 1 ? " venta" : " ventas"));
 
-        // Las ventas canceladas no suman al importe vendido.
+        // Las ventas anuladas o canceladas no suman al importe vendido.
         BigDecimal importe = ventas.stream()
-                .filter(v -> v.getEstadoVenta() != EstadoVenta.CANCELADA)
+                .filter(v -> VentaFormato.sumaAlImporte(v.getEstadoVenta()))
                 .map(VentaDto::getTotal)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

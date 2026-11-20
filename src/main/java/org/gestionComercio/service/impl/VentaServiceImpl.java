@@ -35,6 +35,7 @@ import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.InventarioComprobanteService;
 import org.gestionComercio.service.VentaService;
 import org.gestionComercio.util.CantidadUtils;
+import org.gestionComercio.util.CurrencyUtils;
 import org.gestionComercio.validation.ValidationResult;
 import org.gestionComercio.validation.VentaValidator;
 import org.springframework.stereotype.Service;
@@ -60,6 +61,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(rollbackFor = Exception.class)
 public class VentaServiceImpl implements VentaService {
+
+    /** Largo de las columnas de texto (motivos y descripciones). */
+    static final int TEXTO_MAX = 255;
 
     private final VentaRepository ventaRepository;
     private final ProductoRepository productoRepository;
@@ -118,6 +122,63 @@ public class VentaServiceImpl implements VentaService {
         }
 
         return ventaMapper.toDto(venta);
+    }
+
+    @Override
+    public VentaDto anular(Long ventaId, String motivo) {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.VENTA_ANULAR);
+
+        if (ventaId == null) {
+            throw new BusinessException("La venta es obligatoria.");
+        }
+
+        String motivoAnulacion = validarMotivo(motivo);
+
+        Venta venta = ventaRepository.findParaModificar(ventaId)
+                .orElseThrow(() -> new EntityNotFoundException("No existe una venta con ID: " + ventaId));
+
+        String referencia = "venta N° " + venta.getId();
+
+        if (venta.getEstadoVenta() == EstadoVenta.ANULADA) {
+            throw new BusinessException("La " + referencia + " ya está anulada.");
+        }
+
+        if (venta.getEstadoVenta() != EstadoVenta.PAGADA && venta.getEstadoVenta() != EstadoVenta.PENDIENTE) {
+            throw new BusinessException("Sólo se pueden anular ventas pagadas o pendientes; la "
+                    + referencia + " está " + venta.getEstadoVenta().getDescripcion().toLowerCase()
+                    + ".");
+        }
+
+        Usuario usuario = sesionUsuario.getUsuario();
+
+        // Primero la caja: si no se puede devolver el efectivo, no se toca nada.
+        boolean devuelveEfectivo = venta.getFormaPago() == FormaPago.EFECTIVO && venta.getTotal().signum() > 0;
+        Caja caja = devuelveEfectivo ? cajaParaDevolucion(venta, usuario) : null;
+
+        inventarioComprobanteService.revertir(OrigenMovimientoInventario.VENTA, venta.getId(),
+                recortar("Anulación de " + referencia + ": " + motivoAnulacion));
+
+        LocalDateTime ahora = LocalDateTime.now();
+
+        if (devuelveEfectivo) {
+
+            movimientoCajaRepository.save(MovimientoCaja.builder()
+                    .fecha(ahora)
+                    .tipo(TipoMovimientoCaja.ANULACION_VENTA)
+                    .descripcion("Anulación de " + referencia)
+                    .importe(venta.getTotal())
+                    .caja(caja)
+                    .usuario(usuario)
+                    .build());
+        }
+
+        venta.setEstadoVenta(EstadoVenta.ANULADA);
+        venta.setFechaAnulacion(ahora);
+        venta.setMotivoAnulacion(motivoAnulacion);
+        venta.setUsuarioAnulacion(usuario);
+
+        return ventaMapper.toDto(ventaRepository.save(venta));
     }
 
     @Transactional(readOnly = true)
@@ -240,6 +301,53 @@ public class VentaServiceImpl implements VentaService {
         });
 
         return faltantes;
+    }
+
+    /** @return el motivo recortado */
+    private String validarMotivo(String motivo) {
+
+        if (motivo == null || motivo.isBlank()) {
+            throw new BusinessException("Debe indicar el motivo de la anulación.");
+        }
+
+        String recortado = motivo.trim();
+
+        if (recortado.length() > TEXTO_MAX) {
+            throw new BusinessException("El motivo no puede superar los " + TEXTO_MAX + " caracteres.");
+        }
+
+        return recortado;
+    }
+
+    private static String recortar(String texto) {
+        return texto.length() <= TEXTO_MAX ? texto : texto.substring(0, TEXTO_MAX - 1) + "…";
+    }
+
+    /**
+     * Caja donde se registra la devolución del efectivo de una venta anulada:
+     * la de la venta si sigue abierta, o la caja abierta del usuario que anula.
+     * Controla que el efectivo de esa caja alcance para devolver el total.
+     */
+    private Caja cajaParaDevolucion(Venta venta, Usuario usuario) {
+
+        Caja caja = venta.getCaja().getEstadoCaja() == EstadoCaja.ABIERTA
+                ? venta.getCaja()
+                : cajaRepository
+                .findFirstByUsuarioIdAndEstadoCajaOrderByFechaAperturaDesc(usuario.getId(), EstadoCaja.ABIERTA)
+                .orElseThrow(() -> new BusinessException("La venta se cobró en efectivo y su caja ya está "
+                        + "cerrada. Abra una caja para registrar la devolución del efectivo."));
+
+        BigDecimal saldo = movimientoCajaRepository.findByCajaIdOrderByFechaAscIdAsc(caja.getId()).stream()
+                .map(m -> m.getImporte().multiply(BigDecimal.valueOf(m.getTipo().getSigno())))
+                .reduce(caja.getSaldoInicial(), BigDecimal::add);
+
+        if (venta.getTotal().compareTo(saldo) > 0) {
+            throw new BusinessException("No hay efectivo suficiente en caja para devolver la venta: total "
+                    + CurrencyUtils.format(venta.getTotal()) + ", saldo en caja "
+                    + CurrencyUtils.format(saldo) + ".");
+        }
+
+        return caja;
     }
 
     /** Descuento vacío = sin descuento; lista de renglones nunca nula. */

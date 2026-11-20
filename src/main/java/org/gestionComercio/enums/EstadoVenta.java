@@ -4,7 +4,13 @@ public enum EstadoVenta implements Descriptible {
 
     PENDIENTE("Pendiente"),
     PAGADA("Pagada"),
-    CANCELADA("Cancelada");
+    CANCELADA("Cancelada"),
+
+    /**
+     * Anulada con {@code VentaService.anular}: se devolvió su stock y, si se
+     * cobró en efectivo, se registró el egreso en caja. Sigue en el listado.
+     */
+    ANULADA("Anulada");
 
     private final String descripcion;
 

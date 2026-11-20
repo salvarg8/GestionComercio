@@ -62,6 +62,15 @@ public class VentaDto extends BaseDto {
     /** Nombre y apellido del vendedor. */
     private String usuarioNombreCompleto;
 
+    /** Sólo en ventas anuladas. */
+    private LocalDateTime fechaAnulacion;
+
+    /** Sólo en ventas anuladas. */
+    private String motivoAnulacion;
+
+    /** Nombre y apellido de quien anuló la venta (sólo en ventas anuladas). */
+    private String usuarioAnulacionNombreCompleto;
+
     @Builder.Default
     private List<DetalleVentaDto> detalles = new ArrayList<>();
 

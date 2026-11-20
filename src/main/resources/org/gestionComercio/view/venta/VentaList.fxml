@@ -131,7 +131,7 @@
 
                 <TableColumn fx:id="colAcciones"
                              text="Acciones"
-                             prefWidth="80"
+                             prefWidth="100"
                              sortable="false"/>
 
             </columns>
