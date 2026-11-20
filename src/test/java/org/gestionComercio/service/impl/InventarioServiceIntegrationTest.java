@@ -30,6 +30,7 @@ import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.ConsultaStockService;
 import org.gestionComercio.service.InventarioComprobanteService;
 import org.gestionComercio.service.InventarioService;
+import org.gestionComercio.support.PostgresTestcontainersConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -51,25 +52,33 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Prueba los servicios de inventario contra una base SQLite real (la misma
- * tecnología y la misma configuración de conexión que usa la aplicación) para
- * verificar el control de {@code @Version}, los decimales, la reversión de
- * comprobantes y que el movimiento y el stock se confirmen o reviertan juntos.
+ * Prueba los servicios de inventario contra un PostgreSQL real en Docker (la
+ * misma base y la misma configuración de conexión que usa la aplicación) para
+ * verificar el control de {@code @Version} entre conexiones simultáneas, los
+ * decimales, la reversión de comprobantes y que el movimiento y el stock se
+ * confirmen o reviertan juntos.
  */
 @DataJpaTest(properties = {
-        "spring.datasource.url=jdbc:sqlite:target/inventario-it.db",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.jpa.show-sql=false"
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({
+        PostgresTestcontainersConfig.class,
         InventarioServiceImpl.class,
         ConsultaStockServiceImpl.class,
         InventarioComprobanteServiceImpl.class,
@@ -173,13 +182,13 @@ class InventarioServiceIntegrationTest {
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("La conexión usa una sola conexión y espera si la base está bloqueada")
+    @DisplayName("La aplicación trabaja sobre PostgreSQL con un pool de varias conexiones")
     void configuracionDeLaConexion() {
         assertThat(dataSource).isInstanceOf(HikariDataSource.class);
-        assertThat(((HikariDataSource) dataSource).getMaximumPoolSize()).isEqualTo(1);
+        assertThat(((HikariDataSource) dataSource).getMaximumPoolSize()).isEqualTo(5);
 
-        Integer busyTimeout = new JdbcTemplate(dataSource).queryForObject("pragma busy_timeout", Integer.class);
-        assertThat(busyTimeout).isEqualTo(5000);
+        String version = new JdbcTemplate(dataSource).queryForObject("select version()", String.class);
+        assertThat(version).startsWith("PostgreSQL");
     }
 
     // ------------------------------------------------------------------
@@ -283,6 +292,96 @@ class InventarioServiceIntegrationTest {
         // Se revirtió la transacción completa: sólo queda el movimiento inicial.
         assertThat(productoEnBase(id).getStock()).isEqualByComparingTo("10");
         assertThat(movimientoInventarioRepository.countByProductoId(id)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Con dos conexiones simultáneas, la que guarda sobre datos viejos falla y no pisa a la otra")
+    void conflictoEntreDosConexiones() {
+        Long id = crearProducto("Fideos", UnidadMedida.UNIDAD);
+        inventarioService.registrarEntrada(id, bd("10"), "Stock inicial");
+
+        // Otro hilo = otra transacción con su propia conexión, como otra PC.
+        ExecutorService otraCaja = Executors.newSingleThreadExecutor();
+
+        try {
+            assertThatThrownBy(() -> transaccion.executeWithoutResult(status -> {
+
+                // La conexión 1 lee el producto (stock 10)...
+                Producto leido = entityManager.find(Producto.class, id);
+                assertThat(leido.getStock()).isEqualByComparingTo("10");
+
+                // ...la conexión 2 vende 4 y confirma...
+                esperar(otraCaja.submit(() -> inventarioService.registrarSalida(id, bd("4"), "Otra caja")));
+
+                // ...y la 1 intenta guardar a partir del stock que había leído.
+                assertThatThrownBy(() -> inventarioService.registrarSalida(id, bd("8"), "Venta"))
+                        .isInstanceOf(ConcurrencyException.class);
+
+            })).isInstanceOf(UnexpectedRollbackException.class);
+        } finally {
+            otraCaja.shutdownNow();
+        }
+
+        // Queda sólo lo confirmado por la conexión 2: 10 - 4.
+        assertThat(productoEnBase(id).getStock()).isEqualByComparingTo("6");
+        assertThat(movimientoInventarioRepository.countByProductoId(id)).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Varias conexiones registrando movimientos a la vez nunca pierden ni duplican stock")
+    void operacionesParalelasNoCorrompenElStock() throws Exception {
+        Long id = crearProducto("Azucar", UnidadMedida.UNIDAD);
+
+        int hilos = 4;
+        int operacionesPorHilo = 10;
+
+        ExecutorService pool = Executors.newFixedThreadPool(hilos);
+        CountDownLatch largada = new CountDownLatch(1);
+        AtomicInteger confirmadas = new AtomicInteger();
+        AtomicInteger rechazadas = new AtomicInteger();
+        List<Future<?>> tareas = new ArrayList<>();
+
+        try {
+            for (int h = 0; h < hilos; h++) {
+                tareas.add(pool.submit(() -> {
+                    largada.await();
+                    for (int i = 0; i < operacionesPorHilo; i++) {
+                        try {
+                            inventarioService.registrarEntrada(id, bd("1"), "Entrada en paralelo");
+                            confirmadas.incrementAndGet();
+                        } catch (ConcurrencyException e) {
+                            rechazadas.incrementAndGet();
+                        }
+                    }
+                    return null;
+                }));
+            }
+
+            largada.countDown();
+
+            for (Future<?> tarea : tareas) {
+                tarea.get(60, TimeUnit.SECONDS);
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+
+        // Cada operación se confirmó entera o se rechazó entera: el stock es
+        // exactamente la cantidad de entradas confirmadas, una por movimiento.
+        assertThat(confirmadas.get() + rechazadas.get()).isEqualTo(hilos * operacionesPorHilo);
+        assertThat(confirmadas.get()).isPositive();
+        assertThat(productoEnBase(id).getStock()).isEqualByComparingTo(String.valueOf(confirmadas.get()));
+        assertThat(movimientoInventarioRepository.countByProductoId(id)).isEqualTo(confirmadas.get());
+    }
+
+    private static <T> T esperar(Future<T> futuro) {
+        try {
+            return futuro.get(30, TimeUnit.SECONDS);
+        } catch (ExecutionException e) {
+            throw new IllegalStateException(e.getCause());
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     // ------------------------------------------------------------------

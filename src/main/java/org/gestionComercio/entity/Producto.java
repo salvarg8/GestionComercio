@@ -81,8 +81,8 @@ public class Producto extends BaseEntity {
      * modificó después de que se leyó. Evita que dos operaciones simultáneas
      * calculen el stock sobre el mismo valor y una pise a la otra.
      *
-     * <p>El default 0 permite que ddl-auto agregue la columna NOT NULL en una
-     * base existente (SQLite no admite agregarla sin default).
+     * <p>El default 0 deja a los productos cargados por fuera de Hibernate
+     * (scripts, migración de datos) con una versión válida.
      */
     @Version
     @ColumnDefault("0")

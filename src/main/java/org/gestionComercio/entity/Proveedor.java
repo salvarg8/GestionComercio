@@ -33,7 +33,8 @@ public class Proveedor extends BaseEntity {
 
     /**
      * Opcional. Se guarda sólo con los 11 dígitos, sin guiones. Es UNIQUE en la
-     * base; SQLite admite varios NULL en una columna UNIQUE.
+     * base; PostgreSQL admite varios NULL en una columna UNIQUE, así que
+     * puede haber muchos proveedores sin CUIT.
      */
     @Column(unique = true, length = 11)
     private String cuit;

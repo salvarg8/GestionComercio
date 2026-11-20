@@ -26,8 +26,8 @@ public interface CajaRepository extends JpaRepository<Caja, Long> {
             select c from Caja c
               join fetch c.usuario
             where c.estadoCaja = org.gestionComercio.enums.EstadoCaja.CERRADA
-              and (:desde is null or c.fechaCierre >= :desde)
-              and (:hasta is null or c.fechaCierre <= :hasta)
+              and (cast(:desde as LocalDateTime) is null or c.fechaCierre >= :desde)
+              and (cast(:hasta as LocalDateTime) is null or c.fechaCierre <= :hasta)
             order by c.fechaCierre desc, c.id desc
             """)
     List<Caja> findCerradas(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);

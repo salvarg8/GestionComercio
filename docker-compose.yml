@@ -1,0 +1,25 @@
+# PostgreSQL para desarrollo. Levantar con: docker compose up -d
+# Los datos quedan en el volumen "gestion-comercio-datos" y sobreviven a
+# reinicios; "docker compose down -v" los borra.
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: gestion-comercio-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gestion_comercio
+      POSTGRES_USER: gestion
+      POSTGRES_PASSWORD: gestion
+      TZ: America/Argentina/Buenos_Aires
+    ports:
+      - "5432:5432"
+    volumes:
+      - gestion-comercio-datos:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gestion -d gestion_comercio"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  gestion-comercio-datos:
