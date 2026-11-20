@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
  * test detecta una consulta nueva o modificada que vuelva a caer en eso.</p>
  */
 @DataJpaTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.hibernate.ddl-auto=validate",
         "spring.jpa.show-sql=false"
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

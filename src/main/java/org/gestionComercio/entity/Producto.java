@@ -44,7 +44,12 @@ import java.util.Objects;
 )
 public class Producto extends BaseEntity {
 
-    @Column(nullable = false, unique = true, length = 50)
+    /*
+     * El código interno y el código de barras son únicos sólo entre los
+     * productos activos (índices únicos parciales en V1__esquema_inicial.sql),
+     * por eso no llevan unique = true.
+     */
+    @Column(nullable = false, length = 50)
     private String codigo;
 
     @Column(nullable = false, length = 150)
@@ -53,7 +58,7 @@ public class Producto extends BaseEntity {
     @Column(length = 500)
     private String descripcion;
 
-    @Column(name = "codigo_barras", unique = true, length = 20)
+    @Column(name = "codigo_barras", length = 20)
     private String codigoBarras;
 
     @Column(nullable = false, precision = 12, scale = 2)

@@ -39,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * contra mínimo) y los filtros funcionan igual que {@link SituacionStock}.
  */
 @DataJpaTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.hibernate.ddl-auto=validate",
         "spring.jpa.show-sql=false"
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -116,6 +116,8 @@ class ConsultaStockIntegrationTest {
                 .stock(new BigDecimal(stock))
                 .stockMinimo(new BigDecimal(minimo))
                 .manejaStock(manejaStock)
+                // La base sólo admite stock negativo si el producto lo permite.
+                .permiteStockNegativo(new BigDecimal(stock).signum() < 0)
                 .categoria(categoria)
                 .marca(marca)
                 .proveedor(proveedor)

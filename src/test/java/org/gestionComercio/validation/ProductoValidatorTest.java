@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,10 +54,10 @@ class ProductoValidatorTest {
     @BeforeEach
     void setUp() {
         // Por defecto: códigos libres y relaciones vigentes.
-        lenient().when(productoRepository.findFirstByCodigoIgnoreCase(anyString())).thenReturn(Optional.empty());
-        lenient().when(productoRepository.findFirstByCodigoIgnoreCaseAndIdNot(anyString(), anyLong())).thenReturn(Optional.empty());
-        lenient().when(productoRepository.findByCodigoBarras(anyString())).thenReturn(Optional.empty());
-        lenient().when(productoRepository.findByCodigoBarrasAndIdNot(anyString(), anyLong())).thenReturn(Optional.empty());
+        lenient().when(productoRepository.findFirstByCodigoIgnoreCaseAndEstadoRegistro(anyString(), any())).thenReturn(Optional.empty());
+        lenient().when(productoRepository.findFirstByCodigoIgnoreCaseAndEstadoRegistroAndIdNot(anyString(), any(), anyLong())).thenReturn(Optional.empty());
+        lenient().when(productoRepository.findFirstByCodigoBarrasAndEstadoRegistro(anyString(), any())).thenReturn(Optional.empty());
+        lenient().when(productoRepository.findFirstByCodigoBarrasAndEstadoRegistroAndIdNot(anyString(), any(), anyLong())).thenReturn(Optional.empty());
 
         lenient().when(categoriaRepository.findByIdAndEstadoRegistro(any(), eq(EstadoRegistro.ACTIVO)))
                 .thenReturn(Optional.of(new Categoria()));
@@ -178,19 +179,19 @@ class ProductoValidatorTest {
     @Test
     @DisplayName("no permite repetir el código interno de un producto activo")
     void codigoDuplicado() {
-        when(productoRepository.findFirstByCodigoIgnoreCase("P001"))
+        when(productoRepository.findFirstByCodigoIgnoreCaseAndEstadoRegistro("P001", EstadoRegistro.ACTIVO))
                 .thenReturn(Optional.of(producto(9L, "Otro", EstadoRegistro.ACTIVO)));
 
         assertTrue(tieneError(validator.validate(valido()), "codigo", "Ya existe un producto con ese código"));
     }
 
     @Test
-    @DisplayName("avisa si el código interno lo ocupa un producto dado de baja")
-    void codigoDuplicadoDadoDeBaja() {
-        when(productoRepository.findFirstByCodigoIgnoreCase("P001"))
-                .thenReturn(Optional.of(producto(9L, "Otro", EstadoRegistro.INACTIVO)));
+    @DisplayName("un producto dado de baja no ocupa su código: sólo se buscan duplicados entre los activos")
+    void codigoDeProductoDadoDeBaja() {
+        assertFalse(validator.validate(valido()).hasErrors());
 
-        assertTrue(tieneError(validator.validate(valido()), "codigo", "dado de baja"));
+        verify(productoRepository).findFirstByCodigoIgnoreCaseAndEstadoRegistro("P001", EstadoRegistro.ACTIVO);
+        verify(productoRepository).findFirstByCodigoBarrasAndEstadoRegistro("7790001000011", EstadoRegistro.ACTIVO);
     }
 
     @Test
@@ -198,7 +199,7 @@ class ProductoValidatorTest {
     void codigoAlEditar() {
         ProductoDto dto = valido();
         dto.setId(1L);
-        when(productoRepository.findFirstByCodigoIgnoreCaseAndIdNot("P001", 1L))
+        when(productoRepository.findFirstByCodigoIgnoreCaseAndEstadoRegistroAndIdNot("P001", EstadoRegistro.ACTIVO, 1L))
                 .thenReturn(Optional.of(producto(9L, "Otro", EstadoRegistro.ACTIVO)));
 
         assertTrue(tieneError(validator.validate(dto), "codigo", "Ya existe"));
@@ -207,7 +208,7 @@ class ProductoValidatorTest {
     @Test
     @DisplayName("no permite repetir el código de barras")
     void codigoBarrasDuplicado() {
-        when(productoRepository.findByCodigoBarras("7790001000011"))
+        when(productoRepository.findFirstByCodigoBarrasAndEstadoRegistro("7790001000011", EstadoRegistro.ACTIVO))
                 .thenReturn(Optional.of(producto(9L, "Agua", EstadoRegistro.ACTIVO)));
 
         assertTrue(tieneError(validator.validate(valido()), "codigoBarras", "Agua"));

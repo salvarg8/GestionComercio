@@ -1,0 +1,198 @@
+package org.gestionComercio.migracion;
+
+import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.FlywayException;
+import org.gestionComercio.support.PostgresTestcontainersConfig;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.sql.DataSource;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * Verifica las migraciones de Flyway contra un PostgreSQL vacío: que alcanzan
+ * para crear el esquema (Hibernate lo valida al levantar el contexto, con
+ * ddl-auto=validate), que las restricciones de V1 se cumplen y que una
+ * migración fallida no deja nada a medias.
+ *
+ * <p>Sin transacción de test: cada sentencia se confirma sola, así una
+ * violación de restricción no aborta las siguientes.</p>
+ */
+@DataJpaTest(properties = {
+        "spring.jpa.hibernate.ddl-auto=validate",
+        "spring.jpa.show-sql=false"
+})
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Import(PostgresTestcontainersConfig.class)
+@Transactional(propagation = Propagation.NOT_SUPPORTED)
+class MigracionesIntegrationTest {
+
+    @Autowired
+    private JdbcTemplate jdbc;
+
+    @Autowired
+    private DataSource dataSource;
+
+    private long categoriaId;
+    private long marcaId;
+    private long proveedorId;
+
+    @BeforeEach
+    void setUp() {
+        jdbc.update("delete from productos");
+        jdbc.update("delete from categorias");
+        jdbc.update("delete from marcas");
+        jdbc.update("delete from proveedores");
+
+        categoriaId = insertarMaestro("categorias", "nombre", "Bebidas");
+        marcaId = insertarMaestro("marcas", "nombre", "Marca");
+        proveedorId = insertarMaestro("proveedores", "razon_social", "Proveedor SA");
+    }
+
+    // ------------------------------------------------------------------
+    // Esquema
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("la base se crea sólo con las migraciones y queda registrada en el historial de Flyway")
+    void esquemaCreadoPorFlyway() {
+        List<String> versiones = jdbc.queryForList(
+                "select version from flyway_schema_history where success order by installed_rank",
+                String.class);
+
+        assertTrue(versiones.contains("1"));
+        assertEquals(0, jdbc.queryForObject(
+                "select count(*) from flyway_schema_history where not success", Integer.class));
+    }
+
+    // ------------------------------------------------------------------
+    // Índices únicos parciales
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("dos productos activos no pueden tener el mismo código interno, sin distinguir mayúsculas")
+    void codigoUnicoEntreActivos() {
+        insertarProducto("P001", null, "ACTIVO", "0", false);
+
+        assertThrows(DataIntegrityViolationException.class,
+                () -> insertarProducto("p001", null, "ACTIVO", "0", false));
+    }
+
+    @Test
+    @DisplayName("un producto dado de baja libera su código interno y su código de barras")
+    void codigosLiberadosAlDarDeBaja() {
+        insertarProducto("P001", "7790001000011", "INACTIVO", "0", false);
+        insertarProducto("P001", "7790001000011", "INACTIVO", "0", false);
+
+        insertarProducto("P001", "7790001000011", "ACTIVO", "0", false);
+
+        assertEquals(3, jdbc.queryForObject("select count(*) from productos", Integer.class));
+    }
+
+    @Test
+    @DisplayName("dos productos activos no pueden tener el mismo código de barras")
+    void codigoBarrasUnicoEntreActivos() {
+        insertarProducto("P001", "7790001000011", "ACTIVO", "0", false);
+
+        assertThrows(DataIntegrityViolationException.class,
+                () -> insertarProducto("P002", "7790001000011", "ACTIVO", "0", false));
+    }
+
+    // ------------------------------------------------------------------
+    // Restricciones CHECK
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("el stock no puede ser negativo salvo que el producto lo permita")
+    void stockNegativo() {
+        assertThrows(DataIntegrityViolationException.class,
+                () -> insertarProducto("P001", null, "ACTIVO", "-1", false));
+
+        insertarProducto("P002", null, "ACTIVO", "-1", true);
+    }
+
+    @Test
+    @DisplayName("los precios de un producto no pueden ser negativos")
+    void precioNegativo() {
+        long id = insertarProducto("P001", null, "ACTIVO", "0", false);
+
+        assertThrows(DataIntegrityViolationException.class,
+                () -> jdbc.update("update productos set precio_venta = -1 where id = ?", id));
+    }
+
+    // ------------------------------------------------------------------
+    // Migración fallida
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("una migración que falla se revierte entera")
+    void migracionFallidaSeRevierte() {
+        // En un esquema aparte, para no tocar el que usan los demás tests.
+        Flyway flyway = Flyway.configure()
+                .dataSource(dataSource)
+                .schemas("prueba_migracion_fallida")
+                .createSchemas(true)
+                .locations("classpath:db/migration", "classpath:db/migracion-fallida")
+                .load();
+
+        try {
+            assertThrows(FlywayException.class, flyway::migrate);
+
+            assertFalse(existeTabla("prueba_migracion_fallida", "tabla_de_prueba"),
+                    "La tabla creada por la migración fallida no debería existir");
+            assertTrue(existeTabla("prueba_migracion_fallida", "productos"),
+                    "V1 debería haberse aplicado completa");
+            assertEquals("1", flyway.info().current().getVersion().getVersion());
+        } finally {
+            jdbc.execute("drop schema if exists prueba_migracion_fallida cascade");
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Auxiliares
+    // ------------------------------------------------------------------
+
+    private boolean existeTabla(String esquema, String tabla) {
+        return jdbc.queryForObject(
+                "select exists (select 1 from information_schema.tables where table_schema = ? and table_name = ?)",
+                Boolean.class, esquema, tabla);
+    }
+
+    private long insertarMaestro(String tabla, String columna, String valor) {
+        return jdbc.queryForObject(
+                "insert into " + tabla + " (estado_registro, fecha_creacion, fecha_modificacion, " + columna + ") "
+                        + "values ('ACTIVO', now(), now(), ?) returning id",
+                Long.class, valor);
+    }
+
+    private long insertarProducto(String codigo, String codigoBarras, String estado, String stock,
+                                  boolean permiteStockNegativo) {
+        return jdbc.queryForObject("""
+                        insert into productos (
+                            estado_registro, fecha_creacion, fecha_modificacion,
+                            codigo, nombre, codigo_barras, precio_compra, precio_venta,
+                            stock, stock_minimo, maneja_stock, permite_stock_negativo,
+                            unidad_medida, alicuotaiva, categoria_id, marca_id, proveedor_id)
+                        values (?, now(), now(), ?, 'Producto', ?, 0, 0,
+                                cast(? as numeric), 0, true, ?,
+                                'UNIDAD', 'IVA_21', ?, ?, ?)
+                        returning id
+                        """,
+                Long.class, estado, codigo, codigoBarras, stock, permiteStockNegativo,
+                categoriaId, marcaId, proveedorId);
+    }
+}

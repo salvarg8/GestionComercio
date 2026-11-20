@@ -186,9 +186,8 @@ public class VentaServiceImpl implements VentaService {
 
         String limpio = codigo.trim();
 
-        return productoRepository.findByCodigoBarras(limpio)
-                .or(() -> productoRepository.findFirstByCodigoIgnoreCase(limpio))
-                .filter(p -> p.getEstadoRegistro() == EstadoRegistro.ACTIVO)
+        return productoRepository.findFirstByCodigoBarrasAndEstadoRegistro(limpio, EstadoRegistro.ACTIVO)
+                .or(() -> productoRepository.findFirstByCodigoIgnoreCaseAndEstadoRegistro(limpio, EstadoRegistro.ACTIVO))
                 .map(productoMapper::toDto);
     }
 

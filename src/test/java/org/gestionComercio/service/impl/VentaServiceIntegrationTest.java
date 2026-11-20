@@ -71,7 +71,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * venta, stock y caja se confirmen o se reviertan juntos.
  */
 @DataJpaTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.hibernate.ddl-auto=validate",
         "spring.jpa.show-sql=false"
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

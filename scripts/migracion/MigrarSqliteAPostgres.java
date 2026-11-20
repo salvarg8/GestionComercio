@@ -28,13 +28,13 @@ import java.util.Set;
  * README). Requisitos:</p>
  * <ul>
  *   <li>PostgreSQL levantado y la aplicación arrancada al menos una vez contra
- *       él, para que Hibernate cree las tablas.</li>
+ *       él, para que Flyway cree las tablas.</li>
  *   <li>Un usuario con permiso para {@code session_replication_role} (el del
  *       docker-compose.yml lo tiene).</li>
  * </ul>
  *
  * <p>Vacía las tablas de PostgreSQL (incluidos los datos iniciales que creó la
- * aplicación), copia cada tabla que exista en ambas bases convirtiendo los
+ * aplicación, pero no el historial de Flyway), copia cada tabla que exista en ambas bases convirtiendo los
  * valores al tipo de la columna de destino y ajusta las secuencias de los id.
  * Todo corre en una sola transacción: si algo falla, PostgreSQL queda como
  * estaba.</p>
@@ -278,7 +278,10 @@ public class MigrarSqliteAPostgres {
         return columnas;
     }
 
-    /** Tabla → (columna → tipo) del esquema public de PostgreSQL. */
+    /**
+     * Tabla → (columna → tipo) del esquema public de PostgreSQL, sin el historial
+     * de Flyway: si se vaciara, la aplicación no volvería a arrancar.
+     */
     private static Map<String, Map<String, String>> tablasPostgres(Connection destino) throws SQLException {
         Map<String, Map<String, String>> tablas = new LinkedHashMap<>();
         try (Statement st = destino.createStatement();
@@ -288,6 +291,7 @@ public class MigrarSqliteAPostgres {
                      join information_schema.tables t
                        on t.table_schema = c.table_schema and t.table_name = c.table_name
                      where c.table_schema = 'public' and t.table_type = 'BASE TABLE'
+                       and c.table_name <> 'flyway_schema_history'
                      order by c.table_name, c.ordinal_position
                      """)) {
             while (rs.next()) {
