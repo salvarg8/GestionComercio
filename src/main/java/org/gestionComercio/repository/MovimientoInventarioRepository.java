@@ -43,8 +43,8 @@ public interface MovimientoInventarioRepository extends Repository<MovimientoInv
               join fetch m.usuario
             where (:productoId is null or m.producto.id = :productoId)
               and (:tipo is null or m.tipo = :tipo)
-              and (:desde is null or m.fecha >= :desde)
-              and (:hasta is null or m.fecha <= :hasta)
+              and (cast(:desde as LocalDateTime) is null or m.fecha >= :desde)
+              and (cast(:hasta as LocalDateTime) is null or m.fecha <= :hasta)
             order by m.fecha desc, m.id desc
             """)
     List<MovimientoInventario> consultar(

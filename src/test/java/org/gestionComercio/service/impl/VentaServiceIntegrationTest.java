@@ -41,6 +41,7 @@ import org.gestionComercio.repository.VentaRepository;
 import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.InventarioService;
 import org.gestionComercio.service.VentaService;
+import org.gestionComercio.support.PostgresTestcontainersConfig;
 import org.gestionComercio.validation.VentaValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -66,17 +67,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Prueba el registro de ventas contra una base SQLite real para verificar que
+ * Prueba el registro de ventas contra un PostgreSQL real (Testcontainers) para verificar que
  * venta, stock y caja se confirmen o se reviertan juntos.
  */
 @DataJpaTest(properties = {
-        "spring.datasource.url=jdbc:sqlite:target/ventas-it.db",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.jpa.show-sql=false"
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Import({
+        PostgresTestcontainersConfig.class,
         VentaServiceImpl.class,
         VentaValidator.class,
         VentaMapperImpl.class,

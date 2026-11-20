@@ -17,6 +17,7 @@ import org.gestionComercio.enums.SituacionStock;
 import org.gestionComercio.enums.UnidadMedida;
 import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.ConsultaStockService;
+import org.gestionComercio.support.PostgresTestcontainersConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,17 +34,17 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Prueba las consultas JPQL de stock contra una base SQLite real, para
+ * Prueba las consultas JPQL de stock contra un PostgreSQL real (Testcontainers), para
  * verificar que las comparaciones de cantidades (decimales, negativos, stock
  * contra mínimo) y los filtros funcionan igual que {@link SituacionStock}.
  */
 @DataJpaTest(properties = {
-        "spring.datasource.url=jdbc:sqlite:target/consulta-stock-it.db",
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.jpa.show-sql=false"
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({
+        PostgresTestcontainersConfig.class,
         ConsultaStockServiceImpl.class,
         SesionUsuario.class,
         JpaAuditingConfig.class,
@@ -71,7 +72,7 @@ class ConsultaStockIntegrationTest {
     @BeforeEach
     void setUp() {
         // Cada test corre en su propia transacción (que se revierte), pero la
-        // base es un archivo: se arranca siempre de cero.
+        // base la comparten todos los tests de la clase: se arranca siempre de cero.
         jdbcTemplate.update("delete from productos");
 
         // Sin sesión mientras se cargan los datos: la auditoría registraría como

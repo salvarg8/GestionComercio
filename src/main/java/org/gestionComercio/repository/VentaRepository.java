@@ -35,8 +35,8 @@ public interface VentaRepository extends JpaRepository<Venta, Long> {
               left join fetch v.cliente
               join fetch v.usuario
               join fetch v.caja
-            where (:desde is null or v.fecha >= :desde)
-              and (:hasta is null or v.fecha <= :hasta)
+            where (cast(:desde as LocalDateTime) is null or v.fecha >= :desde)
+              and (cast(:hasta as LocalDateTime) is null or v.fecha <= :hasta)
               and (:estado is null or v.estadoVenta = :estado)
             order by v.fecha desc, v.id desc
             """)
