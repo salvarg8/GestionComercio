@@ -95,8 +95,8 @@
             <columns>
 
                 <TableColumn fx:id="colNumero"
-                             text="N°"
-                             prefWidth="90"
+                             text="Comprobante"
+                             prefWidth="150"
                              sortable="false"/>
 
                 <TableColumn fx:id="colFecha"
@@ -131,7 +131,7 @@
 
                 <TableColumn fx:id="colAcciones"
                              text="Acciones"
-                             prefWidth="100"
+                             prefWidth="130"
                              sortable="false"/>
 
             </columns>

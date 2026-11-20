@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.gestionComercio.controller.base.AbstractController;
 import org.gestionComercio.controller.base.ErroresPorCampo;
 import org.gestionComercio.dto.empresa.EmpresaDto;
+import org.gestionComercio.enums.AnchoTicket;
 import org.gestionComercio.enums.CondicionIVA;
 import org.gestionComercio.enums.PermisoCodigo;
 import org.gestionComercio.exception.BusinessException;
@@ -69,6 +70,9 @@ public class EmpresaConfigController extends AbstractController {
 
     @FXML
     private ComboBox<CondicionIVA> cmbCondicionIva;
+
+    @FXML
+    private ComboBox<AnchoTicket> cmbAnchoTicket;
 
     @FXML
     private Label lblErrorCondicionIva;
@@ -133,6 +137,8 @@ public class EmpresaConfigController extends AbstractController {
                 CondicionIVA.EXENTO
         );
 
+        cmbAnchoTicket.getItems().setAll(AnchoTicket.values());
+
         errores
                 .registrar("razonSocial", txtRazonSocial, lblErrorRazonSocial, txtRazonSocial.textProperty())
                 .registrar("nombreFantasia", txtNombreFantasia, lblErrorNombreFantasia,
@@ -190,6 +196,7 @@ public class EmpresaConfigController extends AbstractController {
         }
 
         cmbCondicionIva.setDisable(!puedeEditar);
+        cmbAnchoTicket.setDisable(!puedeEditar);
 
         mostrar(lblSoloLectura, !puedeEditar);
         mostrar(btnSeleccionarLogo, puedeEditar);
@@ -217,6 +224,7 @@ public class EmpresaConfigController extends AbstractController {
             cmbCondicionIva.getItems().add(empresa.getCondicionIva());
         }
         cmbCondicionIva.setValue(empresa.getCondicionIva());
+        cmbAnchoTicket.setValue(empresa.getAnchoTicket() == null ? AnchoTicket.porDefecto() : empresa.getAnchoTicket());
 
         mostrarLogo(ImageUtils.cargar(rutaLogo));
 
@@ -329,6 +337,7 @@ public class EmpresaConfigController extends AbstractController {
                 .cuit(txtCuit.getText())
                 .ingresosBrutos(txtIngresosBrutos.getText())
                 .condicionIva(cmbCondicionIva.getValue())
+                .anchoTicket(cmbAnchoTicket.getValue())
                 .telefono(txtTelefono.getText())
                 .email(txtEmail.getText())
                 .direccion(txtDireccion.getText())

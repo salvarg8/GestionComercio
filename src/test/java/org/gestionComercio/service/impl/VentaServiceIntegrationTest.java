@@ -1,6 +1,9 @@
 package org.gestionComercio.service.impl;
 
 import jakarta.persistence.EntityManager;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.gestionComercio.config.AuditorProvider;
 import org.gestionComercio.config.JpaAuditingConfig;
 import org.gestionComercio.dto.cliente.ClienteDto;
@@ -25,6 +28,7 @@ import org.gestionComercio.enums.EstadoVenta;
 import org.gestionComercio.enums.FormaPago;
 import org.gestionComercio.enums.OrigenMovimientoInventario;
 import org.gestionComercio.enums.PermisoCodigo;
+import org.gestionComercio.enums.TipoComprobante;
 import org.gestionComercio.enums.TipoDocumento;
 import org.gestionComercio.enums.TipoMovimientoCaja;
 import org.gestionComercio.enums.UnidadMedida;
@@ -33,13 +37,16 @@ import org.gestionComercio.exception.BusinessException;
 import org.gestionComercio.exception.ValidationException;
 import org.gestionComercio.mapper.ClienteMapperImpl;
 import org.gestionComercio.mapper.DetalleVentaMapperImpl;
+import org.gestionComercio.mapper.EmpresaMapperImpl;
 import org.gestionComercio.mapper.ProductoMapperImpl;
 import org.gestionComercio.mapper.MovimientoInventarioMapperImpl;
 import org.gestionComercio.mapper.VentaMapperImpl;
 import org.gestionComercio.repository.MovimientoCajaRepository;
 import org.gestionComercio.repository.MovimientoInventarioRepository;
+import org.gestionComercio.repository.NumeradorComprobanteRepository;
 import org.gestionComercio.repository.VentaRepository;
 import org.gestionComercio.security.SesionUsuario;
+import org.gestionComercio.service.ComprobanteVentaService;
 import org.gestionComercio.service.InventarioService;
 import org.gestionComercio.service.VentaService;
 import org.gestionComercio.support.PostgresTestcontainersConfig;
@@ -62,6 +69,11 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -80,6 +92,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Import({
         PostgresTestcontainersConfig.class,
         VentaServiceImpl.class,
+        NumeradorComprobanteRepository.class,
+        ComprobanteVentaServiceImpl.class,
+        EmpresaMapperImpl.class,
         VentaValidator.class,
         VentaMapperImpl.class,
         DetalleVentaMapperImpl.class,
@@ -99,6 +114,9 @@ class VentaServiceIntegrationTest {
 
     @Autowired
     private VentaService ventaService;
+
+    @Autowired
+    private ComprobanteVentaService comprobanteVentaService;
 
     @Autowired
     private InventarioService inventarioService;
@@ -267,7 +285,9 @@ class VentaServiceIntegrationTest {
         assertThat(movimientos).hasSize(1);
         assertThat(movimientos.get(0).getTipo()).isEqualTo(TipoMovimientoCaja.VENTA);
         assertThat(movimientos.get(0).getImporte()).isEqualByComparingTo("5500");
-        assertThat(movimientos.get(0).getDescripcion()).isEqualTo("Venta N° " + guardada.getId());
+        assertThat(guardada.getTipoComprobante()).isEqualTo(TipoComprobante.TICKET);
+        assertThat(guardada.getComprobante()).startsWith("Ticket N° ");
+        assertThat(movimientos.get(0).getDescripcion()).isEqualTo(guardada.getComprobante());
     }
 
     @Test
@@ -369,6 +389,156 @@ class VentaServiceIntegrationTest {
         assertThat(stockDe(gaseosa)).isEqualByComparingTo("10");
     }
 
+    // ------------------------------------------------------------------
+    // Comprobante
+    // ------------------------------------------------------------------
+
+    private VentaDto registrarComprobante(TipoComprobante tipo, Long productoId) {
+        VentaDto dto = venta(FormaPago.TARJETA_DEBITO, renglon(productoId, "1"));
+        dto.setTipoComprobante(tipo);
+        return ventaService.registrar(dto);
+    }
+
+    @Test
+    @DisplayName("La numeración es correlativa dentro de cada tipo de comprobante e independiente entre tipos")
+    void numeracionCorrelativaPorTipo() {
+        abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+
+        VentaDto ticket1 = registrarComprobante(TipoComprobante.TICKET, gaseosa);
+        VentaDto remito1 = registrarComprobante(TipoComprobante.REMITO, gaseosa);
+        VentaDto ticket2 = registrarComprobante(TipoComprobante.TICKET, gaseosa);
+        VentaDto remito2 = registrarComprobante(TipoComprobante.REMITO, gaseosa);
+
+        assertThat(ticket2.getNumeroComprobante()).isEqualTo(ticket1.getNumeroComprobante() + 1);
+        assertThat(remito2.getNumeroComprobante()).isEqualTo(remito1.getNumeroComprobante() + 1);
+        assertThat(remito1.getComprobante()).startsWith("Remito N° ");
+
+        VentaDto leida = ventaService.obtener(ticket1.getId());
+        assertThat(leida.getTipoComprobante()).isEqualTo(TipoComprobante.TICKET);
+        assertThat(leida.getNumeroComprobante()).isEqualTo(ticket1.getNumeroComprobante());
+    }
+
+    @Test
+    @DisplayName("Sin tipo de comprobante la venta se emite como ticket")
+    void ticketPorDefecto() {
+        abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+
+        VentaDto guardada = registrarComprobante(null, gaseosa);
+
+        assertThat(guardada.getTipoComprobante()).isEqualTo(TipoComprobante.TICKET);
+        assertThat(guardada.getNumeroComprobante()).isPositive();
+    }
+
+    @Test
+    @DisplayName("Una venta rechazada no consume número de comprobante")
+    void ventaRechazadaNoConsumeNumero() {
+        abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "1", UnidadMedida.UNIDAD, true);
+        Long yerba = crearProducto("Yerba", "3000.00", "10", UnidadMedida.UNIDAD, true);
+
+        VentaDto antes = registrarComprobante(TipoComprobante.TICKET, yerba);
+
+        // El número se reserva antes de descontar el stock; al faltar stock se revierte todo.
+        assertThatThrownBy(() -> ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "5"))))
+                .isInstanceOf(BusinessException.class);
+
+        VentaDto despues = registrarComprobante(TipoComprobante.TICKET, yerba);
+
+        assertThat(despues.getNumeroComprobante()).isEqualTo(antes.getNumeroComprobante() + 1);
+    }
+
+    @Test
+    @DisplayName("No se pueden emitir facturas: requieren facturación electrónica")
+    void facturaRechazada() {
+        abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+        long ventasAntes = ventaRepository.count();
+
+        assertThatThrownBy(() -> registrarComprobante(TipoComprobante.FACTURA_B, gaseosa))
+                .isInstanceOf(ValidationException.class);
+
+        assertThat(ventaRepository.count()).isEqualTo(ventasAntes);
+    }
+
+    @Test
+    @DisplayName("Ventas simultáneas del mismo tipo obtienen números distintos y consecutivos")
+    void numeracionConcurrente() throws Exception {
+        abrirCaja();
+        int cantidad = 6;
+
+        // Un producto por venta: dos ventas simultáneas del mismo producto chocan en el stock
+        // (bloqueo optimista), y acá sólo interesa la numeración.
+        List<Long> productos = new ArrayList<>();
+        for (int i = 0; i < cantidad; i++) {
+            productos.add(crearProducto("Producto" + i, "100.00", "10", UnidadMedida.UNIDAD, true));
+        }
+
+        ExecutorService ejecutor = Executors.newFixedThreadPool(cantidad);
+        CountDownLatch largada = new CountDownLatch(1);
+        List<Future<Long>> numeros = new ArrayList<>();
+
+        try {
+            for (Long producto : productos) {
+                numeros.add(ejecutor.submit(() -> {
+                    largada.await();
+                    return registrarComprobante(TipoComprobante.TICKET, producto).getNumeroComprobante();
+                }));
+            }
+
+            largada.countDown();
+
+            List<Long> obtenidos = new ArrayList<>();
+            for (Future<Long> numero : numeros) {
+                obtenidos.add(numero.get(30, TimeUnit.SECONDS));
+            }
+
+            long minimo = obtenidos.stream().mapToLong(Long::longValue).min().orElseThrow();
+            assertThat(obtenidos).doesNotHaveDuplicates()
+                    .allSatisfy(n -> assertThat(n).isBetween(minimo, minimo + cantidad - 1));
+        } finally {
+            ejecutor.shutdownNow();
+        }
+    }
+
+    @Test
+    @DisplayName("El comprobante en PDF muestra la empresa, el número y, si la venta está anulada, ANULADA")
+    void comprobantePdf() throws Exception {
+        abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+        VentaDto venta = registrarComprobante(TipoComprobante.TICKET, gaseosa);
+
+        // Sólo con VENTA_CREAR: el vendedor imprime al terminar la venta.
+        sesionUsuario.iniciarSesion(usuario, EnumSet.of(PermisoCodigo.VENTA_CREAR));
+
+        String pagada = textoPdf(comprobanteVentaService.generarPdf(venta.getId()));
+
+        assertThat(pagada)
+                .contains(venta.getComprobante().replace("Ticket ", ""))
+                .contains("TICKET")
+                .contains("Gaseosa " + sufijo)
+                .doesNotContain("ANULADA");
+
+        sesionUsuario.iniciarSesion(usuario, EnumSet.allOf(PermisoCodigo.class));
+        ventaService.anular(venta.getId(), "Cliente arrepentido");
+
+        String anulada = textoPdf(comprobanteVentaService.generarPdf(venta.getId()));
+
+        assertThat(anulada).contains("ANULADA").contains("Cliente arrepentido");
+
+        sesionUsuario.iniciarSesion(usuario, EnumSet.of(PermisoCodigo.CAJA_VER));
+
+        assertThatThrownBy(() -> comprobanteVentaService.generarPdf(venta.getId()))
+                .isInstanceOf(AuthorizationException.class);
+    }
+
+    private static String textoPdf(byte[] pdf) throws Exception {
+        try (PDDocument documento = Loader.loadPDF(pdf)) {
+            return new PDFTextStripper().getText(documento);
+        }
+    }
+
     @Test
     @DisplayName("Datos inválidos se rechazan con ValidationException y no tocan el stock")
     void datosInvalidos() {
@@ -454,7 +624,7 @@ class VentaServiceIntegrationTest {
         assertThat(movimientos).extracting(MovimientoCaja::getTipo)
                 .containsExactly(TipoMovimientoCaja.VENTA, TipoMovimientoCaja.ANULACION_VENTA);
         assertThat(movimientos.get(1).getImporte()).isEqualByComparingTo("3500");
-        assertThat(movimientos.get(1).getDescripcion()).isEqualTo("Anulación de venta N° " + ventaId);
+        assertThat(movimientos.get(1).getDescripcion()).isEqualTo("Anulación de venta " + anulada.getComprobante());
 
         // Sigue en el listado, marcada como anulada.
         assertThat(ventaService.listar(null, null, EstadoVenta.ANULADA)).extracting(VentaDto::getId)

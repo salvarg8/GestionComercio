@@ -207,6 +207,11 @@
                             <Insets right="15" bottom="15"/>
                         </BorderPane.margin>
 
+                        <Label text="Comprobante  (F9)"/>
+
+                        <ComboBox fx:id="cmbTipoComprobante"
+                                  maxWidth="Infinity"/>
+
                         <Label text="Cliente  (F4)"/>
 
                         <ComboBox fx:id="cmbCliente"

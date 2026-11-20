@@ -19,6 +19,7 @@ import org.gestionComercio.enums.EstadoVenta;
 import org.gestionComercio.enums.FormaPago;
 import org.gestionComercio.enums.OrigenMovimientoInventario;
 import org.gestionComercio.enums.PermisoCodigo;
+import org.gestionComercio.enums.TipoComprobante;
 import org.gestionComercio.enums.TipoMovimientoCaja;
 import org.gestionComercio.exception.BusinessException;
 import org.gestionComercio.exception.EntityNotFoundException;
@@ -29,6 +30,7 @@ import org.gestionComercio.mapper.VentaMapper;
 import org.gestionComercio.repository.CajaRepository;
 import org.gestionComercio.repository.ClienteRepository;
 import org.gestionComercio.repository.MovimientoCajaRepository;
+import org.gestionComercio.repository.NumeradorComprobanteRepository;
 import org.gestionComercio.repository.ProductoRepository;
 import org.gestionComercio.repository.VentaRepository;
 import org.gestionComercio.security.SesionUsuario;
@@ -66,6 +68,7 @@ public class VentaServiceImpl implements VentaService {
     static final int TEXTO_MAX = 255;
 
     private final VentaRepository ventaRepository;
+    private final NumeradorComprobanteRepository numeradorComprobanteRepository;
     private final ProductoRepository productoRepository;
     private final ClienteRepository clienteRepository;
     private final CajaRepository cajaRepository;
@@ -101,10 +104,11 @@ public class VentaServiceImpl implements VentaService {
         }
 
         Venta venta = armarVenta(dto, usuario, caja);
+        venta.setNumeroComprobante(numeradorComprobanteRepository.siguiente(venta.getTipoComprobante()));
 
         venta = ventaRepository.save(venta);
 
-        String referencia = "Venta N° " + venta.getId();
+        String referencia = TipoComprobante.formatear(venta.getTipoComprobante(), venta.getNumeroComprobante());
 
         inventarioComprobanteService.registrarSalidas(
                 OrigenMovimientoInventario.VENTA, venta.getId(), lineasDeInventario(venta), referencia);
@@ -138,7 +142,8 @@ public class VentaServiceImpl implements VentaService {
         Venta venta = ventaRepository.findParaModificar(ventaId)
                 .orElseThrow(() -> new EntityNotFoundException("No existe una venta con ID: " + ventaId));
 
-        String referencia = "venta N° " + venta.getId();
+        String referencia = "venta "
+                + TipoComprobante.formatear(venta.getTipoComprobante(), venta.getNumeroComprobante());
 
         if (venta.getEstadoVenta() == EstadoVenta.ANULADA) {
             throw new BusinessException("La " + referencia + " ya está anulada.");
@@ -350,8 +355,12 @@ public class VentaServiceImpl implements VentaService {
         return caja;
     }
 
-    /** Descuento vacío = sin descuento; lista de renglones nunca nula. */
+    /** Sin tipo = ticket; descuento vacío = sin descuento; lista de renglones nunca nula. */
     private void normalizar(VentaDto dto) {
+
+        if (dto.getTipoComprobante() == null) {
+            dto.setTipoComprobante(TipoComprobante.TICKET);
+        }
 
         if (dto.getDescuento() == null) {
             dto.setDescuento(BigDecimal.ZERO);
@@ -377,6 +386,7 @@ public class VentaServiceImpl implements VentaService {
 
         Venta venta = Venta.builder()
                 .fecha(LocalDateTime.now())
+                .tipoComprobante(dto.getTipoComprobante())
                 .formaPago(dto.getFormaPago())
                 .cliente(cliente)
                 .usuario(usuario)

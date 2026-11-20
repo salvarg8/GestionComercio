@@ -6,6 +6,7 @@ import org.gestionComercio.entity.Cliente;
 import org.gestionComercio.entity.Producto;
 import org.gestionComercio.enums.EstadoRegistro;
 import org.gestionComercio.enums.FormaPago;
+import org.gestionComercio.enums.TipoComprobante;
 import org.gestionComercio.enums.UnidadMedida;
 import org.gestionComercio.repository.ClienteRepository;
 import org.gestionComercio.repository.ProductoRepository;
@@ -73,6 +74,7 @@ class VentaValidatorTest {
 
     private static VentaDto venta(DetalleVentaDto... renglones) {
         return VentaDto.builder()
+                .tipoComprobante(TipoComprobante.TICKET)
                 .formaPago(FormaPago.EFECTIVO)
                 .descuento(BigDecimal.ZERO)
                 .detalles(new ArrayList<>(List.of(renglones)))
@@ -89,6 +91,36 @@ class VentaValidatorTest {
         ValidationResult result = validator.validate(venta(renglon(1L, "2"), renglon(2L, "0.750")));
 
         assertThat(result.isValid()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Un remito es un comprobante válido del punto de venta")
+    void remitoValido() {
+        VentaDto dto = venta(renglon(1L, "1"));
+        dto.setTipoComprobante(TipoComprobante.REMITO);
+
+        assertThat(validator.validate(dto).isValid()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Sin tipo de comprobante informa que es obligatorio")
+    void sinTipoComprobante() {
+        VentaDto dto = venta(renglon(1L, "1"));
+        dto.setTipoComprobante(null);
+
+        assertThat(campos(validator.validate(dto))).containsExactly("tipoComprobante");
+    }
+
+    @Test
+    @DisplayName("Las facturas no se pueden emitir: requieren facturación electrónica")
+    void facturaNoPermitida() {
+        VentaDto dto = venta(renglon(1L, "1"));
+        dto.setTipoComprobante(TipoComprobante.FACTURA_B);
+
+        ValidationResult result = validator.validate(dto);
+
+        assertThat(campos(result)).containsExactly("tipoComprobante");
+        assertThat(result.getErrors().get(0).getMessage()).contains("ARCA");
     }
 
     @Test

@@ -51,7 +51,7 @@ class AnularVentaDialog {
 
         ButtonType anular = new ButtonType("Anular venta", ButtonData.OK_DONE);
 
-        Alert alert = Dialogs.crear(Dialogs.Tipo.PELIGRO, "Anular venta " + VentaFormato.numero(venta.getId()),
+        Alert alert = Dialogs.crear(Dialogs.Tipo.PELIGRO, "Anular venta " + venta.getComprobante(),
                 cuerpo(), Dialogs.CANCELAR, anular);
 
         Button botonAnular = (Button) alert.getDialogPane().lookupButton(anular);

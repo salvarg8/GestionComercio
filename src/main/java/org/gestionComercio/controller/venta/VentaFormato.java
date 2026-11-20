@@ -29,11 +29,6 @@ final class VentaFormato {
         return CurrencyUtils.format(importe);
     }
 
-    /** "N° 000123". */
-    static String numero(Long id) {
-        return id == null ? "" : "N° " + String.format("%06d", id);
-    }
-
     /** "Nombre Apellido (login)", o sólo el login si no hay nombre. */
     static String usuario(String nombreCompleto, String login) {
 
