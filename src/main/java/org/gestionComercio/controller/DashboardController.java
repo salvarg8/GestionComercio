@@ -62,6 +62,9 @@ public class DashboardController extends AbstractController {
     private Button btnCaja;
 
     @FXML
+    private Button btnVentas;
+
+    @FXML
     private Button btnConfiguracion;
 
     @FXML
@@ -90,6 +93,7 @@ public class DashboardController extends AbstractController {
         mostrarSiTieneAcceso(btnProveedores, AppView.PROVEEDOR_LIST);
         mostrarSiTieneAcceso(btnClientes, AppView.CLIENTE_LIST);
         mostrarSiTieneAcceso(btnCaja, AppView.CAJA);
+        mostrarSiTieneAcceso(btnVentas, vistaDeVentas());
         mostrarSiTieneAcceso(btnConfiguracion, AppView.EMPRESA_CONFIG);
 
         // Opcional: vista inicial
@@ -122,11 +126,18 @@ public class DashboardController extends AbstractController {
 
         btnCaja.setOnAction(e -> navigator.navigate(AppView.CAJA));
 
+        btnVentas.setOnAction(e -> navigator.navigate(vistaDeVentas()));
+
         btnConfiguracion.setOnAction(e -> navigator.navigate(AppView.EMPRESA_CONFIG));
 
         btnCambiarPassword.setOnAction(e -> navigator.navigate(AppView.CAMBIAR_PASSWORD));
 
         btnCerrarSesion.setOnAction(e -> cerrarSesion());
+    }
+
+    /** "Ventas" abre el punto de venta; quien sólo puede ver ventas va al listado. */
+    private AppView vistaDeVentas() {
+        return navigator.puedeAcceder(AppView.PUNTO_VENTA) ? AppView.PUNTO_VENTA : AppView.VENTA_LIST;
     }
 
     private void mostrarSiTieneAcceso(Button boton, AppView view) {

@@ -16,6 +16,26 @@
 
 }
 
+/* Renglones del punto de venta cuya cantidad supera el stock disponible */
+
+.table-row-cell:sin-stock {
+
+    -fx-background-color: #FDECEA;
+
+}
+
+.table-row-cell:sin-stock:selected {
+
+    -fx-background-color: #F5C6C2;
+
+}
+
+.table-row-cell:sin-stock .table-cell {
+
+    -fx-text-fill: #C62828;
+
+}
+
 /* Registros dados de baja: texto atenuado */
 
 .table-row-cell:dado-de-baja .table-cell {

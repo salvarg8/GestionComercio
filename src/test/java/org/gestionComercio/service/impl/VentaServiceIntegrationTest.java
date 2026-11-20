@@ -3,6 +3,8 @@ package org.gestionComercio.service.impl;
 import jakarta.persistence.EntityManager;
 import org.gestionComercio.config.AuditorProvider;
 import org.gestionComercio.config.JpaAuditingConfig;
+import org.gestionComercio.dto.cliente.ClienteDto;
+import org.gestionComercio.dto.producto.ProductoDto;
 import org.gestionComercio.dto.venta.DetalleVentaDto;
 import org.gestionComercio.dto.venta.VentaDto;
 import org.gestionComercio.entity.Caja;
@@ -28,7 +30,9 @@ import org.gestionComercio.enums.UnidadMedida;
 import org.gestionComercio.exception.AuthorizationException;
 import org.gestionComercio.exception.BusinessException;
 import org.gestionComercio.exception.ValidationException;
+import org.gestionComercio.mapper.ClienteMapperImpl;
 import org.gestionComercio.mapper.DetalleVentaMapperImpl;
+import org.gestionComercio.mapper.ProductoMapperImpl;
 import org.gestionComercio.mapper.MovimientoInventarioMapperImpl;
 import org.gestionComercio.mapper.VentaMapperImpl;
 import org.gestionComercio.repository.MovimientoCajaRepository;
@@ -77,6 +81,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         VentaValidator.class,
         VentaMapperImpl.class,
         DetalleVentaMapperImpl.class,
+        ProductoMapperImpl.class,
+        ClienteMapperImpl.class,
         InventarioServiceImpl.class,
         InventarioComprobanteServiceImpl.class,
         RegistradorMovimientosInventario.class,
@@ -391,7 +397,7 @@ class VentaServiceIntegrationTest {
         assertThatThrownBy(() -> ventaService.registrar(venta(FormaPago.EFECTIVO)))
                 .isInstanceOf(AuthorizationException.class);
         assertThatThrownBy(() -> ventaService.obtener(1L)).isInstanceOf(AuthorizationException.class);
-        assertThatThrownBy(() -> ventaService.listar(null, null)).isInstanceOf(AuthorizationException.class);
+        assertThatThrownBy(() -> ventaService.listar(null, null, null)).isInstanceOf(AuthorizationException.class);
     }
 
     // ------------------------------------------------------------------
@@ -406,12 +412,97 @@ class VentaServiceIntegrationTest {
         Long primera = ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "1"))).getId();
         Long segunda = ventaService.registrar(venta(FormaPago.TRANSFERENCIA, renglon(gaseosa, "2"))).getId();
 
-        List<VentaDto> hoy = ventaService.listar(LocalDate.now(), LocalDate.now());
+        List<VentaDto> hoy = ventaService.listar(LocalDate.now(), LocalDate.now(), null);
 
         assertThat(hoy).extracting(VentaDto::getId).containsSubsequence(segunda, primera);
-        assertThat(ventaService.listar(LocalDate.now().plusDays(1), null)).isEmpty();
-        assertThatThrownBy(() -> ventaService.listar(LocalDate.now(), LocalDate.now().minusDays(1)))
+        assertThat(ventaService.listar(LocalDate.now().plusDays(1), null, null)).isEmpty();
+        assertThatThrownBy(() -> ventaService.listar(LocalDate.now(), LocalDate.now().minusDays(1), null))
                 .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    @DisplayName("listar() filtra por estado")
+    void listarPorEstado() {
+        abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+        Long clienteId = crearCliente(EstadoRegistro.ACTIVO);
+        Long pagada = ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "1"))).getId();
+        VentaDto cc = venta(FormaPago.CUENTA_CORRIENTE, renglon(gaseosa, "1"));
+        cc.setClienteId(clienteId);
+        Long pendiente = ventaService.registrar(cc).getId();
+
+        assertThat(ventaService.listar(null, null, EstadoVenta.PENDIENTE)).extracting(VentaDto::getId)
+                .contains(pendiente).doesNotContain(pagada);
+        assertThat(ventaService.listar(null, null, EstadoVenta.PAGADA)).extracting(VentaDto::getId)
+                .contains(pagada).doesNotContain(pendiente);
+    }
+
+    // ------------------------------------------------------------------
+    // Consultas del punto de venta
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("tieneCajaAbierta() indica si el usuario puede vender")
+    void tieneCajaAbierta() {
+        assertThat(ventaService.tieneCajaAbierta()).isFalse();
+
+        abrirCaja();
+
+        assertThat(ventaService.tieneCajaAbierta()).isTrue();
+    }
+
+    @Test
+    @DisplayName("buscarProductoPorCodigo() encuentra por código de barras o código interno, sólo activos")
+    void buscarPorCodigo() {
+        Long id = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+        transaccion.executeWithoutResult(status ->
+                entityManager.find(Producto.class, id).setCodigoBarras("779" + sufijo));
+
+        assertThat(ventaService.buscarProductoPorCodigo("779" + sufijo)).map(ProductoDto::getId).hasValue(id);
+        assertThat(ventaService.buscarProductoPorCodigo(("gaseosa" + sufijo).toUpperCase()))
+                .map(ProductoDto::getId).hasValue(id);
+        assertThat(ventaService.buscarProductoPorCodigo("no-existe")).isEmpty();
+
+        transaccion.executeWithoutResult(status ->
+                entityManager.find(Producto.class, id).setEstadoRegistro(EstadoRegistro.INACTIVO));
+
+        assertThat(ventaService.buscarProductoPorCodigo("779" + sufijo)).isEmpty();
+        assertThat(ventaService.buscarProductos("Gaseosa " + sufijo)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("buscarProductos() y listarClientes() sólo exigen VENTA_CREAR")
+    void consultasConSoloVentaCrear() {
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+        Long clienteId = crearCliente(EstadoRegistro.ACTIVO);
+        sesionUsuario.iniciarSesion(usuario, EnumSet.of(PermisoCodigo.VENTA_CREAR));
+
+        assertThat(ventaService.buscarProductos("Gaseosa " + sufijo)).extracting(ProductoDto::getId)
+                .containsExactly(gaseosa);
+        assertThat(ventaService.listarClientes()).extracting(ClienteDto::getId).contains(clienteId);
+
+        sesionUsuario.iniciarSesion(usuario, EnumSet.of(PermisoCodigo.VENTA_VER));
+
+        assertThatThrownBy(() -> ventaService.buscarProductos("")).isInstanceOf(AuthorizationException.class);
+        assertThatThrownBy(() -> ventaService.listarClientes()).isInstanceOf(AuthorizationException.class);
+        assertThatThrownBy(() -> ventaService.tieneCajaAbierta()).isInstanceOf(AuthorizationException.class);
+    }
+
+    @Test
+    @DisplayName("verificarStock() suma renglones del mismo producto e informa todos los faltantes")
+    void verificarStock() {
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "3", UnidadMedida.UNIDAD, true);
+        Long queso = crearProducto("Queso", "8000.00", "0.5", UnidadMedida.KILOGRAMO, true);
+        Long servicio = crearProducto("Servicio", "500.00", "0", UnidadMedida.UNIDAD, false);
+
+        assertThat(ventaService.verificarStock(List.of(renglon(gaseosa, "3"), renglon(servicio, "10")))).isEmpty();
+
+        List<String> faltantes = ventaService.verificarStock(List.of(
+                renglon(gaseosa, "2"), renglon(gaseosa, "2"), renglon(queso, "1"), renglon(servicio, "5")));
+
+        assertThat(faltantes).hasSize(2);
+        assertThat(faltantes.get(0)).contains("Gaseosa " + sufijo).contains("disponible 3").contains("solicitado 4");
+        assertThat(faltantes.get(1)).contains("Queso " + sufijo);
     }
 
 }

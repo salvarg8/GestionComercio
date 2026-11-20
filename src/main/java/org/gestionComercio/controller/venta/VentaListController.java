@@ -1,0 +1,263 @@
+package org.gestionComercio.controller.venta;
+
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.fxml.FXML;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.DatePicker;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
+import lombok.RequiredArgsConstructor;
+import org.gestionComercio.controller.base.AbstractController;
+import org.gestionComercio.dto.venta.VentaDto;
+import org.gestionComercio.enums.EstadoVenta;
+import org.gestionComercio.navigation.AppView;
+import org.gestionComercio.navigation.Navigator;
+import org.gestionComercio.service.VentaService;
+import org.gestionComercio.util.DateUtils;
+import org.gestionComercio.view.component.ComboBoxBusqueda;
+import org.gestionComercio.view.component.SelectorFecha;
+import org.gestionComercio.view.component.table.RowActionsTableCell;
+import org.gestionComercio.view.component.table.RowActionsTableCell.Accion;
+import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Controller;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * Listado de ventas de todos los vendedores. Se filtra por período y estado
+ * en el servicio, y por cliente sobre lo ya consultado (por nombre, sin
+ * distinguir mayúsculas ni acentos). Abre mostrando las ventas del día.
+ * Desde la fila se ve el detalle ({@link VentaDetalleDialog}).
+ */
+@Controller
+@RequiredArgsConstructor
+@Scope("prototype")
+public class VentaListController extends AbstractController {
+
+    @FXML
+    private Button btnNuevaVenta;
+
+    @FXML
+    private DatePicker dpDesde;
+
+    @FXML
+    private DatePicker dpHasta;
+
+    @FXML
+    private TextField txtCliente;
+
+    @FXML
+    private ComboBox<EstadoVenta> cmbEstado;
+
+    @FXML
+    private Button btnLimpiar;
+
+    @FXML
+    private TableView<VentaDto> tblVentas;
+
+    @FXML
+    private TableColumn<VentaDto, String> colNumero;
+
+    @FXML
+    private TableColumn<VentaDto, String> colFecha;
+
+    @FXML
+    private TableColumn<VentaDto, String> colCliente;
+
+    @FXML
+    private TableColumn<VentaDto, String> colVendedor;
+
+    @FXML
+    private TableColumn<VentaDto, String> colFormaPago;
+
+    @FXML
+    private TableColumn<VentaDto, String> colTotal;
+
+    @FXML
+    private TableColumn<VentaDto, EstadoVenta> colEstado;
+
+    @FXML
+    private TableColumn<VentaDto, Void> colAcciones;
+
+    @FXML
+    private Label lblSinResultados;
+
+    @FXML
+    private Label lblCantidad;
+
+    @FXML
+    private Label lblImporte;
+
+    private final VentaService ventaService;
+    private final Navigator navigator;
+
+    /** Ventas del período y estado elegidos, antes de filtrar por cliente. */
+    private List<VentaDto> consultadas = List.of();
+
+    /** Evita consultar varias veces al cambiar varios filtros juntos. */
+    private boolean actualizandoFiltros;
+
+    @Override
+    protected void initializeComponents() {
+
+        SelectorFecha.configurar(dpDesde);
+        SelectorFecha.configurar(dpHasta);
+        configurarEstado();
+        configurarColumnas();
+        configurarAcciones();
+
+        boolean puedeVender = navigator.puedeAcceder(AppView.PUNTO_VENTA);
+        btnNuevaVenta.setVisible(puedeVender);
+        btnNuevaVenta.setManaged(puedeVender);
+
+        actualizandoFiltros = true;
+        dpDesde.setValue(LocalDate.now());
+        dpHasta.setValue(LocalDate.now());
+        actualizandoFiltros = false;
+
+        cargar();
+    }
+
+    @Override
+    protected void initializeEvents() {
+
+        dpDesde.valueProperty().addListener((obs, o, n) -> cargar());
+        dpHasta.valueProperty().addListener((obs, o, n) -> cargar());
+        cmbEstado.valueProperty().addListener((obs, o, n) -> cargar());
+        txtCliente.textProperty().addListener((obs, o, n) -> filtrarPorCliente());
+        btnLimpiar.setOnAction(e -> limpiarFiltros());
+        btnNuevaVenta.setOnAction(e -> navigator.navigate(AppView.PUNTO_VENTA));
+    }
+
+    /** "Todos los estados" es el valor null del combo. */
+    private void configurarEstado() {
+
+        List<EstadoVenta> estados = new ArrayList<>();
+        estados.add(null);
+        estados.addAll(List.of(EstadoVenta.values()));
+        cmbEstado.getItems().setAll(estados);
+
+        cmbEstado.setCellFactory(lista -> new CeldaEstado());
+        cmbEstado.setButtonCell(new CeldaEstado());
+        cmbEstado.setValue(null);
+    }
+
+    private static final class CeldaEstado extends ListCell<EstadoVenta> {
+
+        @Override
+        protected void updateItem(EstadoVenta estado, boolean empty) {
+            super.updateItem(estado, empty);
+            setText(estado == null ? "Todos los estados" : estado.getDescripcion());
+        }
+    }
+
+    private void configurarColumnas() {
+
+        colNumero.setCellValueFactory(c -> new SimpleStringProperty(VentaFormato.numero(c.getValue().getId())));
+        colFecha.setCellValueFactory(c -> new SimpleStringProperty(DateUtils.format(c.getValue().getFecha())));
+        colCliente.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getClienteNombre()));
+        colVendedor.setCellValueFactory(c -> new SimpleStringProperty(
+                VentaFormato.usuario(c.getValue().getUsuarioNombreCompleto(), c.getValue().getUsuarioNombre())));
+        colFormaPago.setCellValueFactory(c -> new SimpleStringProperty(Objects.toString(c.getValue().getFormaPago(), "")));
+        colTotal.setCellValueFactory(c -> new SimpleStringProperty(VentaFormato.importe(c.getValue().getTotal())));
+
+        colEstado.setCellValueFactory(c -> new SimpleObjectProperty<>(c.getValue().getEstadoVenta()));
+        colEstado.setCellFactory(column -> new TableCell<>() {
+
+            @Override
+            protected void updateItem(EstadoVenta estado, boolean empty) {
+                super.updateItem(estado, empty);
+                setGraphic(empty || estado == null ? null : VentaFormato.badgeEstado(estado));
+            }
+        });
+    }
+
+    /** Ver detalle desde el ícono de la fila o con doble clic. */
+    private void configurarAcciones() {
+
+        colAcciones.setCellFactory(column -> new RowActionsTableCell<>(List.of(
+                new Accion<VentaDto>(FontAwesomeSolid.LIST, "Ver detalle", "btn-icon-edit",
+                        venta -> true, this::verDetalle))));
+
+        tblVentas.setRowFactory(tabla -> {
+
+            TableRow<VentaDto> fila = new TableRow<>();
+
+            fila.setOnMouseClicked(e -> {
+                if (e.getClickCount() == 2 && !fila.isEmpty()) {
+                    verDetalle(fila.getItem());
+                }
+            });
+
+            return fila;
+        });
+    }
+
+    private void verDetalle(VentaDto venta) {
+        execute(() -> new VentaDetalleDialog(ventaService.obtener(venta.getId())).mostrar());
+    }
+
+    private void limpiarFiltros() {
+
+        actualizandoFiltros = true;
+        dpDesde.setValue(null);
+        dpHasta.setValue(null);
+        cmbEstado.setValue(null);
+        txtCliente.clear();
+        actualizandoFiltros = false;
+
+        cargar();
+    }
+
+    private void cargar() {
+
+        if (actualizandoFiltros) {
+            return;
+        }
+
+        execute(() -> {
+            consultadas = ventaService.listar(dpDesde.getValue(), dpHasta.getValue(), cmbEstado.getValue());
+            filtrarPorCliente();
+        });
+    }
+
+    private void filtrarPorCliente() {
+
+        String cliente = txtCliente.getText() == null ? "" : txtCliente.getText().trim();
+
+        List<VentaDto> ventas = cliente.isEmpty()
+                ? consultadas
+                : consultadas.stream()
+                .filter(v -> ComboBoxBusqueda.coincide(v.getClienteNombre(), cliente))
+                .toList();
+
+        tblVentas.getItems().setAll(ventas);
+
+        boolean filtrado = dpDesde.getValue() != null || dpHasta.getValue() != null
+                || cmbEstado.getValue() != null || !cliente.isEmpty();
+        lblSinResultados.setText(filtrado ? "No hay ventas que coincidan con los filtros." : "No hay ventas.");
+
+        lblCantidad.setText("Total: " + ventas.size() + (ventas.size() == 1 ? " venta" : " ventas"));
+
+        // Las ventas canceladas no suman al importe vendido.
+        BigDecimal importe = ventas.stream()
+                .filter(v -> v.getEstadoVenta() != EstadoVenta.CANCELADA)
+                .map(VentaDto::getTotal)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        lblImporte.setText(ventas.isEmpty() ? "" : "Importe vendido: " + VentaFormato.importe(importe));
+    }
+}
