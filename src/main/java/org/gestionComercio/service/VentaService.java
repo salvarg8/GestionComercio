@@ -40,6 +40,24 @@ public interface VentaService {
      */
     VentaDto registrar(VentaDto venta);
 
+    /**
+     * Anula una venta pagada o pendiente. Requiere VENTA_ANULAR.
+     *
+     * <p>En una sola transacción: devuelve al stock lo que la venta descontó
+     * (revirtiendo sus movimientos de inventario), y si se cobró en efectivo
+     * registra un egreso de caja (tipo ANULACION_VENTA) por el total. El
+     * egreso va a la caja de la venta si sigue abierta; si ya se cerró, a la
+     * caja abierta del usuario de la sesión. La venta queda ANULADA con la
+     * fecha, el usuario y el motivo, y sigue apareciendo en el listado.
+     *
+     * @param motivo obligatorio, hasta 255 caracteres
+     * @return la venta anulada, con sus renglones
+     * @throws org.gestionComercio.exception.BusinessException si falta el motivo,
+     *         la venta ya está anulada, o es en efectivo y no hay caja abierta donde
+     *         registrar el egreso o el efectivo de esa caja no alcanza
+     */
+    VentaDto anular(Long ventaId, String motivo);
+
     /** Una venta con sus renglones. Requiere VENTA_VER. */
     VentaDto obtener(Long id);
 

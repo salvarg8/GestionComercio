@@ -75,6 +75,7 @@ class MigracionesIntegrationTest {
                 String.class);
 
         assertTrue(versiones.contains("1"));
+        assertTrue(versiones.contains("2"));
         assertEquals(0, jdbc.queryForObject(
                 "select count(*) from flyway_schema_history where not success", Integer.class));
     }
@@ -82,6 +83,16 @@ class MigracionesIntegrationTest {
     // ------------------------------------------------------------------
     // Índices únicos parciales
     // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("V2 agrega los datos de anulación de ventas con sus restricciones")
+    void anulacionDeVentas() {
+        List<String> restricciones = jdbc.queryForList(
+                "select conname from pg_constraint where conrelid = 'ventas'::regclass", String.class);
+
+        assertTrue(restricciones.containsAll(List.of(
+                "fk_ventas_usuario_anulacion", "ck_ventas_motivo_anulacion", "ck_ventas_anulacion")));
+    }
 
     @Test
     @DisplayName("dos productos activos no pueden tener el mismo código interno, sin distinguir mayúsculas")
@@ -155,8 +166,9 @@ class MigracionesIntegrationTest {
             assertFalse(existeTabla("prueba_migracion_fallida", "tabla_de_prueba"),
                     "La tabla creada por la migración fallida no debería existir");
             assertTrue(existeTabla("prueba_migracion_fallida", "productos"),
-                    "V1 debería haberse aplicado completa");
-            assertEquals("1", flyway.info().current().getVersion().getVersion());
+                    "Las migraciones reales deberían haberse aplicado completas");
+            // V999 es la rota: la versión actual queda en la última migración real.
+            assertFalse(flyway.info().current().getVersion().isAtLeast("999"));
         } finally {
             jdbc.execute("drop schema if exists prueba_migracion_fallida cascade");
         }

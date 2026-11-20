@@ -75,4 +75,15 @@ public class Venta extends BaseEntity {
     @Builder.Default
     private EstadoVenta estadoVenta = EstadoVenta.PAGADA;
 
+    // Anulación: los tres datos se completan juntos, sólo en ventas ANULADAS.
+
+    private LocalDateTime fechaAnulacion;
+
+    @Column(length = 255)
+    private String motivoAnulacion;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_anulacion_id")
+    private Usuario usuarioAnulacion;
+
 }

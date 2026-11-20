@@ -11,6 +11,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import org.gestionComercio.dto.venta.DetalleVentaDto;
 import org.gestionComercio.dto.venta.VentaDto;
+import org.gestionComercio.enums.EstadoVenta;
 import org.gestionComercio.util.CantidadUtils;
 import org.gestionComercio.util.DateUtils;
 import org.gestionComercio.util.dialog.Dialogs;
@@ -20,7 +21,8 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * Detalle de una venta: datos generales, renglones y totales. Sólo lectura.
+ * Detalle de una venta: datos generales (y de la anulación, si está
+ * anulada), renglones y totales. Sólo lectura.
  */
 class VentaDetalleDialog {
 
@@ -48,6 +50,18 @@ class VentaDetalleDialog {
                 new Label("Estado:"), VentaFormato.badgeEstado(venta.getEstadoVenta()));
         grid.addRow(2, new Label("Vendedor:"),
                 new Label(VentaFormato.usuario(venta.getUsuarioNombreCompleto(), venta.getUsuarioNombre())));
+
+        if (venta.getEstadoVenta() == EstadoVenta.ANULADA) {
+
+            grid.addRow(3, new Label("Anulada el:"), new Label(DateUtils.format(venta.getFechaAnulacion())),
+                    new Label("Anulada por:"), new Label(Objects.toString(venta.getUsuarioAnulacionNombreCompleto(), "")));
+
+            Label motivo = new Label(Objects.toString(venta.getMotivoAnulacion(), ""));
+            motivo.setWrapText(true);
+            motivo.setMaxWidth(600);
+            grid.add(new Label("Motivo:"), 0, 4);
+            grid.add(motivo, 1, 4, 3, 1);
+        }
 
         return grid;
     }
