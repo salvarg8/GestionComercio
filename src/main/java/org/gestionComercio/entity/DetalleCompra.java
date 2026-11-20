@@ -15,6 +15,7 @@ import lombok.experimental.SuperBuilder;
 import org.gestionComercio.util.CantidadUtils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @Getter
 @Setter
@@ -41,5 +42,10 @@ public class DetalleCompra extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "producto_id", nullable = false)
     private Producto producto;
+
+    /** Cantidad × precio de compra, redondeado a dos decimales (mitad hacia arriba). */
+    public static BigDecimal calcularSubtotal(BigDecimal cantidad, BigDecimal precioCompra) {
+        return cantidad.multiply(precioCompra).setScale(2, RoundingMode.HALF_UP);
+    }
 
 }

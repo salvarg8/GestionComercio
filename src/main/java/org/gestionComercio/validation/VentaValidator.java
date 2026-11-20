@@ -10,7 +10,6 @@ import org.gestionComercio.enums.FormaPago;
 import org.gestionComercio.enums.TipoComprobante;
 import org.gestionComercio.repository.ClienteRepository;
 import org.gestionComercio.repository.ProductoRepository;
-import org.gestionComercio.util.CantidadUtils;
 import org.gestionComercio.util.CurrencyUtils;
 import org.springframework.stereotype.Component;
 
@@ -162,7 +161,8 @@ public class VentaValidator implements Validator<VentaDto> {
                 continue;
             }
 
-            if (!validarCantidad(detalle.getCantidad(), producto, campo + ".cantidad", renglon, result)) {
+            if (!CantidadRenglonValidacion.validar(
+                    detalle.getCantidad(), producto, campo + ".cantidad", renglon, "se vende", result)) {
                 conErrores = true;
                 continue;
             }
@@ -171,45 +171,6 @@ public class VentaValidator implements Validator<VentaDto> {
         }
 
         return conErrores ? null : subtotal;
-    }
-
-    /** @return true si la cantidad no tiene errores. */
-    private boolean validarCantidad(
-            BigDecimal cantidad, Producto producto, String campo, String renglon, ValidationResult result) {
-
-        String nombre = "\"" + producto.getNombre() + "\"";
-
-        if (cantidad == null) {
-            result.addError(campo, renglon + "debe indicar la cantidad de " + nombre + ".");
-            return false;
-        }
-
-        if (cantidad.signum() <= 0) {
-            result.addError(campo, renglon + "la cantidad de " + nombre + " debe ser mayor que cero.");
-            return false;
-        }
-
-        if (!CantidadUtils.escalaValida(cantidad)) {
-            result.addError(campo, renglon + "la cantidad de " + nombre + " admite como máximo "
-                    + CantidadUtils.ESCALA + " decimales.");
-            return false;
-        }
-
-        if (!CantidadUtils.dentroDelMaximo(cantidad)) {
-            result.addError(campo, renglon + "la cantidad de " + nombre + " es demasiado grande.");
-            return false;
-        }
-
-        if (producto.getUnidadMedida() != null
-                && !producto.getUnidadMedida().isFraccionable()
-                && !CantidadUtils.esEntera(cantidad)) {
-            result.addError(campo, renglon + nombre + " se vende por "
-                    + producto.getUnidadMedida().getDescripcion().toLowerCase()
-                    + " y no admite decimales: ingrese un número entero.");
-            return false;
-        }
-
-        return true;
     }
 
     private void validarTotales(BigDecimal subtotal, BigDecimal descuento, ValidationResult result) {

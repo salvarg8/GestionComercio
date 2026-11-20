@@ -75,7 +75,12 @@ public enum PermisoCodigo {
     // Ventas
     VENTA_VER("Ventas", "Ver ventas"),
     VENTA_CREAR("Ventas", "Crear ventas"),
-    VENTA_ANULAR("Ventas", "Anular ventas");
+    VENTA_ANULAR("Ventas", "Anular ventas"),
+
+    // Compras
+    COMPRA_VER("Compras", "Ver compras"),
+    COMPRA_CREAR("Compras", "Registrar y recibir compras"),
+    COMPRA_ANULAR("Compras", "Anular compras");
 
     private final String modulo;
     private final String descripcion;

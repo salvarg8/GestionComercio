@@ -14,7 +14,10 @@ public enum TipoMovimientoCaja implements Descriptible {
     COBRO("Cobro", 1, false),
     /** Devolución del efectivo de una venta anulada. */
     ANULACION_VENTA("Anulación de venta", -1, false),
+    /** Pago en efectivo de una compra. */
     PAGO_PROVEEDOR("Pago a proveedor", -1, false),
+    /** Reintegro del efectivo pagado por una compra anulada. */
+    ANULACION_COMPRA("Anulación de compra", 1, false),
     GASTO("Gasto", -1, true),
     RETIRO("Retiro", -1, true),
     INGRESO_MANUAL("Ingreso manual", 1, true),

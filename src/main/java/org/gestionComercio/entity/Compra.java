@@ -18,6 +18,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.gestionComercio.enums.EstadoCompra;
+import org.gestionComercio.enums.FormaPago;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -36,6 +37,7 @@ public class Compra extends BaseEntity {
     @Column(nullable = false)
     private LocalDateTime fecha;
 
+    /** Número de la factura del proveedor (opcional, único por proveedor entre las no anuladas). */
     @Column(length = 50)
     private String numeroFactura;
 
@@ -45,6 +47,10 @@ public class Compra extends BaseEntity {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal total;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private FormaPago formaPago;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "proveedor_id", nullable = false)
     private Proveedor proveedor;
@@ -52,6 +58,11 @@ public class Compra extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
+
+    /** Caja de donde salió el pago; sólo en compras pagadas en efectivo. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "caja_id")
+    private Caja caja;
 
     @Builder.Default
     @OneToMany(
@@ -65,5 +76,16 @@ public class Compra extends BaseEntity {
     @Column(nullable = false)
     @Builder.Default
     private EstadoCompra estadoCompra = EstadoCompra.RECIBIDA;
+
+    // Anulación: los tres datos se completan juntos, sólo en compras ANULADAS.
+
+    private LocalDateTime fechaAnulacion;
+
+    @Column(length = 255)
+    private String motivoAnulacion;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_anulacion_id")
+    private Usuario usuarioAnulacion;
 
 }
