@@ -38,6 +38,7 @@ import org.gestionComercio.util.CantidadUtils;
 import org.gestionComercio.util.NumberUtils;
 import org.gestionComercio.util.dialog.Dialogs;
 import org.gestionComercio.view.component.ComboBoxBusqueda;
+import org.gestionComercio.view.component.SeleccionProductoDialog;
 import org.gestionComercio.view.component.table.RowActionsTableCell;
 import org.gestionComercio.view.component.table.RowActionsTableCell.Accion;
 import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
@@ -405,7 +406,7 @@ public class PuntoVentaController extends AbstractController {
 
                 producto = coincidencias.size() == 1
                         ? Optional.of(coincidencias.get(0))
-                        : new SeleccionProductoDialog(coincidencias, texto).mostrar();
+                        : new SeleccionProductoDialog(coincidencias, texto, "Precio", ProductoDto::getPrecioVenta).mostrar();
             }
 
             if (producto.isEmpty()) {

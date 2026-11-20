@@ -7,6 +7,8 @@ import org.gestionComercio.exception.ErrorHandler;
 import org.gestionComercio.security.SesionUsuario;
 import org.springframework.stereotype.Component;
 
+import java.util.function.Consumer;
+
 @Component
 @RequiredArgsConstructor
 public class Navigator {
@@ -46,6 +48,29 @@ public class Navigator {
         }
 
         show(loadedView);
+    }
+
+    /**
+     * Abre la vista en una ventana modal, sin reemplazar la pantalla actual
+     * (por ejemplo, para dar de alta un producto sin perder la compra que se
+     * está cargando). Espera a que se cierre la ventana.
+     *
+     * @param configurar recibe el controlador de la vista antes de mostrarla
+     */
+    @SuppressWarnings("unchecked")
+    public <C> void abrirModal(AppView view, Consumer<C> configurar) {
+
+        if (!puedeAcceder(view)) {
+            errorHandler.handle(new AuthorizationException(
+                    "No tiene permiso para acceder a \"" + view.getTitulo() + "\"."));
+            return;
+        }
+
+        LoadedView loadedView = viewLoader.load(view);
+
+        configurar.accept((C) loadedView.controller());
+
+        stageManager.showModal(loadedView);
     }
 
     /**

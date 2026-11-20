@@ -14,8 +14,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -114,6 +117,32 @@ class NavigatorTest {
 
         verify(stageManager).showContent(rolList, contentPane);
         verify(errorHandler, never()).handle(any());
+    }
+
+    @Test
+    @DisplayName("✓ abrirModal configura el controlador y muestra la vista en una ventana modal")
+    void abrirModalConPermiso() {
+        loguearCon(PermisoCodigo.PRODUCTO_CREAR);
+        Object controlador = new Object();
+        LoadedView form = new LoadedView(AppView.PRODUCTO_FORM, null, controlador);
+        when(viewLoader.load(AppView.PRODUCTO_FORM)).thenReturn(form);
+        List<Object> configurados = new ArrayList<>();
+
+        navigator.abrirModal(AppView.PRODUCTO_FORM, configurados::add);
+
+        assertEquals(List.of(controlador), configurados);
+        verify(stageManager).showModal(form);
+    }
+
+    @Test
+    @DisplayName("✓ abrirModal sin permiso no carga la vista e informa el error")
+    void abrirModalSinPermiso() {
+        loguearCon(PermisoCodigo.PRODUCTO_VER);
+
+        navigator.abrirModal(AppView.PRODUCTO_FORM, c -> { });
+
+        verify(viewLoader, never()).load(AppView.PRODUCTO_FORM);
+        verify(errorHandler).handle(any(AuthorizationException.class));
     }
 
     @Test

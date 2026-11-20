@@ -227,6 +227,25 @@ public enum AppView {
             PermisoCodigo.VENTA_VER
     ),
 
+    /** Recibir y anular se habilitan según COMPRA_CREAR y COMPRA_ANULAR. */
+    COMPRA_LIST(
+            "/org/gestionComercio/view/compra/CompraList.fxml",
+            "Compras",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.COMPRA_VER
+    ),
+
+    COMPRA_FORM(
+            "/org/gestionComercio/view/compra/CompraForm.fxml",
+            "Nueva compra",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.COMPRA_CREAR
+    ),
+
     /** Se ve con EMPRESA_VER; sin EMPRESA_EDITAR el formulario es de sólo lectura. */
     EMPRESA_CONFIG(
             "/org/gestionComercio/view/empresa/EmpresaConfig.fxml",

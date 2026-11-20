@@ -249,7 +249,7 @@ public class CompraServiceImpl implements CompraService {
     @Override
     public List<ProveedorDto> listarProveedores() {
 
-        sesionUsuario.requerirPermiso(PermisoCodigo.COMPRA_CREAR);
+        sesionUsuario.requerirAlgunPermiso(PermisoCodigo.COMPRA_CREAR, PermisoCodigo.COMPRA_VER);
 
         return proveedorMapper.toDtoList(
                 proveedorRepository.findByEstadoRegistroOrderByRazonSocialAsc(EstadoRegistro.ACTIVO));

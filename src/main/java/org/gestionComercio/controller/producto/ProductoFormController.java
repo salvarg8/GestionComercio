@@ -32,6 +32,7 @@ import org.springframework.stereotype.Controller;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 @Controller
 @RequiredArgsConstructor
@@ -145,6 +146,13 @@ public class ProductoFormController extends AbstractController implements DataRe
 
     /** null = alta; distinto de null = edición. */
     private ProductoDto productoActual;
+
+    /**
+     * Alta pedida desde otra pantalla, en una ventana aparte (ver
+     * {@link #prepararAlta}): recibe el producto creado. null = uso normal,
+     * desde el ABM de productos.
+     */
+    private Consumer<ProductoDto> alCrear;
 
     private final ErroresPorCampo errores = new ErroresPorCampo();
 
@@ -273,6 +281,31 @@ public class ProductoFormController extends AbstractController implements DataRe
         }
     }
 
+    /**
+     * Prepara el alta de un producto pedida desde otra pantalla (por ejemplo,
+     * al buscar en una compra un artículo que no está cargado). Completa los
+     * datos sugeridos; al guardar, cierra la ventana y entrega el producto
+     * creado a {@code alCrear}. Cancelar sólo cierra la ventana.
+     *
+     * @param sugerido código de barras, nombre y proveedor a completar (cualquiera puede ser null)
+     */
+    public void prepararAlta(ProductoDto sugerido, Consumer<ProductoDto> alCrear) {
+
+        this.alCrear = Objects.requireNonNull(alCrear);
+
+        if (sugerido == null) {
+            return;
+        }
+
+        txtCodigoBarras.setText(sugerido.getCodigoBarras());
+        txtNombre.setText(sugerido.getNombre());
+
+        Opcion proveedor = buscarOpcion(cmbProveedor, sugerido.getProveedorId());
+        if (proveedor != null) {
+            cmbProveedor.setValue(proveedor);
+        }
+    }
+
     /** Una categoría eliminada no se puede conservar: se avisa para que elija otra. */
     private void seleccionarCategoria(ProductoDto producto) {
 
@@ -330,6 +363,13 @@ public class ProductoFormController extends AbstractController implements DataRe
         execute(() -> {
 
             try {
+
+                if (productoActual == null && alCrear != null) {
+                    ProductoDto creado = productoService.save(dto);
+                    cerrarVentana();
+                    alCrear.accept(creado);
+                    return;
+                }
 
                 if (productoActual == null) {
                     productoService.save(dto);
@@ -441,7 +481,18 @@ public class ProductoFormController extends AbstractController implements DataRe
         nodo.setManaged(visible);
     }
 
+    /** En el alta desde otra pantalla cierra la ventana; si no, vuelve al listado de productos. */
     private void volver() {
+
+        if (alCrear != null) {
+            cerrarVentana();
+            return;
+        }
+
         navigator.navigate(AppView.PRODUCTO_LIST);
+    }
+
+    private void cerrarVentana() {
+        btnCancelar.getScene().getWindow().hide();
     }
 }

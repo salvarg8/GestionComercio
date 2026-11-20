@@ -556,4 +556,13 @@ class CompraServiceIntegrationTest {
         assertThat(compraService.buscarProductos("Gaseosa " + sufijo)).isEmpty();
     }
 
+    @Test
+    @DisplayName("Con sólo COMPRA_VER se listan los proveedores (filtro del listado) pero no se buscan productos")
+    void proveedoresConSoloCompraVer() {
+        sesionUsuario.iniciarSesion(usuario, EnumSet.of(PermisoCodigo.COMPRA_VER));
+
+        assertThat(compraService.listarProveedores()).extracting(p -> p.getId()).contains(proveedor.getId());
+        assertThatThrownBy(() -> compraService.buscarProductos("")).isInstanceOf(AuthorizationException.class);
+    }
+
 }
