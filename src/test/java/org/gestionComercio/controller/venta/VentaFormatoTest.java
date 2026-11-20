@@ -13,13 +13,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class VentaFormatoTest {
 
     @Test
-    @DisplayName("numero() completa con ceros")
-    void numero() {
-        assertThat(VentaFormato.numero(42L)).isEqualTo("N° 000042");
-        assertThat(VentaFormato.numero(null)).isEmpty();
-    }
-
-    @Test
     @DisplayName("usuario() muestra nombre y login, o sólo el login")
     void usuario() {
         assertThat(VentaFormato.usuario("Ana Pérez", "ana")).isEqualTo("Ana Pérez (ana)");

@@ -9,6 +9,7 @@ import lombok.experimental.SuperBuilder;
 import org.gestionComercio.dto.BaseDto;
 import org.gestionComercio.enums.EstadoVenta;
 import org.gestionComercio.enums.FormaPago;
+import org.gestionComercio.enums.TipoComprobante;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -18,8 +19,9 @@ import java.util.List;
 /**
  * Una venta con sus renglones.
  *
- * <p>Para registrarla se informan el cliente (opcional), la forma de pago, el
- * descuento (opcional, importe en pesos) y los renglones. La fecha, el
+ * <p>Para registrarla se informan el tipo de comprobante (opcional, ticket por
+ * defecto), el cliente (opcional), la forma de pago, el descuento (opcional,
+ * importe en pesos) y los renglones. La fecha, el número de comprobante, el
  * usuario, la caja, los precios y los totales los completa el servicio.
  */
 @Getter
@@ -32,6 +34,12 @@ public class VentaDto extends BaseDto {
     public static final String CONSUMIDOR_FINAL = "Consumidor final";
 
     private LocalDateTime fecha;
+
+    /** Al registrar: null = ticket. Sólo se aceptan los tipos del punto de venta. */
+    private TipoComprobante tipoComprobante;
+
+    /** Correlativo dentro del tipo; lo asigna el servicio. */
+    private Long numeroComprobante;
 
     /** Null para consumidor final. */
     private Long clienteId;
@@ -73,5 +81,10 @@ public class VentaDto extends BaseDto {
 
     @Builder.Default
     private List<DetalleVentaDto> detalles = new ArrayList<>();
+
+    /** "Ticket N° 00000012"; vacío si la venta todavía no tiene comprobante. */
+    public String getComprobante() {
+        return TipoComprobante.formatear(tipoComprobante, numeroComprobante);
+    }
 
 }

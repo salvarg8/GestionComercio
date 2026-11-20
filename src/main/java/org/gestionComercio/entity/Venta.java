@@ -18,6 +18,7 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.gestionComercio.enums.EstadoVenta;
 import org.gestionComercio.enums.FormaPago;
+import org.gestionComercio.enums.TipoComprobante;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -35,6 +36,14 @@ public class Venta extends BaseEntity {
 
     @Column(nullable = false)
     private LocalDateTime fecha;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TipoComprobante tipoComprobante;
+
+    /** Correlativo dentro del tipo de comprobante (lo asigna {@code NumeradorComprobanteRepository}). */
+    @Column(nullable = false)
+    private Long numeroComprobante;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal subtotal;

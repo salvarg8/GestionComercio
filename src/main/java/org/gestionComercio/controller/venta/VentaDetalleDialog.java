@@ -36,7 +36,7 @@ class VentaDetalleDialog {
 
         VBox cuerpo = new VBox(12, datos(), tabla(), totales());
 
-        Dialogs.crear(Dialogs.Tipo.INFORMACION, "Venta " + VentaFormato.numero(venta.getId()),
+        Dialogs.crear(Dialogs.Tipo.INFORMACION, "Venta " + venta.getComprobante(),
                 cuerpo, Dialogs.ACEPTAR).showAndWait();
     }
 

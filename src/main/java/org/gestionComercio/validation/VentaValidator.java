@@ -7,6 +7,7 @@ import org.gestionComercio.entity.DetalleVenta;
 import org.gestionComercio.entity.Producto;
 import org.gestionComercio.enums.EstadoRegistro;
 import org.gestionComercio.enums.FormaPago;
+import org.gestionComercio.enums.TipoComprobante;
 import org.gestionComercio.repository.ClienteRepository;
 import org.gestionComercio.repository.ProductoRepository;
 import org.gestionComercio.util.CantidadUtils;
@@ -47,6 +48,7 @@ public class VentaValidator implements Validator<VentaDto> {
 
         ValidationResult result = new ValidationResult();
 
+        validarTipoComprobante(dto.getTipoComprobante(), result);
         validarFormaPagoYCliente(dto, result);
 
         boolean descuentoValido = validarDescuento(dto.getDescuento(), result);
@@ -57,6 +59,20 @@ public class VentaValidator implements Validator<VentaDto> {
         }
 
         return result;
+    }
+
+    /** Las facturas y notas requieren ARCA: todavía no se emiten. */
+    private void validarTipoComprobante(TipoComprobante tipo, ValidationResult result) {
+
+        if (tipo == null) {
+            result.addError("tipoComprobante", "Debe seleccionar el tipo de comprobante.");
+            return;
+        }
+
+        if (!tipo.esDelPuntoDeVenta()) {
+            result.addError("tipoComprobante", "No se puede emitir " + tipo.getDescripcion().toLowerCase()
+                    + ": requiere facturación electrónica (ARCA), que todavía no está disponible.");
+        }
     }
 
     private void validarFormaPagoYCliente(VentaDto dto, ValidationResult result) {

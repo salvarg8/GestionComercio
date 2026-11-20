@@ -30,6 +30,7 @@ import org.gestionComercio.dto.cliente.ClienteDto;
 import org.gestionComercio.dto.producto.ProductoDto;
 import org.gestionComercio.dto.venta.VentaDto;
 import org.gestionComercio.enums.FormaPago;
+import org.gestionComercio.enums.TipoComprobante;
 import org.gestionComercio.navigation.AppView;
 import org.gestionComercio.navigation.Navigator;
 import org.gestionComercio.service.VentaService;
@@ -131,6 +132,9 @@ public class PuntoVentaController extends AbstractController {
     private Label lblAvisoStock;
 
     @FXML
+    private ComboBox<TipoComprobante> cmbTipoComprobante;
+
+    @FXML
     private ComboBox<ClienteDto> cmbCliente;
 
     @FXML
@@ -165,6 +169,7 @@ public class PuntoVentaController extends AbstractController {
 
     private final VentaService ventaService;
     private final Navigator navigator;
+    private final ImpresionComprobante impresionComprobante;
 
     private final CarritoVenta carrito = new CarritoVenta();
 
@@ -176,6 +181,9 @@ public class PuntoVentaController extends AbstractController {
 
         cmbFormaPago.getItems().setAll(FormaPago.delPuntoDeVenta());
         cmbFormaPago.setValue(FormaPago.EFECTIVO);
+
+        cmbTipoComprobante.getItems().setAll(TipoComprobante.delPuntoDeVenta());
+        cmbTipoComprobante.setValue(TipoComprobante.TICKET);
 
         mostrar(btnHistorial, navigator.puedeAcceder(AppView.VENTA_LIST));
 
@@ -550,6 +558,7 @@ public class PuntoVentaController extends AbstractController {
             ClienteDto cliente = cmbCliente.getValue();
 
             VentaDto guardada = ventaService.registrar(VentaDto.builder()
+                    .tipoComprobante(cmbTipoComprobante.getValue())
                     .clienteId(cliente == null ? null : cliente.getId())
                     .formaPago(cmbFormaPago.getValue())
                     .descuento(cobro.descuento())
@@ -560,9 +569,16 @@ public class PuntoVentaController extends AbstractController {
 
             nuevaVenta();
 
-            success("Se registró la venta " + VentaFormato.numero(guardada.getId()) + ".\n\n"
+            String registro = "Se registró la venta " + guardada.getComprobante() + ".\n\n"
                     + "Total: " + VentaFormato.importe(guardada.getTotal())
-                    + (cobro.vuelto() == null ? "" : "\nVuelto: " + VentaFormato.importe(cobro.vuelto())));
+                    + (cobro.vuelto() == null ? "" : "\nVuelto: " + VentaFormato.importe(cobro.vuelto()))
+                    + "\n\n¿Desea imprimir el comprobante?";
+
+            // La venta ya quedó registrada: si falla la impresión se avisa aparte
+            // y se puede reimprimir desde el listado de ventas.
+            if (Dialogs.confirmar("Venta registrada", registro, "Imprimir", false)) {
+                execute(() -> impresionComprobante.imprimir(guardada));
+            }
 
             enfocarBusqueda();
         });
@@ -578,6 +594,7 @@ public class PuntoVentaController extends AbstractController {
         ClienteDto cliente = cmbCliente.getValue();
 
         StringBuilder texto = new StringBuilder()
+                .append("Comprobante: ").append(cmbTipoComprobante.getValue()).append('\n')
                 .append("Cliente: ").append(cliente == null || cliente == CONSUMIDOR_FINAL
                         ? VentaDto.CONSUMIDOR_FINAL : cliente.getNombreCompleto()).append('\n')
                 .append("Forma de pago: ").append(cmbFormaPago.getValue()).append('\n')
@@ -617,6 +634,7 @@ public class PuntoVentaController extends AbstractController {
         txtPagaCon.clear();
         cmbCliente.setValue(CONSUMIDOR_FINAL);
         cmbFormaPago.setValue(FormaPago.EFECTIVO);
+        cmbTipoComprobante.setValue(TipoComprobante.TICKET);
 
         refrescarCarrito();
     }
@@ -627,7 +645,8 @@ public class PuntoVentaController extends AbstractController {
 
     /**
      * Atajos de la pantalla: F2 buscar, F3 cambiar cantidad, F4 cliente,
-     * F5 forma de pago, F6 descuento, F7 paga con, F8 vaciar, F12 confirmar.
+     * F5 forma de pago, F6 descuento, F7 paga con, F8 vaciar, F9 comprobante,
+     * F12 confirmar.
      */
     private void atajo(KeyEvent e) {
 
@@ -657,6 +676,10 @@ public class PuntoVentaController extends AbstractController {
                 }
             }
             case F8 -> vaciar();
+            case F9 -> {
+                cmbTipoComprobante.requestFocus();
+                cmbTipoComprobante.show();
+            }
             case F12 -> confirmar();
             default -> {
                 return;

@@ -13,6 +13,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import org.gestionComercio.enums.AnchoTicket;
 import org.gestionComercio.enums.CondicionIVA;
 
 import java.util.ArrayList;
@@ -54,6 +55,12 @@ public class Empresa extends BaseEntity {
 
     @Column(length = 30)
     private String ingresosBrutos;
+
+    /** Ancho del rollo donde se imprimen los tickets. */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private AnchoTicket anchoTicket = AnchoTicket.porDefecto();
 
     @OneToMany(mappedBy = "empresa")
     @Builder.Default

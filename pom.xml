@@ -29,6 +29,8 @@
 
         <mapstruct.version>1.6.3</mapstruct.version>
 
+        <pdfbox.version>3.0.5</pdfbox.version>
+
     </properties>
 
     <dependencies>
@@ -92,6 +94,16 @@
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+
+        <!-- ===================================== -->
+        <!-- PDF (comprobantes de venta) -->
+        <!-- ===================================== -->
+
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>${pdfbox.version}</version>
         </dependency>
 
         <!-- ===================================== -->

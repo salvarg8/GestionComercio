@@ -41,7 +41,8 @@ import java.util.Objects;
  * Listado de ventas de todos los vendedores. Se filtra por período y estado
  * en el servicio, y por cliente sobre lo ya consultado (por nombre, sin
  * distinguir mayúsculas ni acentos). Abre mostrando las ventas del día.
- * Desde la fila se ve el detalle ({@link VentaDetalleDialog}) y se anula la
+ * Desde la fila se ve el detalle ({@link VentaDetalleDialog}), se imprime o
+ * reimprime el comprobante ({@link ImpresionComprobante}) y se anula la
  * venta ({@link AnularVentaDialog}); las anuladas siguen en el listado.
  */
 @Controller
@@ -106,6 +107,7 @@ public class VentaListController extends AbstractController {
     private final VentaService ventaService;
     private final Navigator navigator;
     private final SesionUsuario sesionUsuario;
+    private final ImpresionComprobante impresionComprobante;
 
     /** Ventas del período y estado elegidos, antes de filtrar por cliente. */
     private List<VentaDto> consultadas = List.of();
@@ -169,7 +171,7 @@ public class VentaListController extends AbstractController {
 
     private void configurarColumnas() {
 
-        colNumero.setCellValueFactory(c -> new SimpleStringProperty(VentaFormato.numero(c.getValue().getId())));
+        colNumero.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getComprobante()));
         colFecha.setCellValueFactory(c -> new SimpleStringProperty(DateUtils.format(c.getValue().getFecha())));
         colCliente.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getClienteNombre()));
         colVendedor.setCellValueFactory(c -> new SimpleStringProperty(
@@ -199,6 +201,9 @@ public class VentaListController extends AbstractController {
         acciones.add(new Accion<>(FontAwesomeSolid.LIST, "Ver detalle", "btn-icon-edit",
                 venta -> true, this::verDetalle));
 
+        acciones.add(new Accion<>(FontAwesomeSolid.PRINT, "Imprimir comprobante", "btn-icon-edit",
+                venta -> true, this::imprimir));
+
         if (sesionUsuario.tienePermiso(PermisoCodigo.VENTA_ANULAR)) {
             acciones.add(new Accion<>(FontAwesomeSolid.BAN, "Anular", "btn-icon-delete",
                     venta -> VentaFormato.anulable(venta.getEstadoVenta()), this::anular));
@@ -224,11 +229,16 @@ public class VentaListController extends AbstractController {
         execute(() -> new VentaDetalleDialog(ventaService.obtener(venta.getId())).mostrar());
     }
 
+    /** Imprime o reimprime el comprobante; si la venta está anulada sale marcado como ANULADA. */
+    private void imprimir(VentaDto venta) {
+        execute(() -> impresionComprobante.imprimir(venta));
+    }
+
     private void anular(VentaDto venta) {
 
         new AnularVentaDialog(ventaService, venta).mostrar().ifPresent(anulada -> {
             cargar();
-            success("Venta " + VentaFormato.numero(anulada.getId()) + " anulada correctamente.");
+            success("Venta " + anulada.getComprobante() + " anulada correctamente.");
         });
     }
 

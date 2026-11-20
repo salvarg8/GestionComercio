@@ -1,6 +1,7 @@
 package org.gestionComercio;
 
 import javafx.application.Application;
+import javafx.application.HostServices;
 import javafx.application.Platform;
 import javafx.stage.Stage;
 import org.gestionComercio.config.SpringContext;
@@ -22,7 +23,13 @@ public class App extends Application {
 
     @Override
     public void init() {
-        context = new SpringApplicationBuilder(App.class).run();
+        // HostServices abre archivos con la aplicación del sistema (por ejemplo,
+        // los comprobantes en PDF). Spring corre en modo headless, sin java.awt.Desktop.
+        HostServices hostServices = getHostServices();
+
+        context = new SpringApplicationBuilder(App.class)
+                .initializers(ctx -> ctx.getBeanFactory().registerSingleton("hostServices", hostServices))
+                .run();
         SpringContext.setContext(context);
     }
 

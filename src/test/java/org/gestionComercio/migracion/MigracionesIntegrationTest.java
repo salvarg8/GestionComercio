@@ -2,6 +2,7 @@ package org.gestionComercio.migracion;
 
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.FlywayException;
+import org.flywaydb.core.api.configuration.FluentConfiguration;
 import org.gestionComercio.support.PostgresTestcontainersConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -76,6 +77,7 @@ class MigracionesIntegrationTest {
 
         assertTrue(versiones.contains("1"));
         assertTrue(versiones.contains("2"));
+        assertTrue(versiones.contains("3"));
         assertEquals(0, jdbc.queryForObject(
                 "select count(*) from flyway_schema_history where not success", Integer.class));
     }
@@ -92,6 +94,52 @@ class MigracionesIntegrationTest {
 
         assertTrue(restricciones.containsAll(List.of(
                 "fk_ventas_usuario_anulacion", "ck_ventas_motivo_anulacion", "ck_ventas_anulacion")));
+    }
+
+    @Test
+    @DisplayName("V3 agrega el comprobante de venta, único por tipo y número")
+    void comprobanteDeVenta() {
+        List<String> restricciones = jdbc.queryForList(
+                "select conname from pg_constraint where conrelid = 'ventas'::regclass", String.class);
+
+        assertTrue(restricciones.containsAll(List.of("uk_ventas_comprobante", "ck_ventas_numero_comprobante")));
+        assertTrue(existeTabla("public", "numeradores_comprobante"));
+    }
+
+    @Test
+    @DisplayName("V3 numera como tickets las ventas existentes y deja el numerador en el último número")
+    void comprobanteDeVentasExistentes() {
+        // En un esquema aparte: hasta V2, se cargan ventas y recién entonces se aplica V3.
+        String esquema = "prueba_v3";
+
+        try {
+            flyway(esquema).target("2").load().migrate();
+
+            // Sin controles de claves foráneas: sólo interesan las ventas.
+            String venta = "('ACTIVO', now(), now(), now(), 10, 0, 10, 'EFECTIVO', 'PAGADA', 1, 1)";
+            jdbc.execute("set session_replication_role = replica; "
+                    + "insert into " + esquema + ".ventas (estado_registro, fecha_creacion, fecha_modificacion, "
+                    + "fecha, subtotal, descuento, total, forma_pago, estado_venta, usuario_id, caja_id) "
+                    + "values " + venta + ", " + venta + ", " + venta + "; "
+                    + "set session_replication_role = origin");
+
+            flyway(esquema).load().migrate();
+
+            assertEquals(List.of(1L, 2L, 3L), jdbc.queryForList("select numero_comprobante from " + esquema
+                    + ".ventas where tipo_comprobante = 'TICKET' order by id", Long.class));
+            assertEquals(3L, jdbc.queryForObject("select ultimo_numero from " + esquema
+                    + ".numeradores_comprobante where tipo_comprobante = 'TICKET'", Long.class));
+        } finally {
+            jdbc.execute("drop schema if exists " + esquema + " cascade");
+        }
+    }
+
+    private FluentConfiguration flyway(String esquema) {
+        return Flyway.configure()
+                .dataSource(dataSource)
+                .schemas(esquema)
+                .createSchemas(true)
+                .locations("classpath:db/migration");
     }
 
     @Test

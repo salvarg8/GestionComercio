@@ -146,26 +146,51 @@
 
                                 </HBox>
 
-                                <!-- Condición frente al IVA -->
+                                <!-- Condición frente al IVA y ancho del ticket -->
 
-                                <VBox spacing="5.0" prefWidth="260" maxWidth="260">
+                                <HBox spacing="15.0">
 
                                     <children>
 
-                                        <Label text="Condición frente al IVA *"/>
+                                        <VBox spacing="5.0" prefWidth="260" maxWidth="260">
 
-                                        <ComboBox fx:id="cmbCondicionIva"
-                                                  maxWidth="Infinity"/>
+                                            <children>
 
-                                        <Label fx:id="lblErrorCondicionIva"
-                                               styleClass="field-error-label"
-                                               wrapText="true"
-                                               visible="false"
-                                               managed="false"/>
+                                                <Label text="Condición frente al IVA *"/>
+
+                                                <ComboBox fx:id="cmbCondicionIva"
+                                                          maxWidth="Infinity"/>
+
+                                                <Label fx:id="lblErrorCondicionIva"
+                                                       styleClass="field-error-label"
+                                                       wrapText="true"
+                                                       visible="false"
+                                                       managed="false"/>
+
+                                            </children>
+
+                                        </VBox>
+
+                                        <VBox spacing="5.0" prefWidth="180" maxWidth="180">
+
+                                            <children>
+
+                                                <Label text="Ancho del ticket"/>
+
+                                                <ComboBox fx:id="cmbAnchoTicket"
+                                                          maxWidth="Infinity"/>
+
+                                                <Label text="Rollo de la impresora térmica."
+                                                       styleClass="form-hint"
+                                                       wrapText="true"/>
+
+                                            </children>
+
+                                        </VBox>
 
                                     </children>
 
-                                </VBox>
+                                </HBox>
 
                                 <Separator/>
 
