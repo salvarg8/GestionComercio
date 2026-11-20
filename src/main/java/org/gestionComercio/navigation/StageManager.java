@@ -1,15 +1,23 @@
 package org.gestionComercio.navigation;
 
 import javafx.scene.Scene;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.StackPane;
+import javafx.stage.Modality;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import lombok.Getter;
 import org.gestionComercio.config.WindowConfig;
 import org.springframework.stereotype.Component;
 
+import java.net.URL;
+
 @Getter
 @Component
 public class StageManager {
+
+    /** Las vistas que se abren en el contenido del Dashboard heredan su hoja de estilos; una ventana nueva no. */
+    private static final String STYLESHEET = "/org/gestionComercio/style/style.css";
 
     private Stage primaryStage;
 
@@ -52,9 +60,44 @@ public class StageManager {
         contentPane.getChildren().setAll(loadedView.root());
     }
 
+    /**
+     * Muestra la vista en una ventana modal sobre la principal y espera a que
+     * se cierre. El contenido va en un panel con desplazamiento por si no entra
+     * en la pantalla.
+     */
     public void showModal(LoadedView loadedView) {
-        throw new UnsupportedOperationException(
-                "La navegación modal aún no fue implementada.");
+
+        ScrollPane contenido = new ScrollPane(loadedView.root());
+        contenido.setFitToWidth(true);
+
+        Scene scene = new Scene(contenido);
+
+        URL css = getClass().getResource(STYLESHEET);
+        if (css != null) {
+            scene.getStylesheets().add(css.toExternalForm());
+        }
+
+        Stage modal = new Stage();
+        modal.initModality(Modality.WINDOW_MODAL);
+        modal.setTitle(loadedView.title());
+        modal.setScene(scene);
+
+        if (primaryStage != null) {
+            modal.initOwner(primaryStage);
+            modal.getIcons().setAll(primaryStage.getIcons());
+        }
+
+        modal.sizeToScene();
+
+        double altoMaximo = Screen.getPrimary().getVisualBounds().getHeight() * 0.9;
+        modal.setOnShown(e -> {
+            if (modal.getHeight() > altoMaximo) {
+                modal.setHeight(altoMaximo);
+                modal.centerOnScreen();
+            }
+        });
+
+        modal.showAndWait();
     }
 
 }

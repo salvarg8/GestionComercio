@@ -1,4 +1,4 @@
-package org.gestionComercio.controller.venta;
+package org.gestionComercio.view.component;
 
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
@@ -14,8 +14,10 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
 import org.gestionComercio.dto.producto.ProductoDto;
 import org.gestionComercio.util.CantidadUtils;
+import org.gestionComercio.util.CurrencyUtils;
 import org.gestionComercio.util.dialog.Dialogs;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -24,18 +26,26 @@ import java.util.function.Function;
 /**
  * Elige un producto entre varios que coinciden con la búsqueda. Se maneja con
  * teclado: flechas para moverse, Enter para elegir y Escape para cancelar.
+ *
+ * <p>La columna de precio la elige cada pantalla: el punto de venta muestra
+ * el precio de venta y las compras, el precio de compra.
  */
-class SeleccionProductoDialog {
+public class SeleccionProductoDialog {
 
     private final List<ProductoDto> productos;
     private final String busqueda;
+    private final String tituloPrecio;
+    private final Function<ProductoDto, BigDecimal> precio;
 
-    SeleccionProductoDialog(List<ProductoDto> productos, String busqueda) {
+    public SeleccionProductoDialog(List<ProductoDto> productos, String busqueda,
+                                   String tituloPrecio, Function<ProductoDto, BigDecimal> precio) {
         this.productos = productos;
         this.busqueda = busqueda;
+        this.tituloPrecio = tituloPrecio;
+        this.precio = precio;
     }
 
-    Optional<ProductoDto> mostrar() {
+    public Optional<ProductoDto> mostrar() {
 
         TableView<ProductoDto> tabla = tabla();
 
@@ -88,7 +98,7 @@ class SeleccionProductoDialog {
         tabla.getColumns().setAll(List.of(
                 columna("Código", 110, ProductoDto::getCodigo),
                 columna("Producto", 280, ProductoDto::getNombre),
-                columna("Precio", 110, p -> VentaFormato.importe(p.getPrecioVenta())),
+                columna(tituloPrecio, 110, p -> CurrencyUtils.format(precio.apply(p))),
                 columna("Disponible", 110, SeleccionProductoDialog::disponible)));
 
         tabla.getItems().setAll(productos);
@@ -96,7 +106,8 @@ class SeleccionProductoDialog {
         return tabla;
     }
 
-    static String disponible(ProductoDto producto) {
+    /** Stock disponible con su unidad, o "Sin control" si el producto no maneja stock. */
+    public static String disponible(ProductoDto producto) {
 
         if (!Boolean.TRUE.equals(producto.getManejaStock())) {
             return "Sin control";

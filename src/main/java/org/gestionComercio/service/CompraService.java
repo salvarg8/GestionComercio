@@ -89,7 +89,7 @@ public interface CompraService {
     // quien registra compras tiene que poder elegirlos sin administrarlos.
     // ------------------------------------------------------------------
 
-    /** Proveedores activos, ordenados por razón social. */
+    /** Proveedores activos, ordenados por razón social. Requiere COMPRA_CREAR o COMPRA_VER (filtro del listado). */
     List<ProveedorDto> listarProveedores();
 
     /**
