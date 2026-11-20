@@ -29,8 +29,44 @@ docker compose down -v    # detener y borrar los datos
 Para conectar otra PC de la red, apuntar `DB_URL` al servidor, por ejemplo
 `jdbc:postgresql://192.168.0.10:5432/gestion_comercio`.
 
-Al arrancar contra una base vacía, Hibernate crea las tablas y se cargan los
-permisos, la empresa de ejemplo y el usuario `admin` / `admin123`.
+Al arrancar contra una base vacía, Flyway crea las tablas y `DataInitializer`
+carga los permisos, la empresa de ejemplo y el usuario `admin` / `admin123`.
+
+## Migraciones de base de datos (Flyway)
+
+El esquema lo definen sólo los scripts de
+[src/main/resources/db/migration](src/main/resources/db/migration), que Flyway
+aplica al arrancar la aplicación. Hibernate no crea ni modifica tablas
+(`ddl-auto=validate`): si las entidades no coinciden con el esquema, la
+aplicación no arranca.
+
+**Regla del equipo:** cada cambio de entidad (tabla, columna, tipo, índice,
+restricción) viene en el mismo PR con su script
+`V<n>__descripcion.sql`, con `<n>` el siguiente número libre. Un script ya
+mergeado no se modifica nunca: un error se corrige con otro script.
+
+- Cada migración corre en una transacción y PostgreSQL tiene DDL transaccional:
+  si falla, se revierte entera y la aplicación no arranca.
+- Los datos iniciales (permisos, rol y usuario administrador, empresa) los
+  mantiene `DataInitializer`, no las migraciones: los permisos salen del enum
+  `PermisoCodigo`, así que agregar uno no requiere script.
+- Las columnas de enums son `varchar` sin `CHECK` de valores, así que agregar un
+  valor a un enum tampoco requiere script (renombrarlo o quitarlo, sí).
+- Los tests de integración usan las mismas migraciones.
+
+### Base de desarrollo creada antes de COM31
+
+Si la base del `docker-compose.yml` la creó Hibernate (antes de Flyway), la
+aplicación no arranca: Flyway no aplica migraciones sobre un esquema que no
+creó. Hay que recrearla:
+
+```bash
+docker compose down -v
+docker compose up -d
+```
+
+y arrancar la aplicación una vez. Para recuperar los datos de la base SQLite
+anterior, seguir después la sección siguiente.
 
 ## Ejecutar
 
@@ -54,7 +90,7 @@ Hasta COM40 la aplicación usaba SQLite (`data/gestion-comercio.db`). El script
 [scripts/migracion/MigrarSqliteAPostgres.java](scripts/migracion/MigrarSqliteAPostgres.java)
 copia esos datos a PostgreSQL:
 
-1. Levantar PostgreSQL y arrancar la aplicación una vez, para que se creen las tablas. Cerrarla.
+1. Levantar PostgreSQL y arrancar la aplicación una vez, para que Flyway cree las tablas. Cerrarla.
 2. Descargar los drivers al repositorio local de Maven:
 
    ```bash
@@ -82,6 +118,7 @@ copia esos datos a PostgreSQL:
 
    Opcionalmente se pasan URL, usuario y contraseña como argumentos 2, 3 y 4.
 
-El script vacía las tablas de PostgreSQL (incluidos los datos iniciales), copia
+El script vacía las tablas de PostgreSQL (incluidos los datos iniciales, pero no
+el historial de Flyway), copia
 cada tabla en una sola transacción y ajusta las secuencias de los id. Si algo
 falla, PostgreSQL queda como estaba.

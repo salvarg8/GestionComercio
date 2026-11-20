@@ -68,15 +68,16 @@ public class ProductoValidator implements Validator<ProductoDto> {
                     "El código interno no puede superar los " + CODIGO_MAX + " caracteres.");
         }
 
+        // Sólo cuentan los productos activos: uno dado de baja libera su código.
         Optional<Producto> existente = dto.getId() == null
-                ? productoRepository.findFirstByCodigoIgnoreCase(dto.getCodigo())
-                : productoRepository.findFirstByCodigoIgnoreCaseAndIdNot(dto.getCodigo(), dto.getId());
+                ? productoRepository.findFirstByCodigoIgnoreCaseAndEstadoRegistro(
+                        dto.getCodigo(), EstadoRegistro.ACTIVO)
+                : productoRepository.findFirstByCodigoIgnoreCaseAndEstadoRegistroAndIdNot(
+                        dto.getCodigo(), EstadoRegistro.ACTIVO, dto.getId());
 
         existente.ifPresent(producto -> result.addError(
                 "codigo",
-                producto.getEstadoRegistro() == EstadoRegistro.ACTIVO
-                        ? "Ya existe un producto con ese código interno."
-                        : "Ya existe un producto dado de baja con ese código interno. Puede volver a habilitarlo desde el listado de productos."
+                "Ya existe un producto con ese código interno (" + producto.getNombre() + ")."
         ));
     }
 
@@ -95,15 +96,16 @@ public class ProductoValidator implements Validator<ProductoDto> {
             result.addError("codigoBarras", "El código de barras no puede contener espacios.");
         }
 
+        // Sólo cuentan los productos activos: uno dado de baja libera su código.
         Optional<Producto> existente = dto.getId() == null
-                ? productoRepository.findByCodigoBarras(dto.getCodigoBarras())
-                : productoRepository.findByCodigoBarrasAndIdNot(dto.getCodigoBarras(), dto.getId());
+                ? productoRepository.findFirstByCodigoBarrasAndEstadoRegistro(
+                        dto.getCodigoBarras(), EstadoRegistro.ACTIVO)
+                : productoRepository.findFirstByCodigoBarrasAndEstadoRegistroAndIdNot(
+                        dto.getCodigoBarras(), EstadoRegistro.ACTIVO, dto.getId());
 
         existente.ifPresent(producto -> result.addError(
                 "codigoBarras",
-                producto.getEstadoRegistro() == EstadoRegistro.ACTIVO
-                        ? "Ya existe un producto con ese código de barras (" + producto.getNombre() + ")."
-                        : "Ya existe un producto dado de baja con ese código de barras (" + producto.getNombre() + ")."
+                "Ya existe un producto con ese código de barras (" + producto.getNombre() + ")."
         ));
     }
 

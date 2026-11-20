@@ -42,17 +42,20 @@ public interface ProductoRepository extends BaseRepository<Producto, Long> {
     long countByEstadoRegistro(EstadoRegistro estadoRegistro);
 
     /*
-     * Las búsquedas por código no filtran por estado a propósito: las columnas
-     * codigo y codigo_barras son UNIQUE en la base, así que un producto dado de
-     * baja sigue ocupando sus códigos.
+     * El código interno (sin distinguir mayúsculas) y el código de barras son
+     * únicos sólo entre los productos activos: un producto dado de baja libera
+     * sus códigos. Por eso las búsquedas por código filtran por estado; entre
+     * los dados de baja puede haber varios con el mismo código.
      */
-    Optional<Producto> findFirstByCodigoIgnoreCase(String codigo);
+    Optional<Producto> findFirstByCodigoIgnoreCaseAndEstadoRegistro(String codigo, EstadoRegistro estadoRegistro);
 
-    Optional<Producto> findFirstByCodigoIgnoreCaseAndIdNot(String codigo, Long id);
+    Optional<Producto> findFirstByCodigoIgnoreCaseAndEstadoRegistroAndIdNot(
+            String codigo, EstadoRegistro estadoRegistro, Long id);
 
-    Optional<Producto> findByCodigoBarras(String codigoBarras);
+    Optional<Producto> findFirstByCodigoBarrasAndEstadoRegistro(String codigoBarras, EstadoRegistro estadoRegistro);
 
-    Optional<Producto> findByCodigoBarrasAndIdNot(String codigoBarras, Long id);
+    Optional<Producto> findFirstByCodigoBarrasAndEstadoRegistroAndIdNot(
+            String codigoBarras, EstadoRegistro estadoRegistro, Long id);
 
     boolean existsByCategoriaIdAndEstadoRegistro(Long categoriaId, EstadoRegistro estadoRegistro);
 

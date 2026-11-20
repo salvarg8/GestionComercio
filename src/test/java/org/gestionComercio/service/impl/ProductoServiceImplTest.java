@@ -254,6 +254,42 @@ class ProductoServiceImplTest {
     }
 
     @Test
+    @DisplayName("update() no quita el permiso de stock negativo si el stock es negativo")
+    void updateQuitaStockNegativoConStockNegativo() {
+        Producto existente = Producto.builder().nombre("Gaseosa").categoria(categoria)
+                .permiteStockNegativo(true).stock(new BigDecimal("-2")).build();
+        existente.setId(1L);
+        ProductoDto dto = dto(1L);
+        dto.setPermiteStockNegativo(false);
+
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(existente));
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> productoService.update(dto));
+
+        assertTrue(ex.getMessage().contains("stock negativo"));
+        verify(productoMapper, never()).updateEntity(any(), any());
+        verify(productoRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("update() no deja de controlar el stock si el stock es negativo")
+    void updateDejaDeManejarStockConStockNegativo() {
+        Producto existente = Producto.builder().nombre("Gaseosa").categoria(categoria)
+                .permiteStockNegativo(true).stock(new BigDecimal("-2")).build();
+        existente.setId(1L);
+        ProductoDto dto = dto(1L);
+        dto.setManejaStock(false);
+        dto.setPermiteStockNegativo(true);
+
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(existente));
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> productoService.update(dto));
+
+        assertTrue(ex.getMessage().contains("dejar de controlar el stock"));
+        verify(productoRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
     @DisplayName("update() con una versión vieja lanza ConcurrencyException y no guarda")
     void updateConVersionVieja() {
         Producto existente = Producto.builder().nombre("Gaseosa").categoria(categoria).version(3L).build();
@@ -396,6 +432,48 @@ class ProductoServiceImplTest {
 
         assertTrue(ex.getMessage().contains("categoría"));
         assertEquals(EstadoRegistro.INACTIVO, existente.getEstadoRegistro());
+        verify(productoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("habilitar() falla si otro producto activo tomó su código interno")
+    void habilitarConCodigoOcupado() {
+        Producto existente = producto(1L, EstadoRegistro.INACTIVO);
+        existente.setCodigo("P001");
+        Producto otro = producto(2L, EstadoRegistro.ACTIVO);
+        otro.setNombre("Agua");
+        when(productoRepository.findByIdAndEstadoRegistro(1L, EstadoRegistro.INACTIVO))
+                .thenReturn(Optional.of(existente));
+        when(productoRepository.findFirstByCodigoIgnoreCaseAndEstadoRegistroAndIdNot(
+                "P001", EstadoRegistro.ACTIVO, 1L))
+                .thenReturn(Optional.of(otro));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> productoService.habilitar(1L));
+
+        assertTrue(ex.getMessage().contains("Agua"));
+        assertEquals(EstadoRegistro.INACTIVO, existente.getEstadoRegistro());
+        verify(productoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("habilitar() falla si otro producto activo tomó su código de barras")
+    void habilitarConCodigoBarrasOcupado() {
+        Producto existente = producto(1L, EstadoRegistro.INACTIVO);
+        existente.setCodigo("P001");
+        existente.setCodigoBarras("7790001000011");
+        Producto otro = producto(2L, EstadoRegistro.ACTIVO);
+        otro.setNombre("Agua");
+        when(productoRepository.findByIdAndEstadoRegistro(1L, EstadoRegistro.INACTIVO))
+                .thenReturn(Optional.of(existente));
+        when(productoRepository.findFirstByCodigoBarrasAndEstadoRegistroAndIdNot(
+                "7790001000011", EstadoRegistro.ACTIVO, 1L))
+                .thenReturn(Optional.of(otro));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> productoService.habilitar(1L));
+
+        assertTrue(ex.getMessage().contains("código de barras"));
         verify(productoRepository, never()).save(any());
     }
 

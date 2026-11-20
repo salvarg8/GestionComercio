@@ -99,6 +99,19 @@ public class ProductoServiceImpl implements ProductoService {
                     + "Ajuste primero el stock a un número entero.");
         }
 
+        // La base exige stock >= 0 salvo que el producto permita stock negativo
+        // (y normalizar() lo deja en false si el producto no maneja stock).
+        if (!Boolean.TRUE.equals(dto.getPermiteStockNegativo())
+                && producto.getStock() != null
+                && producto.getStock().signum() < 0) {
+            String accion = Boolean.TRUE.equals(dto.getManejaStock())
+                    ? "quitar el permiso de stock negativo a"
+                    : "dejar de controlar el stock de";
+            throw new BusinessException("No se puede " + accion + " \""
+                    + producto.getNombre() + "\" porque su stock actual es "
+                    + CantidadUtils.formatear(producto.getStock()) + ". Ajuste primero el stock a cero o más.");
+        }
+
         productoMapper.updateEntity(dto, producto);
 
         cargarRelaciones(producto, dto);
@@ -154,9 +167,39 @@ public class ProductoServiceImpl implements ProductoService {
                             + "\" porque su categoría fue eliminada. Edítelo y asígnele otra categoría.");
         }
 
+        verificarCodigosLibres(producto);
+
         producto.setEstadoRegistro(EstadoRegistro.ACTIVO);
 
         productoRepository.save(producto);
+    }
+
+    /**
+     * Un producto dado de baja libera sus códigos, así que mientras estuvo
+     * inactivo otro producto activo pudo haberlos tomado. La base lo impide con
+     * índices únicos parciales; acá se avisa con un mensaje claro.
+     */
+    private void verificarCodigosLibres(Producto producto) {
+
+        productoRepository.findFirstByCodigoIgnoreCaseAndEstadoRegistroAndIdNot(
+                        producto.getCodigo(), EstadoRegistro.ACTIVO, producto.getId())
+                .ifPresent(otro -> {
+                    throw new BusinessException("No se puede habilitar el producto \"" + producto.getNombre()
+                            + "\" porque el código interno " + producto.getCodigo() + " lo usa el producto \""
+                            + otro.getNombre() + "\". Edítelo y asígnele otro código.");
+                });
+
+        if (producto.getCodigoBarras() == null) {
+            return;
+        }
+
+        productoRepository.findFirstByCodigoBarrasAndEstadoRegistroAndIdNot(
+                        producto.getCodigoBarras(), EstadoRegistro.ACTIVO, producto.getId())
+                .ifPresent(otro -> {
+                    throw new BusinessException("No se puede habilitar el producto \"" + producto.getNombre()
+                            + "\" porque el código de barras " + producto.getCodigoBarras()
+                            + " lo usa el producto \"" + otro.getNombre() + "\". Edítelo y asígnele otro código.");
+                });
     }
 
     @Override

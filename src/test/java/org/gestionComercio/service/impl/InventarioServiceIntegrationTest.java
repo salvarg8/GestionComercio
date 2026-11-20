@@ -72,7 +72,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * confirmen o reviertan juntos.
  */
 @DataJpaTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.hibernate.ddl-auto=validate",
         "spring.jpa.show-sql=false"
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
