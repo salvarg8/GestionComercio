@@ -1,6 +1,7 @@
 package org.gestionComercio.repository;
 
 import org.gestionComercio.entity.Venta;
+import org.gestionComercio.enums.EstadoVenta;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -27,7 +28,7 @@ public interface VentaRepository extends JpaRepository<Venta, Long> {
 
     /**
      * Ventas de la más reciente a la más antigua, sin sus renglones. Cada
-     * fecha null no filtra; ambas incluyen el extremo.
+     * filtro null no filtra; las fechas incluyen el extremo.
      */
     @Query("""
             select v from Venta v
@@ -36,8 +37,12 @@ public interface VentaRepository extends JpaRepository<Venta, Long> {
               join fetch v.caja
             where (:desde is null or v.fecha >= :desde)
               and (:hasta is null or v.fecha <= :hasta)
+              and (:estado is null or v.estadoVenta = :estado)
             order by v.fecha desc, v.id desc
             """)
-    List<Venta> buscar(@Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
+    List<Venta> buscar(
+            @Param("desde") LocalDateTime desde,
+            @Param("hasta") LocalDateTime hasta,
+            @Param("estado") EstadoVenta estado);
 
 }

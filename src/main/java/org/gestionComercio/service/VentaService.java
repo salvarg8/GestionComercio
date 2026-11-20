@@ -1,9 +1,14 @@
 package org.gestionComercio.service;
 
+import org.gestionComercio.dto.cliente.ClienteDto;
+import org.gestionComercio.dto.producto.ProductoDto;
+import org.gestionComercio.dto.venta.DetalleVentaDto;
 import org.gestionComercio.dto.venta.VentaDto;
+import org.gestionComercio.enums.EstadoVenta;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Registro y consulta de ventas.
@@ -42,10 +47,46 @@ public interface VentaService {
      * Ventas de todos los usuarios, de la más reciente a la más antigua, sin
      * sus renglones. Requiere VENTA_VER.
      *
-     * @param desde fecha mínima (incluida); null para no limitar
-     * @param hasta fecha máxima (incluida); null para no limitar
+     * @param desde  fecha mínima (incluida); null para no limitar
+     * @param hasta  fecha máxima (incluida); null para no limitar
+     * @param estado estado de la venta; null para todos
      * @throws org.gestionComercio.exception.BusinessException si desde es posterior a hasta
      */
-    List<VentaDto> listar(LocalDate desde, LocalDate hasta);
+    List<VentaDto> listar(LocalDate desde, LocalDate hasta, EstadoVenta estado);
+
+    // ------------------------------------------------------------------
+    // Consultas del punto de venta
+    //
+    // Requieren VENTA_CREAR y no los permisos de productos, clientes o caja:
+    // un vendedor tiene que poder buscar lo que vende sin administrarlo.
+    // ------------------------------------------------------------------
+
+    /** @return true si el usuario de la sesión tiene una caja abierta donde registrar ventas. */
+    boolean tieneCajaAbierta();
+
+    /**
+     * Productos activos por nombre, código interno o código de barras (texto
+     * vacío = todos), con su precio de venta y stock actuales.
+     */
+    List<ProductoDto> buscarProductos(String texto);
+
+    /**
+     * Producto activo cuyo código de barras o código interno es exactamente el
+     * indicado (el código interno sin distinguir mayúsculas). Pensado para el
+     * lector de código de barras.
+     */
+    Optional<ProductoDto> buscarProductoPorCodigo(String codigo);
+
+    /** Clientes activos, ordenados por apellido y nombre. */
+    List<ClienteDto> listarClientes();
+
+    /**
+     * Controla el stock actual de los renglones sin registrar nada (los
+     * renglones del mismo producto se suman). Los productos que no manejan
+     * stock o permiten stock negativo nunca faltan.
+     *
+     * @return un mensaje por producto sin stock suficiente; vacío si alcanza para todos
+     */
+    List<String> verificarStock(List<DetalleVentaDto> detalles);
 
 }

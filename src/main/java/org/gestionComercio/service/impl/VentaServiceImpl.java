@@ -1,7 +1,9 @@
 package org.gestionComercio.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.gestionComercio.dto.cliente.ClienteDto;
 import org.gestionComercio.dto.inventario.LineaInventario;
+import org.gestionComercio.dto.producto.ProductoDto;
 import org.gestionComercio.dto.venta.DetalleVentaDto;
 import org.gestionComercio.dto.venta.VentaDto;
 import org.gestionComercio.entity.Caja;
@@ -12,6 +14,7 @@ import org.gestionComercio.entity.Producto;
 import org.gestionComercio.entity.Usuario;
 import org.gestionComercio.entity.Venta;
 import org.gestionComercio.enums.EstadoCaja;
+import org.gestionComercio.enums.EstadoRegistro;
 import org.gestionComercio.enums.EstadoVenta;
 import org.gestionComercio.enums.FormaPago;
 import org.gestionComercio.enums.OrigenMovimientoInventario;
@@ -20,6 +23,8 @@ import org.gestionComercio.enums.TipoMovimientoCaja;
 import org.gestionComercio.exception.BusinessException;
 import org.gestionComercio.exception.EntityNotFoundException;
 import org.gestionComercio.exception.ValidationException;
+import org.gestionComercio.mapper.ClienteMapper;
+import org.gestionComercio.mapper.ProductoMapper;
 import org.gestionComercio.mapper.VentaMapper;
 import org.gestionComercio.repository.CajaRepository;
 import org.gestionComercio.repository.ClienteRepository;
@@ -40,8 +45,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -62,6 +69,8 @@ public class VentaServiceImpl implements VentaService {
     private final InventarioComprobanteService inventarioComprobanteService;
     private final VentaValidator ventaValidator;
     private final VentaMapper ventaMapper;
+    private final ProductoMapper productoMapper;
+    private final ClienteMapper clienteMapper;
     private final SesionUsuario sesionUsuario;
 
     @Override
@@ -128,7 +137,7 @@ public class VentaServiceImpl implements VentaService {
 
     @Transactional(readOnly = true)
     @Override
-    public List<VentaDto> listar(LocalDate desde, LocalDate hasta) {
+    public List<VentaDto> listar(LocalDate desde, LocalDate hasta, EstadoVenta estado) {
 
         sesionUsuario.requerirPermiso(PermisoCodigo.VENTA_VER);
 
@@ -138,7 +147,100 @@ public class VentaServiceImpl implements VentaService {
 
         return ventaMapper.toResumenList(ventaRepository.buscar(
                 desde == null ? null : desde.atStartOfDay(),
-                hasta == null ? null : hasta.atTime(LocalTime.MAX)));
+                hasta == null ? null : hasta.atTime(LocalTime.MAX),
+                estado));
+    }
+
+    // ------------------------------------------------------------------
+    // Consultas del punto de venta
+    // ------------------------------------------------------------------
+
+    @Transactional(readOnly = true)
+    @Override
+    public boolean tieneCajaAbierta() {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.VENTA_CREAR);
+
+        return cajaRepository.existsByUsuarioIdAndEstadoCaja(sesionUsuario.getUsuario().getId(), EstadoCaja.ABIERTA);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<ProductoDto> buscarProductos(String texto) {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.VENTA_CREAR);
+
+        return productoMapper.toDtoList(productoRepository.buscar(
+                texto == null ? "" : texto.trim(), EstadoRegistro.ACTIVO));
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Optional<ProductoDto> buscarProductoPorCodigo(String codigo) {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.VENTA_CREAR);
+
+        if (codigo == null || codigo.isBlank()) {
+            return Optional.empty();
+        }
+
+        String limpio = codigo.trim();
+
+        return productoRepository.findByCodigoBarras(limpio)
+                .or(() -> productoRepository.findFirstByCodigoIgnoreCase(limpio))
+                .filter(p -> p.getEstadoRegistro() == EstadoRegistro.ACTIVO)
+                .map(productoMapper::toDto);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<ClienteDto> listarClientes() {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.VENTA_CREAR);
+
+        return clienteMapper.toDtoList(clienteRepository.buscar("", "", EstadoRegistro.ACTIVO));
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<String> verificarStock(List<DetalleVentaDto> detalles) {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.VENTA_CREAR);
+
+        if (detalles == null || detalles.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, BigDecimal> cantidades = new LinkedHashMap<>();
+
+        for (DetalleVentaDto detalle : detalles) {
+            if (detalle != null && detalle.getProductoId() != null && detalle.getCantidad() != null) {
+                cantidades.merge(detalle.getProductoId(), detalle.getCantidad(), BigDecimal::add);
+            }
+        }
+
+        Map<Long, Producto> productos = productoRepository.findAllById(cantidades.keySet()).stream()
+                .collect(Collectors.toMap(Producto::getId, Function.identity()));
+
+        List<String> faltantes = new ArrayList<>();
+
+        cantidades.forEach((productoId, cantidad) -> {
+
+            Producto producto = productos.get(productoId);
+
+            if (producto == null
+                    || !Boolean.TRUE.equals(producto.getManejaStock())
+                    || Boolean.TRUE.equals(producto.getPermiteStockNegativo())
+                    || producto.getStock().compareTo(cantidad) >= 0) {
+                return;
+            }
+
+            faltantes.add("Stock insuficiente para \"" + producto.getNombre() + "\": disponible "
+                    + CantidadUtils.formatear(producto.getStock()) + ", solicitado "
+                    + CantidadUtils.formatear(cantidad) + ".");
+        });
+
+        return faltantes;
     }
 
     /** Descuento vacío = sin descuento; lista de renglones nunca nula. */

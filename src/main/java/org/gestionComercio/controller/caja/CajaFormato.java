@@ -6,16 +6,13 @@ import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
-import javafx.util.StringConverter;
 import org.gestionComercio.dto.caja.MovimientoCajaDto;
 import org.gestionComercio.enums.TipoMovimientoCaja;
 import org.gestionComercio.util.CurrencyUtils;
 import org.gestionComercio.util.DateUtils;
+import org.gestionComercio.view.component.SelectorFecha;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.Objects;
 
 /**
@@ -30,8 +27,6 @@ final class CajaFormato {
 
     /** Largo máximo de la descripción de un movimiento y de la observación de cierre. */
     static final int TEXTO_MAX = 255;
-
-    private static final DateTimeFormatter FORMATO_FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private CajaFormato() {
     }
@@ -185,31 +180,8 @@ final class CajaFormato {
                 usuario(c.getValue().getUsuarioNombreCompleto(), c.getValue().getUsuarioNombre())));
     }
 
-    /** Formato dd/MM/yyyy; un texto que no es una fecha válida deja el campo vacío. */
+    /** Formato dd/MM/yyyy (ver {@link SelectorFecha}). */
     static void configurarFecha(DatePicker datePicker) {
-
-        datePicker.setPromptText("dd/mm/aaaa");
-
-        datePicker.setConverter(new StringConverter<>() {
-
-            @Override
-            public String toString(LocalDate fecha) {
-                return fecha == null ? "" : fecha.format(FORMATO_FECHA);
-            }
-
-            @Override
-            public LocalDate fromString(String texto) {
-
-                if (texto == null || texto.isBlank()) {
-                    return null;
-                }
-
-                try {
-                    return LocalDate.parse(texto.trim(), FORMATO_FECHA);
-                } catch (DateTimeParseException e) {
-                    return null;
-                }
-            }
-        });
+        SelectorFecha.configurar(datePicker);
     }
 }

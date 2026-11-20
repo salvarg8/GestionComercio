@@ -208,6 +208,25 @@ public enum AppView {
             PermisoCodigo.CAJA_VER
     ),
 
+    /** Punto de venta: cargar el carrito y confirmar la venta en la caja abierta del vendedor. */
+    PUNTO_VENTA(
+            "/org/gestionComercio/view/venta/PuntoVenta.fxml",
+            "Punto de venta",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.VENTA_CREAR
+    ),
+
+    VENTA_LIST(
+            "/org/gestionComercio/view/venta/VentaList.fxml",
+            "Ventas",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.VENTA_VER
+    ),
+
     /** Se ve con EMPRESA_VER; sin EMPRESA_EDITAR el formulario es de sólo lectura. */
     EMPRESA_CONFIG(
             "/org/gestionComercio/view/empresa/EmpresaConfig.fxml",
