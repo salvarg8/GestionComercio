@@ -3,10 +3,13 @@ package org.gestionComercio.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.gestionComercio.dto.caja.CajaDto;
 import org.gestionComercio.dto.caja.MovimientoCajaDto;
+import org.gestionComercio.dto.caja.ResponsableCajaDto;
 import org.gestionComercio.entity.Caja;
 import org.gestionComercio.entity.MovimientoCaja;
 import org.gestionComercio.entity.Usuario;
 import org.gestionComercio.enums.EstadoCaja;
+import org.gestionComercio.enums.EstadoRegistro;
+import org.gestionComercio.enums.EstadoUsuario;
 import org.gestionComercio.enums.PermisoCodigo;
 import org.gestionComercio.enums.TipoMovimientoCaja;
 import org.gestionComercio.exception.BusinessException;
@@ -15,6 +18,7 @@ import org.gestionComercio.mapper.CajaMapper;
 import org.gestionComercio.mapper.MovimientoCajaMapper;
 import org.gestionComercio.repository.CajaRepository;
 import org.gestionComercio.repository.MovimientoCajaRepository;
+import org.gestionComercio.repository.UsuarioRepository;
 import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.CajaService;
 import org.gestionComercio.util.CurrencyUtils;
@@ -48,17 +52,46 @@ public class CajaServiceImpl implements CajaService {
     private final CajaMapper cajaMapper;
     private final MovimientoCajaMapper movimientoCajaMapper;
     private final SesionUsuario sesionUsuario;
+    private final UsuarioRepository usuarioRepository;
 
     @Override
     public CajaDto abrir(BigDecimal saldoInicial) {
+        return abrir(null, saldoInicial);
+    }
+
+    @Override
+    public CajaDto abrir(Long responsableId, BigDecimal saldoInicial) {
 
         sesionUsuario.requerirPermiso(PermisoCodigo.CAJA_ABRIR);
 
         BigDecimal saldo = validarImporte(saldoInicial, "El saldo inicial", true);
-        Usuario usuario = sesionUsuario.getUsuario();
+        Usuario operador = sesionUsuario.getUsuario();
+        Usuario responsable;
 
-        if (cajaRepository.existsByUsuarioIdAndEstadoCaja(usuario.getId(), EstadoCaja.ABIERTA)) {
-            throw new BusinessException("Ya tiene una caja abierta. Debe cerrarla antes de abrir otra.");
+        if (responsableId == null || responsableId.equals(operador.getId())) {
+
+            responsable = operador;
+
+            if (cajaRepository.existsByUsuarioIdAndEstadoCaja(responsable.getId(), EstadoCaja.ABIERTA)) {
+                throw new BusinessException("Ya tiene una caja abierta. Debe cerrarla antes de abrir otra.");
+            }
+
+        } else {
+
+            sesionUsuario.requerirPermiso(PermisoCodigo.CAJA_ABRIR_OTRO_USUARIO);
+
+            responsable = usuarioRepository.findById(responsableId)
+                    .orElseThrow(() -> new EntityNotFoundException("No existe un usuario con ID: " + responsableId));
+
+            if (!estaActivo(responsable)) {
+                throw new BusinessException("El usuario " + nombre(responsable)
+                        + " no está activo. No se le puede abrir una caja.");
+            }
+
+            if (cajaRepository.existsByUsuarioIdAndEstadoCaja(responsable.getId(), EstadoCaja.ABIERTA)) {
+                throw new BusinessException("El usuario " + nombre(responsable)
+                        + " ya tiene una caja abierta. Debe cerrarse antes de abrirle otra.");
+            }
         }
 
         LocalDateTime ahora = LocalDateTime.now();
@@ -67,7 +100,8 @@ public class CajaServiceImpl implements CajaService {
                 .fechaApertura(ahora)
                 .saldoInicial(saldo)
                 .estadoCaja(EstadoCaja.ABIERTA)
-                .usuario(usuario)
+                .usuario(responsable)
+                .usuarioApertura(operador)
                 .build());
 
         MovimientoCaja apertura = movimientoCajaRepository.save(MovimientoCaja.builder()
@@ -76,10 +110,24 @@ public class CajaServiceImpl implements CajaService {
                 .descripcion("Apertura de caja")
                 .importe(saldo)
                 .caja(caja)
-                .usuario(usuario)
+                .usuario(operador)
                 .build());
 
         return conResumen(caja, List.of(apertura));
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<ResponsableCajaDto> listarResponsablesDisponibles() {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.CAJA_ABRIR_OTRO_USUARIO);
+
+        return usuarioRepository
+                .findByEstadoRegistroAndEstadoUsuarioOrderByApellidoAscNombreAsc(
+                        EstadoRegistro.ACTIVO, EstadoUsuario.ACTIVO)
+                .stream()
+                .map(u -> new ResponsableCajaDto(u.getId(), u.getUsuario(), u.getNombre() + " " + u.getApellido()))
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -150,18 +198,18 @@ public class CajaServiceImpl implements CajaService {
                 desde == null ? null : desde.atStartOfDay(),
                 hasta == null ? null : hasta.atTime(LocalTime.MAX));
 
-        if (cajas.isEmpty()) {
-            return List.of();
-        }
+        return conResumen(cajas);
+    }
 
-        Map<Long, List<MovimientoCaja>> movimientosPorCaja = movimientoCajaRepository
-                .findByCajaIdIn(cajas.stream().map(Caja::getId).toList())
-                .stream()
-                .collect(Collectors.groupingBy(m -> m.getCaja().getId()));
+    @Transactional(readOnly = true)
+    @Override
+    public List<CajaDto> listarCajasAbiertasDeOtrosUsuarios() {
 
-        return cajas.stream()
-                .map(caja -> conResumen(caja, movimientosPorCaja.getOrDefault(caja.getId(), List.of())))
-                .toList();
+        sesionUsuario.requerirPermiso(PermisoCodigo.CAJA_CERRAR_OTRO_USUARIO);
+
+        return conResumen(cajaRepository.findAbiertas().stream()
+                .filter(caja -> !esDelUsuarioDeLaSesion(caja))
+                .toList());
     }
 
     @Transactional(readOnly = true)
@@ -189,7 +237,38 @@ public class CajaServiceImpl implements CajaService {
         BigDecimal contado = validarImporte(saldoContado, "El saldo contado", true);
         String detalle = validarTexto(observacion, "La observación");
 
-        Caja caja = requerirCajaAbierta();
+        return cerrarConArqueo(requerirCajaAbierta(), contado, detalle);
+    }
+
+    @Override
+    public CajaDto cerrar(Long cajaId, BigDecimal saldoContado, String observacion) {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.CAJA_CERRAR);
+
+        BigDecimal contado = validarImporte(saldoContado, "El saldo contado", true);
+        String detalle = validarTexto(observacion, "La observación");
+
+        if (cajaId == null) {
+            throw new BusinessException("La caja es obligatoria.");
+        }
+
+        Caja caja = cajaRepository.findById(cajaId)
+                .orElseThrow(() -> new EntityNotFoundException("No existe una caja con ID: " + cajaId));
+
+        if (!esDelUsuarioDeLaSesion(caja)) {
+            sesionUsuario.requerirPermiso(PermisoCodigo.CAJA_CERRAR_OTRO_USUARIO);
+        }
+
+        if (caja.getEstadoCaja() != EstadoCaja.ABIERTA) {
+            throw new BusinessException("La caja ya está cerrada.");
+        }
+
+        return cerrarConArqueo(caja, contado, detalle);
+    }
+
+    /** Guarda el arqueo y deja la caja cerrada por el usuario de la sesión. */
+    private CajaDto cerrarConArqueo(Caja caja, BigDecimal contado, String detalle) {
+
         List<MovimientoCaja> movimientos = movimientosDe(caja);
         BigDecimal esperado = Resumen.de(caja.getSaldoInicial(), movimientos).saldoEsperado();
 
@@ -199,6 +278,7 @@ public class CajaServiceImpl implements CajaService {
         caja.setDiferencia(contado.subtract(esperado));
         caja.setObservacionCierre(detalle);
         caja.setEstadoCaja(EstadoCaja.CERRADA);
+        caja.setUsuarioCierre(sesionUsuario.getUsuario());
 
         return conResumen(cajaRepository.save(caja), movimientos);
     }
@@ -217,6 +297,36 @@ public class CajaServiceImpl implements CajaService {
 
     private List<MovimientoCaja> movimientosDe(Caja caja) {
         return movimientoCajaRepository.findByCajaIdOrderByFechaAscIdAsc(caja.getId());
+    }
+
+    private boolean esDelUsuarioDeLaSesion(Caja caja) {
+        return caja.getUsuario().getId().equals(sesionUsuario.getUsuario().getId());
+    }
+
+    private static boolean estaActivo(Usuario usuario) {
+        return usuario.getEstadoRegistro() == EstadoRegistro.ACTIVO
+                && usuario.getEstadoUsuario() == EstadoUsuario.ACTIVO;
+    }
+
+    private static String nombre(Usuario usuario) {
+        return usuario.getNombre() + " " + usuario.getApellido() + " (" + usuario.getUsuario() + ")";
+    }
+
+    /** Resumen de varias cajas, consultando los movimientos de todas juntas. */
+    private List<CajaDto> conResumen(List<Caja> cajas) {
+
+        if (cajas.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, List<MovimientoCaja>> movimientosPorCaja = movimientoCajaRepository
+                .findByCajaIdIn(cajas.stream().map(Caja::getId).toList())
+                .stream()
+                .collect(Collectors.groupingBy(m -> m.getCaja().getId()));
+
+        return cajas.stream()
+                .map(caja -> conResumen(caja, movimientosPorCaja.getOrDefault(caja.getId(), List.of())))
+                .toList();
     }
 
     private CajaDto conResumen(Caja caja, List<MovimientoCaja> movimientos) {

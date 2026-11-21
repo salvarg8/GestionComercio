@@ -2,6 +2,7 @@ package org.gestionComercio.mapper;
 
 import org.gestionComercio.dto.caja.CajaDto;
 import org.gestionComercio.entity.Caja;
+import org.gestionComercio.entity.Usuario;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
@@ -21,9 +22,17 @@ public interface CajaMapper {
     @Mapping(target = "totalEgresos", ignore = true)
     @Mapping(target = "usuarioId", source = "usuario.id")
     @Mapping(target = "usuarioNombre", source = "usuario.usuario")
-    @Mapping(target = "usuarioNombreCompleto",
-            expression = "java(entity.getUsuario() == null ? null : "
-                    + "entity.getUsuario().getNombre() + \" \" + entity.getUsuario().getApellido())")
+    @Mapping(target = "usuarioNombreCompleto", expression = "java(nombreCompleto(entity.getUsuario()))")
+    @Mapping(target = "usuarioAperturaId", source = "usuarioApertura.id")
+    @Mapping(target = "usuarioAperturaNombre", source = "usuarioApertura.usuario")
+    @Mapping(target = "usuarioAperturaNombreCompleto", expression = "java(nombreCompleto(entity.getUsuarioApertura()))")
+    @Mapping(target = "usuarioCierreId", source = "usuarioCierre.id")
+    @Mapping(target = "usuarioCierreNombre", source = "usuarioCierre.usuario")
+    @Mapping(target = "usuarioCierreNombreCompleto", expression = "java(nombreCompleto(entity.getUsuarioCierre()))")
     CajaDto toDto(Caja entity);
+
+    default String nombreCompleto(Usuario usuario) {
+        return usuario == null ? null : usuario.getNombre() + " " + usuario.getApellido();
+    }
 
 }

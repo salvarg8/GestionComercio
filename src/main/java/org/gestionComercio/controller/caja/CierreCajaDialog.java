@@ -15,7 +15,8 @@ import java.math.BigDecimal;
 /**
  * Cierre de caja con arqueo: muestra el saldo esperado según el sistema, el
  * usuario carga el efectivo contado y ve la diferencia (sobrante o faltante)
- * antes de confirmar. Al aceptar llama a {@link CajaService#cerrar}.
+ * antes de confirmar. Sirve tanto para la caja propia como para la de otro
+ * usuario. Al aceptar llama a {@link CajaService#cerrar(Long, BigDecimal, String)}.
  */
 class CierreCajaDialog extends FormularioCajaDialog<CajaDto> {
 
@@ -52,6 +53,7 @@ class CierreCajaDialog extends FormularioCajaDialog<CajaDto> {
     @Override
     protected void armarFormulario() {
 
+        fila("Responsable:", new Label(CajaFormato.usuario(caja.getUsuarioNombreCompleto(), caja.getUsuarioNombre())));
         fila("Apertura:", new Label(DateUtils.format(caja.getFechaApertura())));
         fila("Saldo inicial:", new Label(CajaFormato.importe(caja.getSaldoInicial())));
         fila("Ingresos:", new Label("+ " + CajaFormato.importe(caja.getTotalIngresos())));
@@ -98,6 +100,7 @@ class CierreCajaDialog extends FormularioCajaDialog<CajaDto> {
 
     @Override
     protected CajaDto ejecutar() {
-        return cajaService.cerrar(NumberUtils.parseDecimal(txtSaldoContado.getText()), txtObservacion.getText());
+        return cajaService.cerrar(caja.getId(),
+                NumberUtils.parseDecimal(txtSaldoContado.getText()), txtObservacion.getText());
     }
 }

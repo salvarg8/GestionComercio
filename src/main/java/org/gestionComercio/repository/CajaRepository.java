@@ -22,9 +22,21 @@ public interface CajaRepository extends JpaRepository<Caja, Long> {
      * Cajas cerradas, de la más reciente a la más antigua. Cada fecha null no
      * filtra; ambas incluyen el extremo.
      */
+    /** Cajas abiertas de todos los usuarios, ordenadas por responsable. */
+    @Query("""
+            select c from Caja c
+              join fetch c.usuario u
+              join fetch c.usuarioApertura
+            where c.estadoCaja = org.gestionComercio.enums.EstadoCaja.ABIERTA
+            order by u.apellido, u.nombre, c.id
+            """)
+    List<Caja> findAbiertas();
+
     @Query("""
             select c from Caja c
               join fetch c.usuario
+              join fetch c.usuarioApertura
+              left join fetch c.usuarioCierre
             where c.estadoCaja = org.gestionComercio.enums.EstadoCaja.CERRADA
               and (cast(:desde as LocalDateTime) is null or c.fechaCierre >= :desde)
               and (cast(:hasta as LocalDateTime) is null or c.fechaCierre <= :hasta)

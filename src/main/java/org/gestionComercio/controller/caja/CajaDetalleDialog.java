@@ -57,11 +57,16 @@ class CajaDetalleDialog {
         grid.addRow(2, new Label("Cierre:"), new Label(DateUtils.format(caja.getFechaCierre())),
                 new Label("Diferencia:"), diferencia);
 
+        grid.addRow(3, new Label("Abrió:"),
+                new Label(CajaFormato.usuario(caja.getUsuarioAperturaNombreCompleto(), caja.getUsuarioAperturaNombre())),
+                new Label("Cerró:"),
+                new Label(CajaFormato.usuario(caja.getUsuarioCierreNombreCompleto(), caja.getUsuarioCierreNombre())));
+
         if (caja.getObservacionCierre() != null) {
             Label observacion = new Label(caja.getObservacionCierre());
             observacion.setWrapText(true);
-            grid.add(new Label("Observación:"), 0, 3);
-            grid.add(observacion, 1, 3, 3, 1);
+            grid.add(new Label("Observación:"), 0, 4);
+            grid.add(observacion, 1, 4, 3, 1);
         }
 
         return grid;
