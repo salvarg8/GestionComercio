@@ -5,7 +5,9 @@ import org.gestionComercio.dto.cliente.ClienteDto;
 import org.gestionComercio.dto.inventario.LineaInventario;
 import org.gestionComercio.dto.producto.ProductoDto;
 import org.gestionComercio.dto.venta.DetalleVentaDto;
+import org.gestionComercio.dto.venta.ResumenVentas;
 import org.gestionComercio.dto.venta.VentaDto;
+import org.gestionComercio.dto.venta.VentasPorCaja;
 import org.gestionComercio.entity.Caja;
 import org.gestionComercio.entity.Cliente;
 import org.gestionComercio.entity.DetalleVenta;
@@ -48,6 +50,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -215,6 +218,53 @@ public class VentaServiceImpl implements VentaService {
                 desde == null ? null : desde.atStartOfDay(),
                 hasta == null ? null : hasta.atTime(LocalTime.MAX),
                 estado));
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<VentasPorCaja> ventasDelDiaPorCaja() {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.VENTA_VER);
+
+        // Las cajas abiertas aparecen siempre, aunque hoy no hayan vendido.
+        Map<Long, VentasPorCaja> porCaja = new LinkedHashMap<>();
+
+        for (Caja caja : cajaRepository.findAbiertas()) {
+            porCaja.put(caja.getId(), new VentasPorCaja(
+                    caja.getId(),
+                    caja.getUsuario().getNombre() + " " + caja.getUsuario().getApellido(),
+                    caja.getEstadoCaja(),
+                    caja.getFechaApertura(),
+                    0L,
+                    BigDecimal.ZERO));
+        }
+
+        // Las que vendieron hoy (abiertas o ya cerradas) con sus totales.
+        for (VentasPorCaja ventas : totalizarHoyPorCaja(null)) {
+            porCaja.put(ventas.cajaId(), ventas);
+        }
+
+        return porCaja.values().stream()
+                .sorted(Comparator.comparing(VentasPorCaja::fechaApertura)
+                        .thenComparing(VentasPorCaja::cajaId))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public ResumenVentas ventasDelDiaPropias() {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.VENTA_CREAR);
+
+        return ResumenVentas.de(totalizarHoyPorCaja(sesionUsuario.getUsuario().getId()));
+    }
+
+    /** @param usuarioId responsable de las cajas; null para todas */
+    private List<VentasPorCaja> totalizarHoyPorCaja(Long usuarioId) {
+
+        LocalDate hoy = LocalDate.now();
+
+        return ventaRepository.totalizarPorCaja(hoy.atStartOfDay(), hoy.atTime(LocalTime.MAX), usuarioId);
     }
 
     // ------------------------------------------------------------------

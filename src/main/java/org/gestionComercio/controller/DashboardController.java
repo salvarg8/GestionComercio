@@ -29,6 +29,9 @@ public class DashboardController extends AbstractController {
     private Label lblUsuario;
 
     @FXML
+    private Button btnInicio;
+
+    @FXML
     private Button btnRoles;
 
     @FXML
@@ -100,12 +103,13 @@ public class DashboardController extends AbstractController {
         mostrarSiTieneAcceso(btnCompras, vistaDeCompras());
         mostrarSiTieneAcceso(btnConfiguracion, AppView.EMPRESA_CONFIG);
 
-        // Opcional: vista inicial
-        // navigator.navigate(AppView.INICIO);
+        navigator.navigate(AppView.INICIO);
     }
 
     @Override
     protected void initializeEvents() {
+
+        btnInicio.setOnAction(e -> navigator.navigate(AppView.INICIO));
 
         btnRoles.setOnAction(e ->
                 navigator.navigate(AppView.ROL_LIST));

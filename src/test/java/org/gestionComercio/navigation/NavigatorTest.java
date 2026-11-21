@@ -173,7 +173,8 @@ class NavigatorTest {
     @DisplayName("✓ todas las vistas de contenido declaran un permiso (salvo las de uso personal)")
     void vistasDeContenidoDeclaranPermiso() {
         // Vistas que cualquier usuario autenticado puede abrir a propósito.
-        Set<AppView> soloRequierenSesion = Set.of(AppView.CAMBIAR_PASSWORD);
+        // INICIO filtra sus indicadores por permiso.
+        Set<AppView> soloRequierenSesion = Set.of(AppView.CAMBIAR_PASSWORD, AppView.INICIO);
 
         for (AppView view : AppView.values()) {
             if (view.getNavigationType() == NavigationType.CONTENT

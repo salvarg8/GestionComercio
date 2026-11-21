@@ -148,3 +148,54 @@
     -fx-text-fill: -fx-primary-dark;
 
 }
+
+
+/* Inicio: tarjetas del resumen del día y accesos rápidos */
+
+.tarjeta-resumen.tarjeta-inicio {
+
+    -fx-pref-width: 220;
+    -fx-min-height: 100;
+
+}
+
+.tarjeta-resumen-detalle {
+
+    -fx-text-fill: #9CA3AF;
+    -fx-font-size: 11px;
+
+}
+
+.tarjeta-resumen.tarjeta-alerta {
+
+    -fx-background-color: #FFF4E5;
+    -fx-border-color: -fx-warning;
+
+}
+
+.tarjeta-resumen.tarjeta-alerta .tarjeta-resumen-valor {
+
+    -fx-text-fill: -fx-warning;
+
+}
+
+.tarjeta-resumen.tarjeta-peligro {
+
+    -fx-background-color: #FDECEA;
+    -fx-border-color: -fx-danger;
+
+}
+
+.tarjeta-resumen.tarjeta-peligro .tarjeta-resumen-valor {
+
+    -fx-text-fill: -fx-danger;
+
+}
+
+.acceso-rapido {
+
+    -fx-pref-width: 180;
+    -fx-pref-height: 48;
+    -fx-font-size: 14px;
+
+}

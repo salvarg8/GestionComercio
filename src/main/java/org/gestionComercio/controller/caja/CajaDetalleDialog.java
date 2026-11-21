@@ -9,6 +9,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import org.gestionComercio.dto.caja.CajaDto;
 import org.gestionComercio.dto.caja.MovimientoCajaDto;
+import org.gestionComercio.enums.EstadoCaja;
 import org.gestionComercio.enums.TipoMovimientoCaja;
 import org.gestionComercio.util.DateUtils;
 import org.gestionComercio.util.dialog.Dialogs;
@@ -17,7 +18,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Detalle de una caja cerrada: el arqueo y todos sus movimientos. Sólo lectura.
+ * Detalle de una caja: el arqueo (si ya está cerrada) y todos sus movimientos.
+ * Sólo lectura.
  */
 class CajaDetalleDialog {
 
@@ -52,10 +54,14 @@ class CajaDetalleDialog {
         grid.addRow(0, new Label("Responsable:"),
                 new Label(CajaFormato.usuario(caja.getUsuarioNombreCompleto(), caja.getUsuarioNombre())),
                 new Label("Saldo esperado:"), negrita(CajaFormato.importe(caja.getSaldoEsperado())));
+        // Una caja abierta todavía no tiene arqueo.
+        boolean abierta = caja.getEstadoCaja() == EstadoCaja.ABIERTA;
+
         grid.addRow(1, new Label("Apertura:"), new Label(DateUtils.format(caja.getFechaApertura())),
-                new Label("Saldo contado:"), negrita(CajaFormato.importe(caja.getSaldoFinal())));
-        grid.addRow(2, new Label("Cierre:"), new Label(DateUtils.format(caja.getFechaCierre())),
-                new Label("Diferencia:"), diferencia);
+                new Label("Saldo contado:"), negrita(abierta ? "—" : CajaFormato.importe(caja.getSaldoFinal())));
+        grid.addRow(2, new Label("Cierre:"),
+                new Label(abierta ? "Abierta" : DateUtils.format(caja.getFechaCierre())),
+                new Label("Diferencia:"), abierta ? new Label("—") : diferencia);
 
         grid.addRow(3, new Label("Abrió:"),
                 new Label(CajaFormato.usuario(caja.getUsuarioAperturaNombreCompleto(), caja.getUsuarioAperturaNombre())),

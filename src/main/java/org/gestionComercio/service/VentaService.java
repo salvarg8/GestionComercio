@@ -3,7 +3,9 @@ package org.gestionComercio.service;
 import org.gestionComercio.dto.cliente.ClienteDto;
 import org.gestionComercio.dto.producto.ProductoDto;
 import org.gestionComercio.dto.venta.DetalleVentaDto;
+import org.gestionComercio.dto.venta.ResumenVentas;
 import org.gestionComercio.dto.venta.VentaDto;
+import org.gestionComercio.dto.venta.VentasPorCaja;
 import org.gestionComercio.enums.EstadoVenta;
 
 import java.time.LocalDate;
@@ -71,6 +73,21 @@ public interface VentaService {
      * @throws org.gestionComercio.exception.BusinessException si desde es posterior a hasta
      */
     List<VentaDto> listar(LocalDate desde, LocalDate hasta, EstadoVenta estado);
+
+    /**
+     * Lo vendido hoy en cada caja, de todos los usuarios, sin contar las
+     * ventas anuladas ni las canceladas. Aparecen todas las cajas abiertas
+     * (con cero si hoy no vendieron) y las ya cerradas que vendieron hoy,
+     * ordenadas por apertura. Requiere VENTA_VER.
+     */
+    List<VentasPorCaja> ventasDelDiaPorCaja();
+
+    /**
+     * Cantidad e importe de lo vendido hoy en las cajas del usuario de la
+     * sesión, sin contar las ventas anuladas ni las canceladas. Requiere
+     * VENTA_CREAR: es lo que un vendedor puede ver de sus propias ventas.
+     */
+    ResumenVentas ventasDelDiaPropias();
 
     // ------------------------------------------------------------------
     // Consultas del punto de venta

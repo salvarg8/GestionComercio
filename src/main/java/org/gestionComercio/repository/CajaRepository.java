@@ -18,10 +18,6 @@ public interface CajaRepository extends JpaRepository<Caja, Long> {
 
     Optional<Caja> findFirstByUsuarioIdAndEstadoCajaOrderByFechaAperturaDesc(Long usuarioId, EstadoCaja estadoCaja);
 
-    /**
-     * Cajas cerradas, de la más reciente a la más antigua. Cada fecha null no
-     * filtra; ambas incluyen el extremo.
-     */
     /** Cajas abiertas de todos los usuarios, ordenadas por responsable. */
     @Query("""
             select c from Caja c
@@ -32,6 +28,10 @@ public interface CajaRepository extends JpaRepository<Caja, Long> {
             """)
     List<Caja> findAbiertas();
 
+    /**
+     * Cajas cerradas, de la más reciente a la más antigua. Cada fecha null no
+     * filtra; ambas incluyen el extremo.
+     */
     @Query("""
             select c from Caja c
               join fetch c.usuario

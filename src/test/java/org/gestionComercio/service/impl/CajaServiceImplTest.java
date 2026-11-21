@@ -7,6 +7,7 @@ import org.gestionComercio.entity.Caja;
 import org.gestionComercio.entity.MovimientoCaja;
 import org.gestionComercio.entity.Usuario;
 import org.gestionComercio.enums.EstadoCaja;
+import org.gestionComercio.enums.FiltroCaja;
 import org.gestionComercio.enums.EstadoRegistro;
 import org.gestionComercio.enums.EstadoUsuario;
 import org.gestionComercio.enums.PermisoCodigo;
@@ -32,6 +33,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -336,7 +338,7 @@ class CajaServiceImplTest {
 
         List<MovimientoCaja> movimientos = List.of(movimiento(TipoMovimientoCaja.APERTURA, "10"));
         List<MovimientoCajaDto> dtos = List.of(new MovimientoCajaDto());
-        when(cajaRepository.existsById(CAJA_ID)).thenReturn(true);
+        when(cajaRepository.findById(CAJA_ID)).thenReturn(Optional.of(cajaAbierta("10")));
         when(movimientoCajaRepository.findByCajaIdOrderByFechaAscIdAsc(CAJA_ID)).thenReturn(movimientos);
         when(movimientoCajaMapper.toDtoList(movimientos)).thenReturn(dtos);
 
@@ -347,7 +349,7 @@ class CajaServiceImplTest {
     @DisplayName("listarMovimientos falla si la caja no existe")
     void listarMovimientosCajaInexistente() {
 
-        when(cajaRepository.existsById(99L)).thenReturn(false);
+        when(cajaRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(EntityNotFoundException.class, () -> cajaService.listarMovimientos(99L));
     }
@@ -773,6 +775,150 @@ class CajaServiceImplTest {
         loguearSin(PermisoCodigo.CAJA_CERRAR_OTRO_USUARIO);
 
         assertThrows(AuthorizationException.class, () -> cajaService.listarCajasAbiertasDeOtrosUsuarios());
+        verifyNoInteractions(cajaRepository);
+    }
+
+    // ------------------------------------------------------------------
+    // Historial
+    // ------------------------------------------------------------------
+
+    /** Caja propia abierta, caja abierta de otro usuario (más reciente) y una cerrada. */
+    private List<Caja> cajasParaHistorial() {
+
+        Caja propia = cajaAbierta("100");
+        propia.setFechaApertura(LocalDateTime.of(2026, 11, 20, 8, 0));
+        Caja deOtro = conCajaAbiertaDeOtro(otroUsuario(), "200");
+        deOtro.setFechaApertura(LocalDateTime.of(2026, 11, 21, 9, 0));
+        Caja cerrada = cajaAbierta("50");
+        cerrada.setId(3L);
+        cerrada.setEstadoCaja(EstadoCaja.CERRADA);
+        cerrada.setSaldoEsperado(new BigDecimal("50.00"));
+
+        lenient().when(cajaRepository.findAbiertas()).thenReturn(List.of(propia, deOtro));
+        lenient().when(cajaRepository.findCerradas(any(), any())).thenReturn(List.of(cerrada));
+
+        return List.of(propia, deOtro, cerrada);
+    }
+
+    @Test
+    @DisplayName("listarHistorial muestra primero las abiertas (más recientes primero), incluidas las de otros, y después las cerradas")
+    void listarHistorial() {
+
+        cajasParaHistorial();
+
+        List<CajaDto> cajas = cajaService.listarHistorial(null, null, FiltroCaja.TODAS);
+
+        assertEquals(List.of(CAJA_OTRO_ID, CAJA_ID, 3L), cajas.stream().map(CajaDto::getId).toList());
+    }
+
+    @Test
+    @DisplayName("listarHistorial sin CAJA_VER_ABIERTAS_TODAS oculta las abiertas de otros usuarios")
+    void listarHistorialSinVerAbiertasAjenas() {
+
+        cajasParaHistorial();
+        loguearSin(PermisoCodigo.CAJA_VER_ABIERTAS_TODAS);
+
+        List<CajaDto> cajas = cajaService.listarHistorial(null, null, null);
+
+        assertEquals(List.of(CAJA_ID, 3L), cajas.stream().map(CajaDto::getId).toList());
+    }
+
+    @Test
+    @DisplayName("listarHistorial sin CAJA_VER_CERRADAS_TODAS muestra sólo las cerradas propias")
+    void listarHistorialSinVerCerradasAjenas() {
+
+        cajasParaHistorial();
+        Caja cerradaDeOtro = conCajaAbiertaDeOtro(otroUsuario(), "70");
+        cerradaDeOtro.setId(4L);
+        cerradaDeOtro.setEstadoCaja(EstadoCaja.CERRADA);
+        Caja cerradaPropia = cajaAbierta("50");
+        cerradaPropia.setId(3L);
+        cerradaPropia.setEstadoCaja(EstadoCaja.CERRADA);
+        when(cajaRepository.findCerradas(any(), any())).thenReturn(List.of(cerradaDeOtro, cerradaPropia));
+
+        assertEquals(List.of(4L, 3L), cajaService.listarHistorial(null, null, FiltroCaja.CERRADAS)
+                .stream().map(CajaDto::getId).toList());
+
+        loguearSin(PermisoCodigo.CAJA_VER_CERRADAS_TODAS);
+
+        assertEquals(List.of(CAJA_OTRO_ID, CAJA_ID, 3L), cajaService.listarHistorial(null, null, null)
+                .stream().map(CajaDto::getId).toList());
+        assertEquals(List.of(3L), cajaService.listarCajasCerradas(null, null)
+                .stream().map(CajaDto::getId).toList());
+    }
+
+    @Test
+    @DisplayName("listarMovimientos de una caja ajena requiere el permiso de ver todas las cajas en su estado")
+    void listarMovimientosDeCajaAjena() {
+
+        Caja deOtro = conCajaAbiertaDeOtro(otroUsuario(), "200");
+
+        // Abierta: alcanza con CAJA_VER_ABIERTAS_TODAS o con CAJA_CERRAR_OTRO_USUARIO.
+        loguearSin(PermisoCodigo.CAJA_VER_ABIERTAS_TODAS);
+        cajaService.listarMovimientos(CAJA_OTRO_ID);
+
+        loguearCon(EnumSet.of(PermisoCodigo.CAJA_VER, PermisoCodigo.CAJA_VER_CERRADAS_TODAS));
+        assertThrows(AuthorizationException.class, () -> cajaService.listarMovimientos(CAJA_OTRO_ID));
+
+        // Cerrada: sólo con CAJA_VER_CERRADAS_TODAS.
+        deOtro.setEstadoCaja(EstadoCaja.CERRADA);
+        cajaService.listarMovimientos(CAJA_OTRO_ID);
+
+        loguearSin(PermisoCodigo.CAJA_VER_CERRADAS_TODAS);
+        assertThrows(AuthorizationException.class, () -> cajaService.listarMovimientos(CAJA_OTRO_ID));
+    }
+
+    @Test
+    @DisplayName("sin los permisos de ver todas las cajas se ven los movimientos de las propias")
+    void listarMovimientosDeCajaPropiaSinPermisosAmplios() {
+
+        loguearCon(EnumSet.of(PermisoCodigo.CAJA_VER));
+        Caja propia = cajaAbierta("10");
+        propia.setEstadoCaja(EstadoCaja.CERRADA);
+        when(cajaRepository.findById(CAJA_ID)).thenReturn(Optional.of(propia));
+
+        cajaService.listarMovimientos(CAJA_ID);
+
+        verify(movimientoCajaRepository).findByCajaIdOrderByFechaAscIdAsc(CAJA_ID);
+    }
+
+    @Test
+    @DisplayName("listarHistorial filtra por estado")
+    void listarHistorialPorEstado() {
+
+        cajasParaHistorial();
+
+        assertEquals(List.of(CAJA_OTRO_ID, CAJA_ID), cajaService.listarHistorial(null, null, FiltroCaja.ABIERTAS)
+                .stream().map(CajaDto::getId).toList());
+        assertEquals(List.of(3L), cajaService.listarHistorial(null, null, FiltroCaja.CERRADAS)
+                .stream().map(CajaDto::getId).toList());
+    }
+
+    @Test
+    @DisplayName("listarHistorial muestra las abiertas que se abrieron hasta la fecha 'hasta' y filtra las cerradas por cierre")
+    void listarHistorialPorFechas() {
+
+        cajasParaHistorial();
+        LocalDate desde = LocalDate.of(2026, 11, 1);
+        LocalDate hasta = LocalDate.of(2026, 11, 20);
+
+        List<CajaDto> cajas = cajaService.listarHistorial(desde, hasta, FiltroCaja.TODAS);
+
+        // La caja del otro usuario se abrió el 21: queda afuera.
+        assertEquals(List.of(CAJA_ID, 3L), cajas.stream().map(CajaDto::getId).toList());
+        verify(cajaRepository).findCerradas(desde.atStartOfDay(), hasta.atTime(LocalTime.MAX));
+    }
+
+    @Test
+    @DisplayName("listarHistorial requiere CAJA_VER y rechaza un rango invertido")
+    void listarHistorialValidaciones() {
+
+        assertThrows(BusinessException.class, () -> cajaService.listarHistorial(
+                LocalDate.of(2026, 11, 18), LocalDate.of(2026, 11, 1), null));
+
+        loguearSin(PermisoCodigo.CAJA_VER);
+
+        assertThrows(AuthorizationException.class, () -> cajaService.listarHistorial(null, null, null));
         verifyNoInteractions(cajaRepository);
     }
 
