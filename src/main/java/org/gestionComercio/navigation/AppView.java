@@ -25,6 +25,18 @@ public enum AppView {
             false
     ),
 
+    /**
+     * Pantalla por defecto al iniciar sesión, disponible para cualquier usuario
+     * con sesión iniciada. Cada indicador se muestra según su permiso.
+     */
+    INICIO(
+            "/org/gestionComercio/view/inicio/Inicio.fxml",
+            "Inicio",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false
+    ),
+
     ROL_LIST(
             "/org/gestionComercio/view/rol/RolList.fxml",
             "Lista de roles",

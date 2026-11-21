@@ -9,7 +9,9 @@ import org.gestionComercio.config.JpaAuditingConfig;
 import org.gestionComercio.dto.cliente.ClienteDto;
 import org.gestionComercio.dto.producto.ProductoDto;
 import org.gestionComercio.dto.venta.DetalleVentaDto;
+import org.gestionComercio.dto.venta.ResumenVentas;
 import org.gestionComercio.dto.venta.VentaDto;
+import org.gestionComercio.dto.venta.VentasPorCaja;
 import org.gestionComercio.entity.Caja;
 import org.gestionComercio.entity.Categoria;
 import org.gestionComercio.entity.Cliente;
@@ -802,6 +804,81 @@ class VentaServiceIntegrationTest {
                 .contains(pendiente).doesNotContain(pagada);
         assertThat(ventaService.listar(null, null, EstadoVenta.PAGADA)).extracting(VentaDto::getId)
                 .contains(pagada).doesNotContain(pendiente);
+    }
+
+    /** Registra hoy dos ventas válidas (1500 y 3000) y una anulada (4500) en una caja nueva. */
+    private Long cajaConVentasDeHoy() {
+        Long cajaId = abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+        ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "1")));
+        ventaService.registrar(venta(FormaPago.TRANSFERENCIA, renglon(gaseosa, "2")));
+        Long anulada = ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "3"))).getId();
+        ventaService.anular(anulada, "Error en la carga");
+        return cajaId;
+    }
+
+    @Test
+    @DisplayName("ventasDelDiaPorCaja() totaliza las ventas de hoy de cada caja, sin las anuladas")
+    void ventasDelDiaPorCaja() {
+        Long cajaId = cajaConVentasDeHoy();
+
+        // La base es compartida con otros tests: puede haber cajas de otros usuarios.
+        List<VentasPorCaja> cajas = ventaService.ventasDelDiaPorCaja();
+        VentasPorCaja caja = cajas.stream().filter(c -> c.cajaId().equals(cajaId)).findFirst().orElseThrow();
+
+        assertThat(caja.usuarioNombreCompleto()).isEqualTo("Ana Pérez");
+        assertThat(caja.estadoCaja()).isEqualTo(EstadoCaja.ABIERTA);
+        assertThat(caja.cantidad()).isEqualTo(2);
+        assertThat(caja.total()).isEqualByComparingTo("4500");
+
+        sesionUsuario.iniciarSesion(usuario, EnumSet.of(PermisoCodigo.VENTA_CREAR));
+        assertThatThrownBy(() -> ventaService.ventasDelDiaPorCaja()).isInstanceOf(AuthorizationException.class);
+    }
+
+    @Test
+    @DisplayName("ventasDelDiaPorCaja() incluye las cajas abiertas aunque hoy no hayan vendido")
+    void ventasDelDiaPorCajaIncluyeAbiertasSinVentas() {
+        Long cajaId = abrirCaja();
+
+        VentasPorCaja caja = ventaService.ventasDelDiaPorCaja().stream()
+                .filter(c -> c.cajaId().equals(cajaId)).findFirst().orElseThrow();
+
+        assertThat(caja.usuarioNombreCompleto()).isEqualTo("Ana Pérez");
+        assertThat(caja.estadoCaja()).isEqualTo(EstadoCaja.ABIERTA);
+        assertThat(caja.cantidad()).isZero();
+        assertThat(caja.total()).isEqualByComparingTo("0");
+    }
+
+    @Test
+    @DisplayName("ventasDelDiaPropias() suma sólo lo vendido hoy en las cajas del usuario")
+    void ventasDelDiaPropias() {
+        cajaConVentasDeHoy();
+
+        // Otro usuario con ventas hoy: no tiene que sumar.
+        Usuario otro = transaccion.execute(status -> {
+            Usuario u = Usuario.builder()
+                    .usuario("otro" + sufijo).password("x").nombre("Luis").apellido("Díaz")
+                    .empresa(entityManager.merge(usuario).getEmpresa()).rol(entityManager.merge(usuario).getRol())
+                    .tipoDocumento(TipoDocumento.DNI).documento("9" + sufijo)
+                    .build();
+            entityManager.persist(u);
+            return u;
+        });
+        Usuario ana = usuario;
+        usuario = otro;
+        sesionUsuario.iniciarSesion(otro, EnumSet.allOf(PermisoCodigo.class));
+        abrirCaja();
+        Long queso = crearProducto("Queso", "8000.00", "5", UnidadMedida.UNIDAD, true);
+        ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(queso, "1")));
+
+        sesionUsuario.iniciarSesion(ana, EnumSet.of(PermisoCodigo.VENTA_CREAR));
+        ResumenVentas propias = ventaService.ventasDelDiaPropias();
+
+        assertThat(propias.cantidad()).isEqualTo(2);
+        assertThat(propias.total()).isEqualByComparingTo("4500");
+
+        sesionUsuario.iniciarSesion(ana, EnumSet.of(PermisoCodigo.VENTA_VER));
+        assertThatThrownBy(() -> ventaService.ventasDelDiaPropias()).isInstanceOf(AuthorizationException.class);
     }
 
     // ------------------------------------------------------------------

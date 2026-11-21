@@ -1,6 +1,7 @@
 package org.gestionComercio.repository;
 
 import jakarta.persistence.LockModeType;
+import org.gestionComercio.dto.venta.VentasPorCaja;
 import org.gestionComercio.entity.Venta;
 import org.gestionComercio.enums.EstadoVenta;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -57,5 +58,36 @@ public interface VentaRepository extends JpaRepository<Venta, Long> {
             @Param("desde") LocalDateTime desde,
             @Param("hasta") LocalDateTime hasta,
             @Param("estado") EstadoVenta estado);
+
+    /**
+     * Lo vendido en cada caja entre las dos fechas (ambas incluidas), sin las
+     * ventas anuladas ni las canceladas, ordenado por apertura de la caja.
+     * Sólo aparecen las cajas con al menos una venta en el período.
+     *
+     * @param usuarioId responsable de las cajas; null para todas
+     */
+    @Query("""
+            select new org.gestionComercio.dto.venta.VentasPorCaja(
+                     c.id,
+                     concat(u.nombre, ' ', u.apellido),
+                     c.estadoCaja,
+                     c.fechaApertura,
+                     count(v),
+                     sum(v.total))
+            from Venta v
+              join v.caja c
+              join c.usuario u
+            where v.fecha >= :desde
+              and v.fecha <= :hasta
+              and v.estadoVenta not in (org.gestionComercio.enums.EstadoVenta.ANULADA,
+                                        org.gestionComercio.enums.EstadoVenta.CANCELADA)
+              and (:usuarioId is null or u.id = :usuarioId)
+            group by c.id, u.nombre, u.apellido, c.estadoCaja, c.fechaApertura
+            order by c.fechaApertura, c.id
+            """)
+    List<VentasPorCaja> totalizarPorCaja(
+            @Param("desde") LocalDateTime desde,
+            @Param("hasta") LocalDateTime hasta,
+            @Param("usuarioId") Long usuarioId);
 
 }

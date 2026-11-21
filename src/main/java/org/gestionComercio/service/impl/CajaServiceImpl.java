@@ -10,8 +10,10 @@ import org.gestionComercio.entity.Usuario;
 import org.gestionComercio.enums.EstadoCaja;
 import org.gestionComercio.enums.EstadoRegistro;
 import org.gestionComercio.enums.EstadoUsuario;
+import org.gestionComercio.enums.FiltroCaja;
 import org.gestionComercio.enums.PermisoCodigo;
 import org.gestionComercio.enums.TipoMovimientoCaja;
+import org.gestionComercio.exception.AuthorizationException;
 import org.gestionComercio.exception.BusinessException;
 import org.gestionComercio.exception.EntityNotFoundException;
 import org.gestionComercio.mapper.CajaMapper;
@@ -29,6 +31,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -194,11 +198,64 @@ public class CajaServiceImpl implements CajaService {
             throw new BusinessException("La fecha desde no puede ser posterior a la fecha hasta.");
         }
 
-        List<Caja> cajas = cajaRepository.findCerradas(
-                desde == null ? null : desde.atStartOfDay(),
-                hasta == null ? null : hasta.atTime(LocalTime.MAX));
+        return conResumen(cerradasVisibles(desde, hasta));
+    }
 
-        return conResumen(cajas);
+    @Transactional(readOnly = true)
+    @Override
+    public List<CajaDto> listarHistorial(LocalDate desde, LocalDate hasta, FiltroCaja filtro) {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.CAJA_VER);
+
+        if (desde != null && hasta != null && desde.isAfter(hasta)) {
+            throw new BusinessException("La fecha desde no puede ser posterior a la fecha hasta.");
+        }
+
+        FiltroCaja estado = filtro == null ? FiltroCaja.TODAS : filtro;
+        List<CajaDto> historial = new ArrayList<>();
+
+        if (estado != FiltroCaja.CERRADAS) {
+
+            LocalDateTime limite = hasta == null ? null : hasta.atTime(LocalTime.MAX);
+
+            historial.addAll(conResumen(cajaRepository.findAbiertas().stream()
+                    .filter(this::puedeVer)
+                    .filter(caja -> limite == null || !caja.getFechaApertura().isAfter(limite))
+                    .sorted(Comparator.comparing(Caja::getFechaApertura).reversed())
+                    .toList()));
+        }
+
+        if (estado != FiltroCaja.ABIERTAS) {
+            historial.addAll(conResumen(cerradasVisibles(desde, hasta)));
+        }
+
+        return historial;
+    }
+
+    /** Cajas cerradas en el rango que la sesión puede ver (ver {@link #puedeVer}). */
+    private List<Caja> cerradasVisibles(LocalDate desde, LocalDate hasta) {
+        return cajaRepository.findCerradas(
+                        desde == null ? null : desde.atStartOfDay(),
+                        hasta == null ? null : hasta.atTime(LocalTime.MAX))
+                .stream()
+                .filter(this::puedeVer)
+                .toList();
+    }
+
+    /**
+     * Si la sesión puede ver la caja y sus movimientos: la propia siempre;
+     * la de otro usuario con CAJA_VER_ABIERTAS_TODAS o CAJA_VER_CERRADAS_TODAS,
+     * según su estado.
+     */
+    private boolean puedeVer(Caja caja) {
+
+        if (esDelUsuarioDeLaSesion(caja)) {
+            return true;
+        }
+
+        return sesionUsuario.tienePermiso(caja.getEstadoCaja() == EstadoCaja.ABIERTA
+                ? PermisoCodigo.CAJA_VER_ABIERTAS_TODAS
+                : PermisoCodigo.CAJA_VER_CERRADAS_TODAS);
     }
 
     @Transactional(readOnly = true)
@@ -222,8 +279,15 @@ public class CajaServiceImpl implements CajaService {
             throw new BusinessException("La caja es obligatoria.");
         }
 
-        if (!cajaRepository.existsById(cajaId)) {
-            throw new EntityNotFoundException("No existe una caja con ID: " + cajaId);
+        Caja caja = cajaRepository.findById(cajaId)
+                .orElseThrow(() -> new EntityNotFoundException("No existe una caja con ID: " + cajaId));
+
+        // Quien puede cerrar las cajas abiertas de otros también ve sus movimientos.
+        boolean cierraAjena = caja.getEstadoCaja() == EstadoCaja.ABIERTA
+                && sesionUsuario.tienePermiso(PermisoCodigo.CAJA_CERRAR_OTRO_USUARIO);
+
+        if (!puedeVer(caja) && !cierraAjena) {
+            throw new AuthorizationException("No tiene permiso para ver los movimientos de esta caja.");
         }
 
         return movimientoCajaMapper.toDtoList(movimientoCajaRepository.findByCajaIdOrderByFechaAscIdAsc(cajaId));

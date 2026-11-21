@@ -4,6 +4,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
@@ -13,6 +14,8 @@ import javafx.scene.control.TableView;
 import lombok.RequiredArgsConstructor;
 import org.gestionComercio.controller.base.AbstractController;
 import org.gestionComercio.dto.caja.CajaDto;
+import org.gestionComercio.enums.EstadoCaja;
+import org.gestionComercio.enums.FiltroCaja;
 import org.gestionComercio.navigation.AppView;
 import org.gestionComercio.navigation.Navigator;
 import org.gestionComercio.service.CajaService;
@@ -29,9 +32,12 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * Historial de cajas cerradas de todos los usuarios, filtrable por fecha de
- * cierre. Cada caja muestra su arqueo (saldo esperado, contado y diferencia);
- * desde la fila se abre el detalle con sus movimientos ({@link CajaDetalleDialog}).
+ * Historial de cajas abiertas y cerradas, filtrable por estado y fechas
+ * (ver {@link CajaService#listarHistorial}). Se ven las cajas propias y, con
+ * CAJA_VER_ABIERTAS_TODAS / CAJA_VER_CERRADAS_TODAS, las abiertas / cerradas
+ * de los demás usuarios. Cada caja cerrada muestra su arqueo (saldo esperado,
+ * contado y diferencia); desde la fila se abre el detalle con sus
+ * movimientos ({@link CajaDetalleDialog}).
  */
 @Controller
 @RequiredArgsConstructor
@@ -40,6 +46,9 @@ public class CajaHistorialController extends AbstractController {
 
     @FXML
     private Button btnVolver;
+
+    @FXML
+    private ComboBox<FiltroCaja> cmbEstado;
 
     @FXML
     private DatePicker dpDesde;
@@ -52,6 +61,9 @@ public class CajaHistorialController extends AbstractController {
 
     @FXML
     private TableView<CajaDto> tblCajas;
+
+    @FXML
+    private TableColumn<CajaDto, EstadoCaja> colEstado;
 
     @FXML
     private TableColumn<CajaDto, String> colApertura;
@@ -101,6 +113,8 @@ public class CajaHistorialController extends AbstractController {
     @Override
     protected void initializeComponents() {
 
+        cmbEstado.getItems().setAll(FiltroCaja.values());
+        cmbEstado.setValue(FiltroCaja.TODAS);
         CajaFormato.configurarFecha(dpDesde);
         CajaFormato.configurarFecha(dpHasta);
         configurarColumnas();
@@ -116,6 +130,7 @@ public class CajaHistorialController extends AbstractController {
     @Override
     protected void initializeEvents() {
 
+        cmbEstado.valueProperty().addListener((obs, o, n) -> cargar());
         dpDesde.valueProperty().addListener((obs, o, n) -> cargar());
         dpHasta.valueProperty().addListener((obs, o, n) -> cargar());
         btnLimpiar.setOnAction(e -> limpiarFiltros());
@@ -123,6 +138,29 @@ public class CajaHistorialController extends AbstractController {
     }
 
     private void configurarColumnas() {
+
+        colEstado.setCellValueFactory(c -> new SimpleObjectProperty<>(c.getValue().getEstadoCaja()));
+        colEstado.setCellFactory(column -> new TableCell<>() {
+
+            private final Label badge = new Label();
+
+            @Override
+            protected void updateItem(EstadoCaja estado, boolean empty) {
+
+                super.updateItem(estado, empty);
+
+                if (empty || estado == null) {
+                    setGraphic(null);
+                    return;
+                }
+
+                boolean abierta = estado == EstadoCaja.ABIERTA;
+                badge.setText(abierta ? "Abierta" : "Cerrada");
+                badge.getStyleClass().setAll("label", "estado-badge", abierta ? "estado-activo" : "estado-inactivo");
+
+                setGraphic(badge);
+            }
+        });
 
         colApertura.setCellValueFactory(c -> new SimpleStringProperty(DateUtils.format(c.getValue().getFechaApertura())));
         colCierre.setCellValueFactory(c -> new SimpleStringProperty(DateUtils.format(c.getValue().getFechaCierre())));
@@ -133,7 +171,10 @@ public class CajaHistorialController extends AbstractController {
         colIngresos.setCellValueFactory(c -> importe(c.getValue(), CajaDto::getTotalIngresos));
         colEgresos.setCellValueFactory(c -> importe(c.getValue(), CajaDto::getTotalEgresos));
         colSaldoEsperado.setCellValueFactory(c -> importe(c.getValue(), CajaDto::getSaldoEsperado));
-        colSaldoContado.setCellValueFactory(c -> importe(c.getValue(), CajaDto::getSaldoFinal));
+        // Una caja abierta todavía no tiene arqueo.
+        colSaldoContado.setCellValueFactory(c -> c.getValue().getEstadoCaja() == EstadoCaja.ABIERTA
+                ? new SimpleStringProperty("")
+                : importe(c.getValue(), CajaDto::getSaldoFinal));
 
         colDiferencia.setCellValueFactory(c -> new SimpleObjectProperty<>(c.getValue().getDiferencia()));
         colDiferencia.setCellFactory(column -> new TableCell<>() {
@@ -190,6 +231,7 @@ public class CajaHistorialController extends AbstractController {
     private void limpiarFiltros() {
 
         actualizandoFiltros = true;
+        cmbEstado.setValue(FiltroCaja.TODAS);
         dpDesde.setValue(null);
         dpHasta.setValue(null);
         actualizandoFiltros = false;
@@ -205,16 +247,23 @@ public class CajaHistorialController extends AbstractController {
 
         execute(() -> {
 
-            List<CajaDto> cajas = cajaService.listarCajasCerradas(dpDesde.getValue(), dpHasta.getValue());
+            FiltroCaja filtro = cmbEstado.getValue() == null ? FiltroCaja.TODAS : cmbEstado.getValue();
+
+            List<CajaDto> cajas = cajaService.listarHistorial(dpDesde.getValue(), dpHasta.getValue(), filtro);
 
             tblCajas.getItems().setAll(cajas);
 
+            String cuales = switch (filtro) {
+                case ABIERTAS -> "cajas abiertas";
+                case CERRADAS -> "cajas cerradas";
+                case TODAS -> "cajas";
+            };
             boolean filtrado = dpDesde.getValue() != null || dpHasta.getValue() != null;
-            lblSinResultados.setText(filtrado
-                    ? "No hay cajas cerradas en el período indicado."
-                    : "No hay cajas cerradas.");
+            lblSinResultados.setText("No hay " + cuales + (filtrado ? " en el período indicado." : "."));
 
-            lblTotal.setText("Total: " + cajas.size() + (cajas.size() == 1 ? " caja" : " cajas"));
+            long abiertas = cajas.stream().filter(c -> c.getEstadoCaja() == EstadoCaja.ABIERTA).count();
+            lblTotal.setText("Total: " + cajas.size() + (cajas.size() == 1 ? " caja" : " cajas")
+                    + (abiertas > 0 ? " (" + abiertas + (abiertas == 1 ? " abierta)" : " abiertas)") : ""));
 
             BigDecimal acumulada = cajas.stream()
                     .map(CajaDto::getDiferencia)

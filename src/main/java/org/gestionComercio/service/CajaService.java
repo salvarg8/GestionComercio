@@ -3,6 +3,7 @@ package org.gestionComercio.service;
 import org.gestionComercio.dto.caja.CajaDto;
 import org.gestionComercio.dto.caja.MovimientoCajaDto;
 import org.gestionComercio.dto.caja.ResponsableCajaDto;
+import org.gestionComercio.enums.FiltroCaja;
 import org.gestionComercio.enums.TipoMovimientoCaja;
 
 import java.math.BigDecimal;
@@ -71,8 +72,9 @@ public interface CajaService {
     MovimientoCajaDto registrarMovimiento(TipoMovimientoCaja tipo, BigDecimal importe, String descripcion);
 
     /**
-     * Cajas cerradas de todos los usuarios, de la más reciente a la más
-     * antigua según la fecha de cierre, con sus totales. Requiere CAJA_VER.
+     * Cajas cerradas, de la más reciente a la más antigua según la fecha de
+     * cierre, con sus totales. Requiere CAJA_VER; sin CAJA_VER_CERRADAS_TODAS
+     * sólo devuelve las del usuario de la sesión.
      *
      * @param desde fecha de cierre mínima (incluida); null para no limitar
      * @param hasta fecha de cierre máxima (incluida); null para no limitar
@@ -80,7 +82,34 @@ public interface CajaService {
      */
     List<CajaDto> listarCajasCerradas(LocalDate desde, LocalDate hasta);
 
-    /** Movimientos de una caja, en el orden en que se registraron. Requiere CAJA_VER. */
+    /**
+     * Historial de cajas, abiertas y cerradas, con sus totales. Requiere CAJA_VER.
+     *
+     * <p>Primero las abiertas (de la más reciente a la más antigua según la
+     * apertura) y después las cerradas (igual que {@link #listarCajasCerradas}).
+     * Siempre se ven las cajas propias; las abiertas de otros usuarios, con
+     * CAJA_VER_ABIERTAS_TODAS, y las cerradas de otros, con
+     * CAJA_VER_CERRADAS_TODAS.
+     *
+     * <p>Las fechas filtran las cerradas por fecha de cierre; las abiertas
+     * aparecen si se abrieron hasta la fecha {@code hasta} (siguen abiertas,
+     * así que estuvieron activas en el período).
+     *
+     * @param desde  fecha mínima (incluida); null para no limitar
+     * @param hasta  fecha máxima (incluida); null para no limitar
+     * @param filtro estado a mostrar; null = todas
+     * @throws org.gestionComercio.exception.BusinessException si desde es posterior a hasta
+     */
+    List<CajaDto> listarHistorial(LocalDate desde, LocalDate hasta, FiltroCaja filtro);
+
+    /**
+     * Movimientos de una caja, en el orden en que se registraron. Requiere
+     * CAJA_VER y, si la caja es de otro usuario, CAJA_VER_ABIERTAS_TODAS o
+     * CAJA_VER_CERRADAS_TODAS según su estado (una abierta también se ve con
+     * CAJA_CERRAR_OTRO_USUARIO, para poder cerrarla).
+     *
+     * @throws org.gestionComercio.exception.AuthorizationException si no puede ver esa caja
+     */
     List<MovimientoCajaDto> listarMovimientos(Long cajaId);
 
     /**

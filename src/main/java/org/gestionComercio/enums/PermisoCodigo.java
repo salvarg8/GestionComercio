@@ -67,7 +67,9 @@ public enum PermisoCodigo {
     PROVEEDOR_HABILITAR("Proveedores", "Volver a habilitar proveedores dados de baja"),
 
     // Caja
-    CAJA_VER("Caja", "Ver la caja y sus movimientos"),
+    CAJA_VER("Caja", "Ver la caja propia, su historial y sus movimientos"),
+    CAJA_VER_ABIERTAS_TODAS("Caja", "Ver las cajas abiertas de todos los usuarios y sus movimientos"),
+    CAJA_VER_CERRADAS_TODAS("Caja", "Ver las cajas cerradas de todos los usuarios y sus movimientos"),
     CAJA_ABRIR("Caja", "Abrir caja"),
     CAJA_CERRAR("Caja", "Cerrar caja con arqueo"),
     CAJA_ABRIR_OTRO_USUARIO("Caja", "Abrir caja a nombre de otro usuario"),

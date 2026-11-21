@@ -2,6 +2,7 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.DatePicker?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TableColumn?>
@@ -44,7 +45,12 @@
             <HBox spacing="10"
                   alignment="CENTER_LEFT">
 
-                <Label text="Cerradas desde"/>
+                <Label text="Estado"/>
+
+                <ComboBox fx:id="cmbEstado"
+                          prefWidth="130"/>
+
+                <Label text="Desde"/>
 
                 <DatePicker fx:id="dpDesde"
                             prefWidth="140"/>
@@ -58,6 +64,10 @@
                         text="Limpiar filtros"/>
 
             </HBox>
+
+            <Label text="Las cajas cerradas se filtran por fecha de cierre; las abiertas aparecen si se abrieron hasta la fecha &quot;Hasta&quot;."
+                   styleClass="form-hint"
+                   wrapText="true"/>
 
         </VBox>
 
@@ -76,10 +86,15 @@
             </columnResizePolicy>
 
             <placeholder>
-                <Label fx:id="lblSinResultados" text="No hay cajas cerradas."/>
+                <Label fx:id="lblSinResultados" text="No hay cajas."/>
             </placeholder>
 
             <columns>
+
+                <TableColumn fx:id="colEstado"
+                             text="Estado"
+                             prefWidth="90"
+                             sortable="false"/>
 
                 <TableColumn fx:id="colApertura"
                              text="Apertura"
