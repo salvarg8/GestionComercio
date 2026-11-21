@@ -2,6 +2,7 @@ package org.gestionComercio.repository;
 
 import org.gestionComercio.entity.Usuario;
 import org.gestionComercio.enums.EstadoRegistro;
+import org.gestionComercio.enums.EstadoUsuario;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -32,6 +33,10 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
             """)
     List<Usuario> buscar(@Param("texto") String texto,
                          @Param("estado") EstadoRegistro estado);
+
+    /** Usuarios activos y habilitados para iniciar sesión, por apellido y nombre. */
+    List<Usuario> findByEstadoRegistroAndEstadoUsuarioOrderByApellidoAscNombreAsc(
+            EstadoRegistro estadoRegistro, EstadoUsuario estadoUsuario);
 
     boolean existsByUsuarioIgnoreCase(String usuario);
 

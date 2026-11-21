@@ -2,10 +2,13 @@ package org.gestionComercio.service.impl;
 
 import org.gestionComercio.dto.caja.CajaDto;
 import org.gestionComercio.dto.caja.MovimientoCajaDto;
+import org.gestionComercio.dto.caja.ResponsableCajaDto;
 import org.gestionComercio.entity.Caja;
 import org.gestionComercio.entity.MovimientoCaja;
 import org.gestionComercio.entity.Usuario;
 import org.gestionComercio.enums.EstadoCaja;
+import org.gestionComercio.enums.EstadoRegistro;
+import org.gestionComercio.enums.EstadoUsuario;
 import org.gestionComercio.enums.PermisoCodigo;
 import org.gestionComercio.enums.TipoMovimientoCaja;
 import org.gestionComercio.exception.AuthorizationException;
@@ -15,6 +18,7 @@ import org.gestionComercio.mapper.CajaMapper;
 import org.gestionComercio.mapper.MovimientoCajaMapper;
 import org.gestionComercio.repository.CajaRepository;
 import org.gestionComercio.repository.MovimientoCajaRepository;
+import org.gestionComercio.repository.UsuarioRepository;
 import org.gestionComercio.security.SesionUsuario;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -64,6 +68,9 @@ class CajaServiceImplTest {
     @Mock
     private MovimientoCajaMapper movimientoCajaMapper;
 
+    @Mock
+    private UsuarioRepository usuarioRepository;
+
     private SesionUsuario sesionUsuario;
 
     private CajaServiceImpl cajaService;
@@ -74,7 +81,8 @@ class CajaServiceImplTest {
         loguearCon(EnumSet.allOf(PermisoCodigo.class));
 
         cajaService = new CajaServiceImpl(
-                cajaRepository, movimientoCajaRepository, cajaMapper, movimientoCajaMapper, sesionUsuario);
+                cajaRepository, movimientoCajaRepository, cajaMapper, movimientoCajaMapper, sesionUsuario,
+                usuarioRepository);
 
         lenient().when(cajaRepository.save(any())).thenAnswer(inv -> {
             Caja caja = inv.getArgument(0);
@@ -161,6 +169,7 @@ class CajaServiceImplTest {
         assertEquals(EstadoCaja.ABIERTA, caja.getValue().getEstadoCaja());
         assertEquals(new BigDecimal("1500.00"), caja.getValue().getSaldoInicial());
         assertSame(sesionUsuario.getUsuario(), caja.getValue().getUsuario());
+        assertSame(sesionUsuario.getUsuario(), caja.getValue().getUsuarioApertura());
         assertNotNull(caja.getValue().getFechaApertura());
 
         ArgumentCaptor<MovimientoCaja> mov = ArgumentCaptor.forClass(MovimientoCaja.class);
@@ -469,6 +478,7 @@ class CajaServiceImplTest {
         assertEquals(new BigDecimal("1250.00"), caja.getSaldoFinal());
         assertEquals(new BigDecimal("-50.00"), caja.getDiferencia());
         assertEquals("Faltan 50", caja.getObservacionCierre());
+        assertSame(sesionUsuario.getUsuario(), caja.getUsuarioCierre());
         verify(cajaRepository).save(caja);
 
         assertEquals(EstadoCaja.CERRADA, dto.getEstadoCaja());
@@ -516,6 +526,254 @@ class CajaServiceImplTest {
 
         assertThrows(AuthorizationException.class, () -> cajaService.cerrar(BigDecimal.TEN, null));
         verifyNoInteractions(cajaRepository, movimientoCajaRepository);
+    }
+
+    // ------------------------------------------------------------------
+    // Caja de otro usuario
+    // ------------------------------------------------------------------
+
+    private static final Long OTRO_USUARIO_ID = 8L;
+    private static final Long CAJA_OTRO_ID = 2L;
+
+    private Usuario otroUsuario() {
+        Usuario usuario = Usuario.builder().usuario("cajero").nombre("Ana").apellido("Pérez").build();
+        usuario.setId(OTRO_USUARIO_ID);
+        return usuario;
+    }
+
+    /** Caja abierta de otro usuario, con los movimientos indicados además de la apertura. */
+    private Caja conCajaAbiertaDeOtro(Usuario responsable, String saldoInicial, MovimientoCaja... movimientos) {
+        Caja caja = Caja.builder()
+                .saldoInicial(new BigDecimal(saldoInicial))
+                .estadoCaja(EstadoCaja.ABIERTA)
+                .usuario(responsable)
+                .usuarioApertura(responsable)
+                .build();
+        caja.setId(CAJA_OTRO_ID);
+        List<MovimientoCaja> lista = new ArrayList<>();
+        lista.add(movimiento(TipoMovimientoCaja.APERTURA, saldoInicial));
+        lista.addAll(List.of(movimientos));
+        lenient().when(cajaRepository.findById(CAJA_OTRO_ID)).thenReturn(Optional.of(caja));
+        lenient().when(movimientoCajaRepository.findByCajaIdOrderByFechaAscIdAsc(CAJA_OTRO_ID)).thenReturn(lista);
+        return caja;
+    }
+
+    @Test
+    @DisplayName("abrir para otro usuario lo deja como responsable y guarda quién la abrió")
+    void abrirParaOtroUsuario() {
+
+        Usuario otro = otroUsuario();
+        when(usuarioRepository.findById(OTRO_USUARIO_ID)).thenReturn(Optional.of(otro));
+
+        cajaService.abrir(OTRO_USUARIO_ID, new BigDecimal("500"));
+
+        ArgumentCaptor<Caja> caja = ArgumentCaptor.forClass(Caja.class);
+        verify(cajaRepository).save(caja.capture());
+        assertSame(otro, caja.getValue().getUsuario());
+        assertSame(sesionUsuario.getUsuario(), caja.getValue().getUsuarioApertura());
+        assertEquals(new BigDecimal("500.00"), caja.getValue().getSaldoInicial());
+
+        ArgumentCaptor<MovimientoCaja> mov = ArgumentCaptor.forClass(MovimientoCaja.class);
+        verify(movimientoCajaRepository).save(mov.capture());
+        assertSame(sesionUsuario.getUsuario(), mov.getValue().getUsuario());
+        verify(cajaRepository).existsByUsuarioIdAndEstadoCaja(OTRO_USUARIO_ID, EstadoCaja.ABIERTA);
+    }
+
+    @Test
+    @DisplayName("abrir para otro usuario requiere CAJA_ABRIR_OTRO_USUARIO")
+    void abrirParaOtroUsuarioSinPermiso() {
+
+        loguearSin(PermisoCodigo.CAJA_ABRIR_OTRO_USUARIO);
+
+        assertThrows(AuthorizationException.class,
+                () -> cajaService.abrir(OTRO_USUARIO_ID, BigDecimal.TEN));
+        verifyNoInteractions(usuarioRepository, cajaRepository, movimientoCajaRepository);
+    }
+
+    @Test
+    @DisplayName("sin CAJA_ABRIR_OTRO_USUARIO se puede abrir la caja propia indicando el propio usuario")
+    void abrirPropiaSinPermisoDeOtroUsuario() {
+
+        loguearSin(PermisoCodigo.CAJA_ABRIR_OTRO_USUARIO);
+
+        cajaService.abrir(USUARIO_ID, BigDecimal.TEN);
+
+        ArgumentCaptor<Caja> caja = ArgumentCaptor.forClass(Caja.class);
+        verify(cajaRepository).save(caja.capture());
+        assertSame(sesionUsuario.getUsuario(), caja.getValue().getUsuario());
+        verifyNoInteractions(usuarioRepository);
+    }
+
+    @Test
+    @DisplayName("no se puede abrir una caja a un usuario que ya tiene una abierta")
+    void abrirParaOtroUsuarioConCajaAbierta() {
+
+        when(usuarioRepository.findById(OTRO_USUARIO_ID)).thenReturn(Optional.of(otroUsuario()));
+        when(cajaRepository.existsByUsuarioIdAndEstadoCaja(OTRO_USUARIO_ID, EstadoCaja.ABIERTA)).thenReturn(true);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> cajaService.abrir(OTRO_USUARIO_ID, BigDecimal.TEN));
+
+        assertTrue(ex.getMessage().contains("Ana Pérez (cajero) ya tiene una caja abierta"));
+        verify(cajaRepository, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = EstadoUsuario.class, names = {"INACTIVO", "BLOQUEADO"})
+    @DisplayName("no se puede abrir una caja a un usuario inactivo o bloqueado")
+    void abrirParaUsuarioNoActivo(EstadoUsuario estado) {
+
+        Usuario otro = otroUsuario();
+        otro.setEstadoUsuario(estado);
+        when(usuarioRepository.findById(OTRO_USUARIO_ID)).thenReturn(Optional.of(otro));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> cajaService.abrir(OTRO_USUARIO_ID, BigDecimal.TEN));
+
+        assertTrue(ex.getMessage().contains("no está activo"));
+        verify(cajaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("no se puede abrir una caja a un usuario dado de baja")
+    void abrirParaUsuarioDadoDeBaja() {
+
+        Usuario otro = otroUsuario();
+        otro.setEstadoRegistro(EstadoRegistro.INACTIVO);
+        when(usuarioRepository.findById(OTRO_USUARIO_ID)).thenReturn(Optional.of(otro));
+
+        assertThrows(BusinessException.class, () -> cajaService.abrir(OTRO_USUARIO_ID, BigDecimal.TEN));
+        verify(cajaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("abrir para un usuario inexistente falla")
+    void abrirParaUsuarioInexistente() {
+
+        when(usuarioRepository.findById(OTRO_USUARIO_ID)).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class, () -> cajaService.abrir(OTRO_USUARIO_ID, BigDecimal.TEN));
+        verify(cajaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("listarResponsablesDisponibles devuelve los usuarios activos con su nombre completo")
+    void listarResponsablesDisponibles() {
+
+        when(usuarioRepository.findByEstadoRegistroAndEstadoUsuarioOrderByApellidoAscNombreAsc(
+                EstadoRegistro.ACTIVO, EstadoUsuario.ACTIVO)).thenReturn(List.of(otroUsuario()));
+
+        List<ResponsableCajaDto> responsables = cajaService.listarResponsablesDisponibles();
+
+        assertEquals(List.of(new ResponsableCajaDto(OTRO_USUARIO_ID, "cajero", "Ana Pérez")), responsables);
+    }
+
+    @Test
+    @DisplayName("listarResponsablesDisponibles requiere CAJA_ABRIR_OTRO_USUARIO")
+    void listarResponsablesDisponiblesSinPermiso() {
+
+        loguearSin(PermisoCodigo.CAJA_ABRIR_OTRO_USUARIO);
+
+        assertThrows(AuthorizationException.class, () -> cajaService.listarResponsablesDisponibles());
+        verifyNoInteractions(usuarioRepository);
+    }
+
+    @Test
+    @DisplayName("cerrar la caja de otro usuario guarda el arqueo y quién la cerró")
+    void cerrarCajaDeOtroUsuario() {
+
+        Usuario otro = otroUsuario();
+        Caja caja = conCajaAbiertaDeOtro(otro, "1000", movimiento(TipoMovimientoCaja.VENTA, "300"));
+
+        CajaDto dto = cajaService.cerrar(CAJA_OTRO_ID, new BigDecimal("1300"), null);
+
+        assertEquals(EstadoCaja.CERRADA, caja.getEstadoCaja());
+        assertEquals(new BigDecimal("1300.00"), caja.getSaldoEsperado());
+        assertEquals(new BigDecimal("0.00"), caja.getDiferencia());
+        assertSame(otro, caja.getUsuario());
+        assertSame(sesionUsuario.getUsuario(), caja.getUsuarioCierre());
+        verify(cajaRepository).save(caja);
+        assertEquals(EstadoCaja.CERRADA, dto.getEstadoCaja());
+    }
+
+    @Test
+    @DisplayName("cerrar la caja de otro usuario requiere CAJA_CERRAR_OTRO_USUARIO")
+    void cerrarCajaDeOtroUsuarioSinPermiso() {
+
+        loguearSin(PermisoCodigo.CAJA_CERRAR_OTRO_USUARIO);
+        Caja caja = conCajaAbiertaDeOtro(otroUsuario(), "100");
+
+        assertThrows(AuthorizationException.class, () -> cajaService.cerrar(CAJA_OTRO_ID, BigDecimal.TEN, null));
+        assertEquals(EstadoCaja.ABIERTA, caja.getEstadoCaja());
+        verify(cajaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("sin CAJA_CERRAR_OTRO_USUARIO se puede cerrar la caja propia por su id")
+    void cerrarCajaPropiaPorIdSinPermisoDeOtroUsuario() {
+
+        loguearSin(PermisoCodigo.CAJA_CERRAR_OTRO_USUARIO);
+        Caja caja = conCajaAbierta("100");
+        when(cajaRepository.findById(CAJA_ID)).thenReturn(Optional.of(caja));
+
+        cajaService.cerrar(CAJA_ID, new BigDecimal("100"), null);
+
+        assertEquals(EstadoCaja.CERRADA, caja.getEstadoCaja());
+        assertSame(sesionUsuario.getUsuario(), caja.getUsuarioCierre());
+    }
+
+    @Test
+    @DisplayName("cerrar una caja ya cerrada falla")
+    void cerrarCajaYaCerrada() {
+
+        Caja caja = conCajaAbiertaDeOtro(otroUsuario(), "100");
+        caja.setEstadoCaja(EstadoCaja.CERRADA);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> cajaService.cerrar(CAJA_OTRO_ID, BigDecimal.TEN, null));
+
+        assertTrue(ex.getMessage().contains("ya está cerrada"));
+        verify(cajaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("cerrar una caja inexistente falla")
+    void cerrarCajaInexistente() {
+
+        when(cajaRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class, () -> cajaService.cerrar(99L, BigDecimal.TEN, null));
+        assertThrows(BusinessException.class, () -> cajaService.cerrar((Long) null, BigDecimal.TEN, null));
+    }
+
+    @Test
+    @DisplayName("listarCajasAbiertasDeOtrosUsuarios excluye la caja propia y calcula los totales")
+    void listarCajasAbiertasDeOtrosUsuarios() {
+
+        Caja propia = cajaAbierta("100");
+        Caja deOtro = conCajaAbiertaDeOtro(otroUsuario(), "200");
+        MovimientoCaja venta = movimiento(TipoMovimientoCaja.VENTA, "50");
+        venta.setCaja(deOtro);
+
+        when(cajaRepository.findAbiertas()).thenReturn(List.of(propia, deOtro));
+        when(movimientoCajaRepository.findByCajaIdIn(List.of(CAJA_OTRO_ID))).thenReturn(List.of(venta));
+
+        List<CajaDto> cajas = cajaService.listarCajasAbiertasDeOtrosUsuarios();
+
+        assertEquals(1, cajas.size());
+        assertEquals(CAJA_OTRO_ID, cajas.get(0).getId());
+        assertEquals(new BigDecimal("50.00"), cajas.get(0).getTotalIngresos());
+        assertEquals(new BigDecimal("250.00"), cajas.get(0).getSaldoEsperado());
+    }
+
+    @Test
+    @DisplayName("listarCajasAbiertasDeOtrosUsuarios requiere CAJA_CERRAR_OTRO_USUARIO")
+    void listarCajasAbiertasDeOtrosUsuariosSinPermiso() {
+
+        loguearSin(PermisoCodigo.CAJA_CERRAR_OTRO_USUARIO);
+
+        assertThrows(AuthorizationException.class, () -> cajaService.listarCajasAbiertasDeOtrosUsuarios());
+        verifyNoInteractions(cajaRepository);
     }
 
 }

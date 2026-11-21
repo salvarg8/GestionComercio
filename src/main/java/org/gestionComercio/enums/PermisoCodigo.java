@@ -70,6 +70,8 @@ public enum PermisoCodigo {
     CAJA_VER("Caja", "Ver la caja y sus movimientos"),
     CAJA_ABRIR("Caja", "Abrir caja"),
     CAJA_CERRAR("Caja", "Cerrar caja con arqueo"),
+    CAJA_ABRIR_OTRO_USUARIO("Caja", "Abrir caja a nombre de otro usuario"),
+    CAJA_CERRAR_OTRO_USUARIO("Caja", "Ver y cerrar con arqueo las cajas abiertas de otros usuarios"),
     CAJA_REGISTRAR_MOVIMIENTO("Caja", "Registrar ingresos, egresos, gastos y retiros de caja"),
 
     // Ventas

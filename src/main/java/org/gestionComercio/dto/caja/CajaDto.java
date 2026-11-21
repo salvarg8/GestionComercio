@@ -56,4 +56,18 @@ public class CajaDto extends BaseDto {
     /** Nombre y apellido del responsable. */
     private String usuarioNombreCompleto;
 
+    /** Usuario que abrió la caja; puede ser distinto del responsable. */
+    private Long usuarioAperturaId;
+
+    private String usuarioAperturaNombre;
+
+    private String usuarioAperturaNombreCompleto;
+
+    /** Usuario que cerró la caja. Null mientras está abierta. */
+    private Long usuarioCierreId;
+
+    private String usuarioCierreNombre;
+
+    private String usuarioCierreNombreCompleto;
+
 }

@@ -36,6 +36,18 @@
 
             <Region HBox.hgrow="ALWAYS"/>
 
+            <Button fx:id="btnAbrirOtroUsuario"
+                    styleClass="btn-secondary"
+                    text="Abrir caja a otro usuario"
+                    visible="false"
+                    managed="false"/>
+
+            <Button fx:id="btnCajasAbiertas"
+                    styleClass="btn-secondary"
+                    text="Cajas abiertas"
+                    visible="false"
+                    managed="false"/>
+
             <Button fx:id="btnHistorial"
                     styleClass="btn-secondary"
                     text="Historial de cajas"/>

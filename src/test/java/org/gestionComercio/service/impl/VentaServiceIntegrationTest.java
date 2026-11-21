@@ -187,6 +187,7 @@ class VentaServiceIntegrationTest {
                     .saldoInicial(new BigDecimal("1000.00"))
                     .estadoCaja(EstadoCaja.ABIERTA)
                     .usuario(entityManager.merge(usuario))
+                    .usuarioApertura(entityManager.merge(usuario))
                     .build();
             entityManager.persist(caja);
             return caja.getId();
@@ -581,6 +582,7 @@ class VentaServiceIntegrationTest {
             Caja caja = entityManager.find(Caja.class, cajaId);
             caja.setEstadoCaja(EstadoCaja.CERRADA);
             caja.setFechaCierre(LocalDateTime.now());
+            caja.setUsuarioCierre(caja.getUsuario());
         });
     }
 

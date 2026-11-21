@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.sql.DataSource;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -129,6 +130,50 @@ class MigracionesIntegrationTest {
                     + ".ventas where tipo_comprobante = 'TICKET' order by id", Long.class));
             assertEquals(3L, jdbc.queryForObject("select ultimo_numero from " + esquema
                     + ".numeradores_comprobante where tipo_comprobante = 'TICKET'", Long.class));
+        } finally {
+            jdbc.execute("drop schema if exists " + esquema + " cascade");
+        }
+    }
+
+    @Test
+    @DisplayName("V6 agrega a la caja el usuario que la abrió y el que la cerró")
+    void cajaDeOtroUsuario() {
+        List<String> restricciones = jdbc.queryForList(
+                "select conname from pg_constraint where conrelid = 'cajas'::regclass", String.class);
+
+        assertTrue(restricciones.containsAll(List.of(
+                "fk_cajas_usuario_apertura", "fk_cajas_usuario_cierre", "ck_cajas_usuario_cierre")));
+    }
+
+    @Test
+    @DisplayName("V6 toma al responsable como quien abrió y cerró las cajas existentes")
+    void cajaDeOtroUsuarioEnCajasExistentes() {
+        // En un esquema aparte: hasta V5, se cargan cajas y recién entonces se aplica V6.
+        String esquema = "prueba_v6";
+
+        try {
+            flyway(esquema).target("5").load().migrate();
+
+            // Sin controles de claves foráneas al insertar: sólo interesan las cajas. Los usuarios
+            // tienen que existir porque V6 crea claves foráneas hacia ellos.
+            jdbc.execute("set session_replication_role = replica; "
+                    + "insert into " + esquema + ".usuarios (id, estado_registro, fecha_creacion, "
+                    + "fecha_modificacion, usuario, password, nombre, apellido, estado_usuario, empresa_id, "
+                    + "rol_id, tipo_documento, documento) values "
+                    + "(5, 'ACTIVO', now(), now(), 'cajero1', 'x', 'Ana', 'Pérez', 'ACTIVO', 1, 1, 'DNI', '1'), "
+                    + "(6, 'ACTIVO', now(), now(), 'cajero2', 'x', 'Luis', 'Gómez', 'ACTIVO', 1, 1, 'DNI', '2'); "
+                    + "insert into " + esquema + ".cajas (estado_registro, fecha_creacion, fecha_modificacion, "
+                    + "fecha_apertura, saldo_inicial, estado_caja, usuario_id) values "
+                    + "('ACTIVO', now(), now(), now(), 0, 'CERRADA', 5), "
+                    + "('ACTIVO', now(), now(), now(), 0, 'ABIERTA', 6); "
+                    + "set session_replication_role = origin");
+
+            flyway(esquema).load().migrate();
+
+            assertEquals(List.of(5L, 6L), jdbc.queryForList("select usuario_apertura_id from " + esquema
+                    + ".cajas order by id", Long.class));
+            assertEquals(Arrays.asList(5L, null), jdbc.queryForList("select usuario_cierre_id from " + esquema
+                    + ".cajas order by id", Long.class));
         } finally {
             jdbc.execute("drop schema if exists " + esquema + " cascade");
         }

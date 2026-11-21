@@ -59,9 +59,20 @@ public class Caja extends BaseEntity {
     @Column(nullable = false)
     private EstadoCaja estadoCaja;
 
+    /** Responsable de la caja: el usuario que vende y registra movimientos con ella. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
+
+    /** Usuario que abrió la caja; puede ser distinto del responsable. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_apertura_id", nullable = false)
+    private Usuario usuarioApertura;
+
+    /** Usuario que cerró la caja; puede ser distinto del responsable. Null mientras está abierta. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_cierre_id")
+    private Usuario usuarioCierre;
 
     @Builder.Default
     @OneToMany(mappedBy = "caja")

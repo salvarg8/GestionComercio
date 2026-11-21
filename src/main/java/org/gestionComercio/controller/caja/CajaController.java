@@ -22,6 +22,7 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -31,6 +32,10 @@ import java.util.Optional;
  * permisos permite registrar ingresos y egresos manuales
  * ({@link MovimientoCajaDialog}) y cerrarla con arqueo
  * ({@link CierreCajaDialog}).
+ *
+ * <p>Con CAJA_ABRIR_OTRO_USUARIO se elige para quién se abre la caja, y con
+ * CAJA_CERRAR_OTRO_USUARIO se ven y cierran las cajas abiertas de los demás
+ * usuarios ({@link CajasAbiertasDialog}).
  */
 @Controller
 @RequiredArgsConstructor
@@ -39,6 +44,12 @@ public class CajaController extends AbstractController {
 
     @FXML
     private Label lblEstado;
+
+    @FXML
+    private Button btnAbrirOtroUsuario;
+
+    @FXML
+    private Button btnCajasAbiertas;
 
     @FXML
     private Button btnHistorial;
@@ -115,6 +126,9 @@ public class CajaController extends AbstractController {
 
         mostrar(btnRegistrarMovimiento, sesionUsuario.tienePermiso(PermisoCodigo.CAJA_REGISTRAR_MOVIMIENTO));
         mostrar(btnCerrar, sesionUsuario.tienePermiso(PermisoCodigo.CAJA_CERRAR));
+        mostrar(btnAbrirOtroUsuario, puedeAbrirOtroUsuario());
+        mostrar(btnCajasAbiertas, sesionUsuario.tienePermiso(PermisoCodigo.CAJA_CERRAR)
+                && sesionUsuario.tienePermiso(PermisoCodigo.CAJA_CERRAR_OTRO_USUARIO));
         mostrar(btnHistorial, navigator.puedeAcceder(AppView.CAJA_HISTORIAL));
 
         cargar();
@@ -123,20 +137,52 @@ public class CajaController extends AbstractController {
     @Override
     protected void initializeEvents() {
 
-        btnAbrir.setOnAction(e -> abrir());
+        btnAbrir.setOnAction(e -> abrir(sesionUsuario.getUsuario().getId()));
+        btnAbrirOtroUsuario.setOnAction(e -> abrir(null));
+        btnCajasAbiertas.setOnAction(e -> {
+            new CajasAbiertasDialog(cajaService).mostrar();
+            cargar();
+        });
         btnRegistrarMovimiento.setOnAction(e -> registrarMovimiento());
         btnCerrar.setOnAction(e -> cerrar());
         btnHistorial.setOnAction(e -> navigator.navigate(AppView.CAJA_HISTORIAL));
     }
 
-    private void abrir() {
+    private boolean puedeAbrirOtroUsuario() {
+        return sesionUsuario.tienePermiso(PermisoCodigo.CAJA_ABRIR)
+                && sesionUsuario.tienePermiso(PermisoCodigo.CAJA_ABRIR_OTRO_USUARIO);
+    }
 
-        new AbrirCajaDialog(cajaService).mostrar().ifPresent(abierta -> {
+    /**
+     * Abre una caja. Con CAJA_ABRIR_OTRO_USUARIO se elige el responsable;
+     * si no, la caja es siempre del usuario de la sesión.
+     *
+     * @param responsableInicial usuario elegido al abrir la ventana; null para no elegir ninguno
+     */
+    private void abrir(Long responsableInicial) {
+
+        if (!puedeAbrirOtroUsuario()) {
+            mostrarApertura(new AbrirCajaDialog(cajaService));
+            return;
+        }
+
+        // Si la consulta de usuarios falla, execute lo informa y no se abre la ventana.
+        execute(() -> mostrarApertura(new AbrirCajaDialog(
+                cajaService, cajaService.listarResponsablesDisponibles(), responsableInicial)));
+    }
+
+    private void mostrarApertura(AbrirCajaDialog dialogo) {
+
+        dialogo.mostrar().ifPresent(abierta -> {
 
             cargar();
 
-            success("Se abrió la caja con un saldo inicial de "
-                    + CajaFormato.importe(abierta.getSaldoInicial()) + ".");
+            boolean propia = Objects.equals(abierta.getUsuarioId(), sesionUsuario.getUsuario().getId());
+
+            success("Se abrió la caja"
+                    + (propia ? "" : " de " + CajaFormato.usuario(
+                            abierta.getUsuarioNombreCompleto(), abierta.getUsuarioNombre()))
+                    + " con un saldo inicial de " + CajaFormato.importe(abierta.getSaldoInicial()) + ".");
         });
     }
 
@@ -205,7 +251,8 @@ public class CajaController extends AbstractController {
             }
 
             lblApertura.setText("Abierta el " + DateUtils.format(caja.getFechaApertura())
-                    + " por " + CajaFormato.usuario(caja.getUsuarioNombreCompleto(), caja.getUsuarioNombre()));
+                    + " por " + CajaFormato.usuario(caja.getUsuarioAperturaNombreCompleto(),
+                    caja.getUsuarioAperturaNombre()));
 
             lblSaldoInicial.setText(CajaFormato.importe(caja.getSaldoInicial()));
             lblIngresos.setText("+ " + CajaFormato.importe(caja.getTotalIngresos()));
