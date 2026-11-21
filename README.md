@@ -9,6 +9,41 @@ Varias PC (cajas, depósito) pueden trabajar a la vez sobre la misma base.
 - Maven 3.9+
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (para la base de desarrollo y los tests de integración)
 
+## Inicio rápido
+
+Desde cero, con Docker en ejecución:
+
+```bash
+git clone https://github.com/salvarg8/GestionComercio.git
+cd GestionComercio
+docker compose up -d      # PostgreSQL de desarrollo
+mvn javafx:run            # compila y abre la aplicación
+```
+
+En el primer arranque se crean las tablas y los datos iniciales. Ingresar con
+el usuario **`admin`** y la contraseña **`admin123`**, y cambiarla desde
+el perfil (Cambiar contraseña).
+
+## Compilar
+
+```bash
+mvn clean package         # compila, corre Checkstyle y los tests
+mvn clean package -DskipTests
+```
+
+Checkstyle ([checkstyle.xml](checkstyle.xml)) corre en la fase `validate`: una
+violación corta la compilación.
+
+## Estructura
+
+| Carpeta                              | Contenido                                              |
+|--------------------------------------|--------------------------------------------------------|
+| `src/main/java/org/gestionComercio`  | Código: `entity`, `repository`, `service`, `controller`, `view`, etc. |
+| `src/main/resources`                 | `application.properties`, vistas FXML, estilos y migraciones Flyway |
+| `src/test`                           | Tests unitarios y de integración                       |
+| `scripts/migracion`                  | Script para pasar datos de SQLite a PostgreSQL         |
+| `data/` (no versionada)              | Datos locales: logos subidos, base SQLite anterior     |
+
 ## Base de datos para desarrollo
 
 El archivo [docker-compose.yml](docker-compose.yml) levanta PostgreSQL 17 con la base, el usuario y la contraseña que espera la aplicación:

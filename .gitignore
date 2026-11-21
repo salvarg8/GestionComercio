@@ -3,17 +3,25 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+### Datos locales (bases, backups, logos subidos) ###
+data/
+*.db
+*.db.bak*
+*.bak
+
 ### IntelliJ IDEA ###
-.idea/modules.xml
-.idea/jarRepositories.xml
-.idea/compiler.xml
-.idea/libraries/
+# Se versiona sólo la configuración compartida del proyecto;
+# lo demás depende de cada máquina (rutas, datasources, workspace).
+.idea/*
+!.idea/.gitignore
+!.idea/encodings.xml
+!.idea/misc.xml
+!.idea/vcs.xml
+!.idea/codeStyles/
 *.iws
 *.iml
 *.ipr
-*.xml
-*.db
-data/logos/
+out/
 
 ### Eclipse ###
 .apt_generated
