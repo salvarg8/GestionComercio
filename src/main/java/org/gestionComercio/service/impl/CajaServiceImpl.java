@@ -22,6 +22,7 @@ import org.gestionComercio.repository.CajaRepository;
 import org.gestionComercio.repository.MovimientoCajaRepository;
 import org.gestionComercio.repository.UsuarioRepository;
 import org.gestionComercio.security.SesionUsuario;
+import org.gestionComercio.util.DateUtils;
 import org.gestionComercio.service.CajaService;
 import org.gestionComercio.util.CurrencyUtils;
 import org.springframework.stereotype.Service;
@@ -30,7 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -216,7 +216,7 @@ public class CajaServiceImpl implements CajaService {
 
         if (estado != FiltroCaja.CERRADAS) {
 
-            LocalDateTime limite = hasta == null ? null : hasta.atTime(LocalTime.MAX);
+            LocalDateTime limite = DateUtils.finDelDia(hasta);
 
             historial.addAll(conResumen(cajaRepository.findAbiertas().stream()
                     .filter(this::puedeVer)
@@ -236,7 +236,7 @@ public class CajaServiceImpl implements CajaService {
     private List<Caja> cerradasVisibles(LocalDate desde, LocalDate hasta) {
         return cajaRepository.findCerradas(
                         desde == null ? null : desde.atStartOfDay(),
-                        hasta == null ? null : hasta.atTime(LocalTime.MAX))
+                        DateUtils.finDelDia(hasta))
                 .stream()
                 .filter(this::puedeVer)
                 .toList();

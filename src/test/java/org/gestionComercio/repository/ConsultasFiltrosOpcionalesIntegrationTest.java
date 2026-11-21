@@ -60,12 +60,27 @@ class ConsultasFiltrosOpcionalesIntegrationTest {
     @Autowired
     private ProveedorRepository proveedorRepository;
 
+    @Autowired
+    private DetalleVentaRepository detalleVentaRepository;
+
+    @Autowired
+    private CompraRepository compraRepository;
+
+    @Autowired
+    private MovimientoCajaRepository movimientoCajaRepository;
+
     @Test
     @DisplayName("Las consultas aceptan todos los filtros opcionales en null")
     void filtrosVacios() {
         assertThatCode(() -> {
             cajaRepository.findCerradas(null, null);
             ventaRepository.buscar(null, null, null);
+            ventaRepository.totalizarPorDia(null, null);
+            ventaRepository.totalizarPorFormaPago(null, null);
+            ventaRepository.totalizarPorUsuario(null, null);
+            detalleVentaRepository.totalizarPorProducto(null, null);
+            compraRepository.totalizarPorProveedor(null, null);
+            movimientoCajaRepository.buscarIngresosYEgresos(null, null);
             movimientoInventarioRepository.consultar(null, null, null, null);
             productoRepository.buscar("", null);
             productoRepository.consultarStock("", null, "TODOS");
@@ -80,6 +95,11 @@ class ConsultasFiltrosOpcionalesIntegrationTest {
         assertThatCode(() -> {
             cajaRepository.findCerradas(DESDE, HASTA);
             ventaRepository.buscar(DESDE, HASTA, EstadoVenta.values()[0]);
+            ventaRepository.totalizarPorDia(DESDE, HASTA);
+            detalleVentaRepository.totalizarPorProducto(DESDE, HASTA);
+            compraRepository.totalizarPorProveedor(DESDE, HASTA);
+            movimientoCajaRepository.buscarIngresosYEgresos(DESDE, HASTA);
+            productoRepository.consultarValorizacion();
             movimientoInventarioRepository.consultar(1L, TipoMovimientoInventario.values()[0], DESDE, HASTA);
             productoRepository.buscar("arroz", EstadoRegistro.ACTIVO);
             productoRepository.consultarStock("arroz", 1L, "STOCK_BAJO");
@@ -96,6 +116,13 @@ class ConsultasFiltrosOpcionalesIntegrationTest {
             cajaRepository.findCerradas(null, HASTA);
             ventaRepository.buscar(DESDE, null, null);
             ventaRepository.buscar(null, HASTA, null);
+            ventaRepository.totalizarPorDia(DESDE, null);
+            ventaRepository.totalizarPorDia(null, HASTA);
+            ventaRepository.totalizarPorFormaPago(DESDE, null);
+            ventaRepository.totalizarPorUsuario(null, HASTA);
+            detalleVentaRepository.totalizarPorProducto(DESDE, null);
+            compraRepository.totalizarPorProveedor(null, HASTA);
+            movimientoCajaRepository.buscarIngresosYEgresos(DESDE, null);
             movimientoInventarioRepository.consultar(null, null, DESDE, null);
             movimientoInventarioRepository.consultar(null, null, null, HASTA);
         }).doesNotThrowAnyException();

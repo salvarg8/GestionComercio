@@ -31,6 +31,8 @@
 
         <pdfbox.version>3.0.5</pdfbox.version>
 
+        <poi.version>5.4.1</poi.version>
+
     </properties>
 
     <dependencies>
@@ -97,13 +99,23 @@
         </dependency>
 
         <!-- ===================================== -->
-        <!-- PDF (comprobantes de venta) -->
+        <!-- PDF (comprobantes de venta y reportes) -->
         <!-- ===================================== -->
 
         <dependency>
             <groupId>org.apache.pdfbox</groupId>
             <artifactId>pdfbox</artifactId>
             <version>${pdfbox.version}</version>
+        </dependency>
+
+        <!-- ===================================== -->
+        <!-- Excel (exportación de reportes) -->
+        <!-- ===================================== -->
+
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>${poi.version}</version>
         </dependency>
 
         <!-- ===================================== -->

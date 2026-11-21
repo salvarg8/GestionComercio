@@ -1,6 +1,7 @@
 package org.gestionComercio.repository;
 
 import org.gestionComercio.dto.inventario.StockProductoDto;
+import org.gestionComercio.dto.reporte.ProductoValorizado;
 import org.gestionComercio.entity.Producto;
 import org.gestionComercio.enums.EstadoRegistro;
 import org.springframework.data.jpa.repository.Query;
@@ -152,4 +153,20 @@ public interface ProductoRepository extends BaseRepository<Producto, Long> {
               and p.stock <= 0
             """)
     long contarSinStock();
+
+    /**
+     * Productos activos que manejan stock y tienen stock positivo, con su
+     * precio de compra, ordenados por nombre. Para valorizar el inventario.
+     */
+    @Query("""
+            select new org.gestionComercio.dto.reporte.ProductoValorizado(
+                p.id, p.codigo, p.nombre, c.nombre, p.unidadMedida, p.stock, p.precioCompra)
+            from Producto p
+              join p.categoria c
+            where p.estadoRegistro = org.gestionComercio.enums.EstadoRegistro.ACTIVO
+              and p.manejaStock = true
+              and p.stock > 0
+            order by p.nombre asc, p.id asc
+            """)
+    List<ProductoValorizado> consultarValorizacion();
 }

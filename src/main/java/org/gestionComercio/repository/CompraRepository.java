@@ -1,6 +1,7 @@
 package org.gestionComercio.repository;
 
 import jakarta.persistence.LockModeType;
+import org.gestionComercio.dto.reporte.ComprasPorProveedor;
 import org.gestionComercio.entity.Compra;
 import org.gestionComercio.enums.EstadoCompra;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -73,5 +74,30 @@ public interface CompraRepository extends JpaRepository<Compra, Long> {
     boolean existeFactura(
             @Param("proveedorId") Long proveedorId,
             @Param("numeroFactura") String numeroFactura);
+
+    /**
+     * Compras de cada proveedor con al menos una compra en el período, de
+     * mayor a menor importe, sin las anuladas ni las canceladas. Cada fecha
+     * null no filtra; las fechas incluyen el extremo.
+     */
+    @Query("""
+            select new org.gestionComercio.dto.reporte.ComprasPorProveedor(
+                     p.id,
+                     p.razonSocial,
+                     p.cuit,
+                     count(c),
+                     sum(c.total))
+            from Compra c
+              join c.proveedor p
+            where (cast(:desde as LocalDateTime) is null or c.fecha >= :desde)
+              and (cast(:hasta as LocalDateTime) is null or c.fecha <= :hasta)
+              and c.estadoCompra not in (org.gestionComercio.enums.EstadoCompra.ANULADA,
+                                         org.gestionComercio.enums.EstadoCompra.CANCELADA)
+            group by p.id, p.razonSocial, p.cuit
+            order by sum(c.total) desc, p.razonSocial
+            """)
+    List<ComprasPorProveedor> totalizarPorProveedor(
+            @Param("desde") LocalDateTime desde,
+            @Param("hasta") LocalDateTime hasta);
 
 }

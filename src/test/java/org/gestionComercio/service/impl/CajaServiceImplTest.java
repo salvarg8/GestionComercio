@@ -21,6 +21,7 @@ import org.gestionComercio.repository.CajaRepository;
 import org.gestionComercio.repository.MovimientoCajaRepository;
 import org.gestionComercio.repository.UsuarioRepository;
 import org.gestionComercio.security.SesionUsuario;
+import org.gestionComercio.util.DateUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -291,7 +292,7 @@ class CajaServiceImplTest {
 
         LocalDate desde = LocalDate.of(2026, 11, 1);
         LocalDate hasta = LocalDate.of(2026, 11, 18);
-        when(cajaRepository.findCerradas(desde.atStartOfDay(), hasta.atTime(LocalTime.MAX)))
+        when(cajaRepository.findCerradas(desde.atStartOfDay(), DateUtils.finDelDia(hasta)))
                 .thenReturn(List.of(c1, c2));
         when(movimientoCajaRepository.findByCajaIdIn(List.of(1L, 2L))).thenReturn(List.of(venta, gasto));
 
@@ -906,7 +907,7 @@ class CajaServiceImplTest {
 
         // La caja del otro usuario se abrió el 21: queda afuera.
         assertEquals(List.of(CAJA_ID, 3L), cajas.stream().map(CajaDto::getId).toList());
-        verify(cajaRepository).findCerradas(desde.atStartOfDay(), hasta.atTime(LocalTime.MAX));
+        verify(cajaRepository).findCerradas(desde.atStartOfDay(), DateUtils.finDelDia(hasta));
     }
 
     @Test
