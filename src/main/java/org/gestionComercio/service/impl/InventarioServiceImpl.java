@@ -13,6 +13,7 @@ import org.gestionComercio.exception.BusinessException;
 import org.gestionComercio.mapper.MovimientoInventarioMapper;
 import org.gestionComercio.repository.MovimientoInventarioRepository;
 import org.gestionComercio.security.SesionUsuario;
+import org.gestionComercio.util.DateUtils;
 import org.gestionComercio.service.InventarioService;
 import org.gestionComercio.util.CantidadUtils;
 import org.springframework.stereotype.Service;
@@ -20,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.List;
 
 /**
@@ -157,7 +157,7 @@ public class InventarioServiceImpl implements InventarioService {
                 criterios.productoId(),
                 criterios.tipo(),
                 desde == null ? null : desde.atStartOfDay(),
-                hasta == null ? null : hasta.atTime(LocalTime.MAX)));
+                DateUtils.finDelDia(hasta)));
     }
 
     /**

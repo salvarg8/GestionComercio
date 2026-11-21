@@ -19,6 +19,7 @@ import org.gestionComercio.mapper.MovimientoInventarioMapper;
 import org.gestionComercio.repository.MovimientoInventarioRepository;
 import org.gestionComercio.repository.ProductoRepository;
 import org.gestionComercio.security.SesionUsuario;
+import org.gestionComercio.util.DateUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -482,7 +483,7 @@ class InventarioServiceImplTest {
         inventarioService.buscarMovimientos(desde, hasta, null);
 
         verify(movimientoInventarioRepository).consultar(
-                null, null, LocalDateTime.of(2026, 11, 1, 0, 0), LocalDateTime.of(hasta, LocalTime.MAX));
+                null, null, LocalDateTime.of(2026, 11, 1, 0, 0), DateUtils.finDelDia(hasta));
     }
 
     @Test
@@ -496,7 +497,7 @@ class InventarioServiceImplTest {
 
         verify(movimientoInventarioRepository).consultar(
                 7L, TipoMovimientoInventario.SALIDA,
-                LocalDateTime.of(2026, 11, 1, 0, 0), LocalDateTime.of(hasta, LocalTime.MAX));
+                LocalDateTime.of(2026, 11, 1, 0, 0), DateUtils.finDelDia(hasta));
     }
 
     @Test
@@ -517,7 +518,7 @@ class InventarioServiceImplTest {
         inventarioService.consultarMovimientos(new FiltroMovimientos(null, null, null, dia));
 
         verify(movimientoInventarioRepository).consultar(null, null, dia.atStartOfDay(), null);
-        verify(movimientoInventarioRepository).consultar(null, null, null, dia.atTime(LocalTime.MAX));
+        verify(movimientoInventarioRepository).consultar(null, null, null, DateUtils.finDelDia(dia));
     }
 
     @Test

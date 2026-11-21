@@ -258,6 +258,19 @@ public enum AppView {
             PermisoCodigo.COMPRA_CREAR
     ),
 
+    /** Cada reporte se ofrece según su permiso REPORTE_* (ver TipoReporte). */
+    REPORTES(
+            "/org/gestionComercio/view/reporte/Reportes.fxml",
+            "Reportes",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.REPORTE_VENTAS,
+            PermisoCodigo.REPORTE_INVENTARIO,
+            PermisoCodigo.REPORTE_COMPRAS,
+            PermisoCodigo.REPORTE_CAJA
+    ),
+
     /** Se ve con EMPRESA_VER; sin EMPRESA_EDITAR el formulario es de sólo lectura. */
     EMPRESA_CONFIG(
             "/org/gestionComercio/view/empresa/EmpresaConfig.fxml",

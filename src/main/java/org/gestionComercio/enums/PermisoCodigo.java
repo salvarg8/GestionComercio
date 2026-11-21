@@ -84,7 +84,13 @@ public enum PermisoCodigo {
     // Compras
     COMPRA_VER("Compras", "Ver compras"),
     COMPRA_CREAR("Compras", "Registrar y recibir compras"),
-    COMPRA_ANULAR("Compras", "Anular compras");
+    COMPRA_ANULAR("Compras", "Anular compras"),
+
+    // Reportes
+    REPORTE_VENTAS("Reportes", "Reportes de ventas por período, forma de pago y usuario, y productos más vendidos"),
+    REPORTE_INVENTARIO("Reportes", "Reportes de valorización del inventario y de productos con stock bajo o sin stock"),
+    REPORTE_COMPRAS("Reportes", "Reporte de compras por proveedor"),
+    REPORTE_CAJA("Reportes", "Reporte de movimientos de caja de todos los usuarios");
 
     private final String modulo;
     private final String descripcion;

@@ -199,3 +199,27 @@
     -fx-font-size: 14px;
 
 }
+
+/* ===================================================== */
+/* Reportes */
+/* ===================================================== */
+
+.tabla-reporte .table-cell {
+
+    -fx-alignment: CENTER-LEFT;
+
+}
+
+.tabla-reporte .table-cell.celda-numerica {
+
+    -fx-alignment: CENTER-RIGHT;
+
+}
+
+.tabla-reporte .table-row-cell.fila-total {
+
+    -fx-font-weight: bold;
+    -fx-border-color: -fx-text-base-color transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+
+}

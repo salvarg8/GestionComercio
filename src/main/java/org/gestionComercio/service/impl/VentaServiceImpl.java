@@ -36,6 +36,7 @@ import org.gestionComercio.repository.NumeradorComprobanteRepository;
 import org.gestionComercio.repository.ProductoRepository;
 import org.gestionComercio.repository.VentaRepository;
 import org.gestionComercio.security.SesionUsuario;
+import org.gestionComercio.util.DateUtils;
 import org.gestionComercio.service.InventarioComprobanteService;
 import org.gestionComercio.service.VentaService;
 import org.gestionComercio.util.CantidadUtils;
@@ -48,7 +49,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -216,7 +216,7 @@ public class VentaServiceImpl implements VentaService {
 
         return ventaMapper.toResumenList(ventaRepository.buscar(
                 desde == null ? null : desde.atStartOfDay(),
-                hasta == null ? null : hasta.atTime(LocalTime.MAX),
+                DateUtils.finDelDia(hasta),
                 estado));
     }
 
@@ -264,7 +264,7 @@ public class VentaServiceImpl implements VentaService {
 
         LocalDate hoy = LocalDate.now();
 
-        return ventaRepository.totalizarPorCaja(hoy.atStartOfDay(), hoy.atTime(LocalTime.MAX), usuarioId);
+        return ventaRepository.totalizarPorCaja(hoy.atStartOfDay(), DateUtils.finDelDia(hoy), usuarioId);
     }
 
     // ------------------------------------------------------------------

@@ -790,6 +790,23 @@ class VentaServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("listar() no incluye en un día la venta registrada a las 00:00 del día siguiente")
+    void listarMedianoche() {
+        abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+        Long ventaId = ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "1"))).getId();
+
+        // Un día propio del test, para no ver ventas de otros tests.
+        LocalDate dia = LocalDate.of(1999, 1, 1);
+        transaccion.executeWithoutResult(status ->
+                entityManager.find(Venta.class, ventaId).setFecha(dia.plusDays(1).atStartOfDay()));
+
+        assertThat(ventaService.listar(dia, dia, null)).extracting(VentaDto::getId).doesNotContain(ventaId);
+        assertThat(ventaService.listar(dia.plusDays(1), dia.plusDays(1), null))
+                .extracting(VentaDto::getId).containsExactly(ventaId);
+    }
+
+    @Test
     @DisplayName("listar() filtra por estado")
     void listarPorEstado() {
         abrirCaja();

@@ -32,6 +32,7 @@ import org.gestionComercio.repository.MovimientoCajaRepository;
 import org.gestionComercio.repository.ProductoRepository;
 import org.gestionComercio.repository.ProveedorRepository;
 import org.gestionComercio.security.SesionUsuario;
+import org.gestionComercio.util.DateUtils;
 import org.gestionComercio.service.CompraService;
 import org.gestionComercio.service.InventarioComprobanteService;
 import org.gestionComercio.util.CantidadUtils;
@@ -44,7 +45,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -236,7 +236,7 @@ public class CompraServiceImpl implements CompraService {
 
         return compraMapper.toResumenList(compraRepository.buscar(
                 desde == null ? null : desde.atStartOfDay(),
-                hasta == null ? null : hasta.atTime(LocalTime.MAX),
+                DateUtils.finDelDia(hasta),
                 estado,
                 proveedorId));
     }

@@ -1,6 +1,9 @@
 package org.gestionComercio.repository;
 
 import jakarta.persistence.LockModeType;
+import org.gestionComercio.dto.reporte.VentasPorDia;
+import org.gestionComercio.dto.reporte.VentasPorFormaPago;
+import org.gestionComercio.dto.reporte.VentasPorUsuario;
 import org.gestionComercio.dto.venta.VentasPorCaja;
 import org.gestionComercio.entity.Venta;
 import org.gestionComercio.enums.EstadoVenta;
@@ -89,5 +92,68 @@ public interface VentaRepository extends JpaRepository<Venta, Long> {
             @Param("desde") LocalDateTime desde,
             @Param("hasta") LocalDateTime hasta,
             @Param("usuarioId") Long usuarioId);
+
+    // ------------------------------------------------------------------
+    // Reportes: sin ventas anuladas ni canceladas; cada fecha null no
+    // filtra y las fechas incluyen el extremo.
+    // ------------------------------------------------------------------
+
+    /** Ventas de cada día con al menos una venta, del más antiguo al más reciente. */
+    @Query("""
+            select new org.gestionComercio.dto.reporte.VentasPorDia(
+                     cast(v.fecha as LocalDate),
+                     count(v),
+                     sum(v.subtotal),
+                     sum(v.descuento),
+                     sum(v.total))
+            from Venta v
+            where (cast(:desde as LocalDateTime) is null or v.fecha >= :desde)
+              and (cast(:hasta as LocalDateTime) is null or v.fecha <= :hasta)
+              and v.estadoVenta not in (org.gestionComercio.enums.EstadoVenta.ANULADA,
+                                        org.gestionComercio.enums.EstadoVenta.CANCELADA)
+            group by cast(v.fecha as LocalDate)
+            order by cast(v.fecha as LocalDate)
+            """)
+    List<VentasPorDia> totalizarPorDia(
+            @Param("desde") LocalDateTime desde,
+            @Param("hasta") LocalDateTime hasta);
+
+    /** Ventas de cada forma de pago usada, de mayor a menor importe. */
+    @Query("""
+            select new org.gestionComercio.dto.reporte.VentasPorFormaPago(
+                     v.formaPago,
+                     count(v),
+                     sum(v.total))
+            from Venta v
+            where (cast(:desde as LocalDateTime) is null or v.fecha >= :desde)
+              and (cast(:hasta as LocalDateTime) is null or v.fecha <= :hasta)
+              and v.estadoVenta not in (org.gestionComercio.enums.EstadoVenta.ANULADA,
+                                        org.gestionComercio.enums.EstadoVenta.CANCELADA)
+            group by v.formaPago
+            order by sum(v.total) desc, v.formaPago
+            """)
+    List<VentasPorFormaPago> totalizarPorFormaPago(
+            @Param("desde") LocalDateTime desde,
+            @Param("hasta") LocalDateTime hasta);
+
+    /** Ventas de cada vendedor con al menos una venta, de mayor a menor importe. */
+    @Query("""
+            select new org.gestionComercio.dto.reporte.VentasPorUsuario(
+                     u.id,
+                     concat(u.nombre, ' ', u.apellido),
+                     count(v),
+                     sum(v.total))
+            from Venta v
+              join v.usuario u
+            where (cast(:desde as LocalDateTime) is null or v.fecha >= :desde)
+              and (cast(:hasta as LocalDateTime) is null or v.fecha <= :hasta)
+              and v.estadoVenta not in (org.gestionComercio.enums.EstadoVenta.ANULADA,
+                                        org.gestionComercio.enums.EstadoVenta.CANCELADA)
+            group by u.id, u.nombre, u.apellido
+            order by sum(v.total) desc, u.nombre, u.apellido
+            """)
+    List<VentasPorUsuario> totalizarPorUsuario(
+            @Param("desde") LocalDateTime desde,
+            @Param("hasta") LocalDateTime hasta);
 
 }
