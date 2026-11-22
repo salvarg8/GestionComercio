@@ -90,7 +90,12 @@ public enum PermisoCodigo {
     REPORTE_VENTAS("Reportes", "Reportes de ventas por período, forma de pago y usuario, y productos más vendidos"),
     REPORTE_INVENTARIO("Reportes", "Reportes de valorización del inventario y de productos con stock bajo o sin stock"),
     REPORTE_COMPRAS("Reportes", "Reporte de compras por proveedor"),
-    REPORTE_CAJA("Reportes", "Reporte de movimientos de caja de todos los usuarios");
+    REPORTE_CAJA("Reportes", "Reporte de movimientos de caja de todos los usuarios"),
+
+    // Copias de seguridad
+    BACKUP_CREAR("Copias de seguridad", "Crear copias de seguridad de la base de datos"),
+    BACKUP_RESTAURAR("Copias de seguridad",
+            "Restaurar la base de datos desde una copia de seguridad (reemplaza todos los datos)");
 
     private final String modulo;
     private final String descripcion;

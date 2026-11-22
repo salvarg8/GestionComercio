@@ -281,6 +281,17 @@ public enum AppView {
             PermisoCodigo.EMPRESA_VER
     ),
 
+    /** Crear y restaurar se habilitan según BACKUP_CREAR y BACKUP_RESTAURAR. */
+    BACKUP(
+            "/org/gestionComercio/view/backup/Backup.fxml",
+            "Copias de seguridad",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.BACKUP_CREAR,
+            PermisoCodigo.BACKUP_RESTAURAR
+    ),
+
     /** Disponible para cualquier usuario con sesión iniciada. */
     CAMBIAR_PASSWORD(
             "/org/gestionComercio/view/perfil/CambiarPassword.fxml",

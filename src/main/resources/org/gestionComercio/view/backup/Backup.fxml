@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="org.gestionComercio.controller.backup.BackupController"
+            fitToWidth="true"
+            styleClass="form-scroll">
+
+    <content>
+
+        <VBox spacing="15.0"
+              prefWidth="820"
+              maxWidth="820">
+
+            <padding>
+                <Insets top="30" right="30" bottom="30" left="30"/>
+            </padding>
+
+            <children>
+
+                <Label text="Copias de seguridad"
+                       style="-fx-font-size: 22px; -fx-font-weight: bold;"/>
+
+                <Label text="Una copia guarda toda la información de la base de datos en un archivo. Es segura aunque haya otras PC trabajando."
+                       styleClass="form-hint"
+                       wrapText="true"/>
+
+                <!-- Progreso de la operación en curso -->
+
+                <HBox fx:id="panelProgreso"
+                      spacing="10"
+                      alignment="CENTER_LEFT"
+                      styleClass="form-warning"
+                      visible="false"
+                      managed="false">
+
+                    <children>
+
+                        <ProgressIndicator prefWidth="22" prefHeight="22"/>
+
+                        <Label fx:id="lblProgreso" wrapText="true"/>
+
+                    </children>
+
+                </HBox>
+
+                <!-- ============================================= -->
+                <!-- CREAR -->
+                <!-- ============================================= -->
+
+                <VBox fx:id="panelCrear" spacing="8.0">
+
+                    <children>
+
+                        <Label text="Crear una copia" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+                        <Label text="Carpeta de destino"/>
+
+                        <HBox spacing="8">
+
+                            <children>
+
+                                <TextField fx:id="txtCarpeta"
+                                           HBox.hgrow="ALWAYS"
+                                           editable="false"
+                                           promptText="Elija una carpeta"/>
+
+                                <Button fx:id="btnElegirCarpeta"
+                                        styleClass="btn-secondary"
+                                        text="Elegir carpeta…"/>
+
+                            </children>
+
+                        </HBox>
+
+                        <Label text="Recomendación: guarde también una copia fuera de esta PC, por ejemplo en un pendrive o en una carpeta sincronizada con la nube (Google Drive, OneDrive, Dropbox)."
+                               styleClass="form-hint"
+                               wrapText="true"/>
+
+                        <HBox alignment="CENTER_RIGHT">
+
+                            <children>
+
+                                <Button fx:id="btnCrear"
+                                        styleClass="btn-primary"
+                                        text="Crear copia de seguridad"/>
+
+                            </children>
+
+                        </HBox>
+
+                    </children>
+
+                </VBox>
+
+                <Separator fx:id="sepRestaurar"/>
+
+                <!-- ============================================= -->
+                <!-- RESTAURAR -->
+                <!-- ============================================= -->
+
+                <VBox fx:id="panelRestaurar" spacing="8.0">
+
+                    <children>
+
+                        <Label text="Restaurar una copia" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+                        <Label text="Reemplaza toda la información actual por la de la copia. Antes se guarda automáticamente una copia de la base actual. Las demás PC se desconectan y, al terminar, hay que volver a abrir la aplicación en todas."
+                               styleClass="form-warning"
+                               wrapText="true"
+                               maxWidth="Infinity"/>
+
+                        <Label text="Archivo de la copia"/>
+
+                        <HBox spacing="8">
+
+                            <children>
+
+                                <TextField fx:id="txtArchivo"
+                                           HBox.hgrow="ALWAYS"
+                                           editable="false"
+                                           promptText="Elija un archivo .backup"/>
+
+                                <Button fx:id="btnElegirArchivo"
+                                        styleClass="btn-secondary"
+                                        text="Elegir archivo…"/>
+
+                            </children>
+
+                        </HBox>
+
+                        <HBox alignment="CENTER_RIGHT">
+
+                            <children>
+
+                                <Button fx:id="btnRestaurar"
+                                        styleClass="btn-danger"
+                                        text="Restaurar…"/>
+
+                            </children>
+
+                        </HBox>
+
+                    </children>
+
+                </VBox>
+
+                <Separator/>
+
+                <!-- ============================================= -->
+                <!-- AUTOMÁTICAS -->
+                <!-- ============================================= -->
+
+                <VBox spacing="8.0">
+
+                    <children>
+
+                        <Label text="Copias automáticas" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+                        <Label fx:id="lblAutomaticas"
+                               styleClass="form-hint"
+                               wrapText="true"/>
+
+                        <TableView fx:id="tblAutomaticas" prefHeight="220">
+
+                            <columnResizePolicy>
+                                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+                            </columnResizePolicy>
+
+                            <placeholder>
+                                <Label text="No hay copias en la carpeta de copias automáticas."/>
+                            </placeholder>
+
+                            <columns>
+
+                                <TableColumn fx:id="colFecha" text="Fecha" prefWidth="140"/>
+
+                                <TableColumn fx:id="colTipo" text="Tipo" prefWidth="150"/>
+
+                                <TableColumn fx:id="colArchivo" text="Archivo" prefWidth="330"/>
+
+                                <TableColumn fx:id="colTamanio" text="Tamaño" prefWidth="90"/>
+
+                            </columns>
+
+                        </TableView>
+
+                        <HBox spacing="8" alignment="CENTER_RIGHT">
+
+                            <children>
+
+                                <Button fx:id="btnActualizar"
+                                        styleClass="btn-secondary"
+                                        text="Actualizar"/>
+
+                                <Button fx:id="btnUsarSeleccionada"
+                                        styleClass="btn-secondary"
+                                        text="Usar la seleccionada para restaurar"/>
+
+                            </children>
+
+                        </HBox>
+
+                    </children>
+
+                </VBox>
+
+            </children>
+
+        </VBox>
+
+    </content>
+
+</ScrollPane>
