@@ -77,6 +77,9 @@ public class DashboardController extends AbstractController {
     private Button btnConfiguracion;
 
     @FXML
+    private Button btnBackup;
+
+    @FXML
     private Button btnCambiarPassword;
 
     @FXML
@@ -106,6 +109,7 @@ public class DashboardController extends AbstractController {
         mostrarSiTieneAcceso(btnCompras, vistaDeCompras());
         mostrarSiTieneAcceso(btnReportes, AppView.REPORTES);
         mostrarSiTieneAcceso(btnConfiguracion, AppView.EMPRESA_CONFIG);
+        mostrarSiTieneAcceso(btnBackup, AppView.BACKUP);
 
         navigator.navigate(AppView.INICIO);
     }
@@ -145,6 +149,8 @@ public class DashboardController extends AbstractController {
         btnReportes.setOnAction(e -> navigator.navigate(AppView.REPORTES));
 
         btnConfiguracion.setOnAction(e -> navigator.navigate(AppView.EMPRESA_CONFIG));
+
+        btnBackup.setOnAction(e -> navigator.navigate(AppView.BACKUP));
 
         btnCambiarPassword.setOnAction(e -> navigator.navigate(AppView.CAMBIAR_PASSWORD));
 

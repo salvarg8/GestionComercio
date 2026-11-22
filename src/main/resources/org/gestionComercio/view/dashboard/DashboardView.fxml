@@ -103,6 +103,8 @@
 
             <Button fx:id="btnConfiguracion" maxWidth="Infinity" styleClass="menu-button" text="Configuración" />
 
+            <Button fx:id="btnBackup" maxWidth="Infinity" styleClass="menu-button" text="Copias de seguridad" />
+
             <Button fx:id="btnUsuarios" maxWidth="Infinity" styleClass="menu-button" text="Usuarios" />
 
             <Button fx:id="btnPermisos" maxWidth="Infinity" styleClass="menu-button" text="Permisos" />

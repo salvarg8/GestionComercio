@@ -16,6 +16,9 @@ public interface CajaRepository extends JpaRepository<Caja, Long> {
 
     boolean existsByUsuarioIdAndEstadoCaja(Long usuarioId, EstadoCaja estadoCaja);
 
+    /** Indica si se cerró alguna caja después de la fecha indicada (backup automático). */
+    boolean existsByFechaCierreAfter(LocalDateTime fecha);
+
     Optional<Caja> findFirstByUsuarioIdAndEstadoCajaOrderByFechaAperturaDesc(Long usuarioId, EstadoCaja estadoCaja);
 
     /** Cajas abiertas de todos los usuarios, ordenadas por responsable. */

@@ -9,6 +9,9 @@ data/
 *.db.bak*
 *.bak
 
+### Herramientas de PostgreSQL (pg_dump/pg_restore) para desarrollo ###
+pgsql/
+
 ### IntelliJ IDEA ###
 # Se versiona sólo la configuración compartida del proyecto;
 # lo demás depende de cada máquina (rutas, datasources, workspace).
