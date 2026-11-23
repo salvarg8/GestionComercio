@@ -7,6 +7,8 @@ import org.gestionComercio.arca.CredencialArca;
 import org.gestionComercio.entity.ConfiguracionArca;
 import org.gestionComercio.entity.Empresa;
 import org.gestionComercio.exception.BusinessException;
+import org.gestionComercio.licencia.ModuloLicencia;
+import org.gestionComercio.licencia.ModulosHabilitados;
 import org.gestionComercio.repository.ConfiguracionArcaRepository;
 import org.gestionComercio.repository.EmpresaRepository;
 import org.gestionComercio.util.CuitUtils;
@@ -18,7 +20,8 @@ import java.time.LocalDateTime;
 /**
  * Lee la configuración de ARCA y los datos de la empresa y controla que
  * alcancen para facturar. No requiere permisos: lo usan los servicios de
- * ventas y de facturación, que ya los controlaron.
+ * ventas y de facturación, que ya los controlaron. Sin el módulo de
+ * facturación electrónica en la licencia, la facturación queda deshabilitada.
  */
 @Component
 @RequiredArgsConstructor
@@ -28,10 +31,12 @@ public class ConfiguracionArcaVigente {
     private final ConfiguracionArcaRepository configuracionRepository;
     private final EmpresaRepository empresaRepository;
     private final ClaveCertificadoArca claveCertificado;
+    private final ModulosHabilitados modulos;
 
-    /** @return true si la facturación electrónica está habilitada. */
+    /** @return true si la facturación electrónica está habilitada y la licencia incluye el módulo. */
     public boolean habilitada() {
-        return configuracionRepository.findFirstByOrderByIdAsc()
+        return modulos.habilitado(ModuloLicencia.FACTURACION_ELECTRONICA)
+                && configuracionRepository.findFirstByOrderByIdAsc()
                 .map(c -> Boolean.TRUE.equals(c.getHabilitada()))
                 .orElse(false);
     }
@@ -57,6 +62,10 @@ public class ConfiguracionArcaVigente {
     }
 
     private ContextoArca contexto(boolean exigirHabilitada, boolean abrirCertificado) {
+
+        if (!modulos.habilitado(ModuloLicencia.FACTURACION_ELECTRONICA)) {
+            throw new BusinessException("La licencia no incluye el módulo de facturación electrónica.");
+        }
 
         ConfiguracionArca config = configuracionRepository.findFirstByOrderByIdAsc()
                 .orElseThrow(() -> new BusinessException(

@@ -101,7 +101,10 @@ public enum PermisoCodigo {
     // Copias de seguridad
     BACKUP_CREAR("Copias de seguridad", "Crear copias de seguridad de la base de datos"),
     BACKUP_RESTAURAR("Copias de seguridad",
-            "Restaurar la base de datos desde una copia de seguridad (reemplaza todos los datos)");
+            "Restaurar la base de datos desde una copia de seguridad (reemplaza todos los datos)"),
+
+    // Licencia
+    LICENCIA_ADMINISTRAR("Licencia", "Ver el estado de la licencia del sistema y activar una licencia nueva");
 
     private final String modulo;
     private final String descripcion;

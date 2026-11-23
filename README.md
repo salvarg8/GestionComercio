@@ -183,6 +183,74 @@ El reloj de las PC tiene que estar sincronizado (ARCA rechaza el pedido de
 acceso si la hora no coincide). Para ver en el log los pedidos y respuestas
 (sin token, sign ni certificado): `logging.level.org.gestionComercio.arca=DEBUG`.
 
+## Licencias
+
+Cada comercio necesita una licencia. Es **por comercio**: vale para todas sus
+PC, se guarda en la base (tabla `licencia`) y lista los códigos de las PC
+habilitadas. Funciona sin internet.
+
+- **Período de prueba:** sin licencia, el sistema funciona completo durante 30
+  días desde la instalación (desde que se creó la base).
+- **Modalidades:** pago único (sin vencimiento) o abono (con vencimiento; se
+  renueva con una licencia nueva). Avisa desde 15 días antes de vencer.
+- **Módulos:** la licencia indica los módulos habilitados (por ahora,
+  facturación electrónica). Sin el módulo, se quitan sus permisos y no se
+  emiten facturas electrónicas. En la prueba están todos.
+- **Modo sólo consulta:** al vencer la prueba o el abono, en una PC que no está
+  en la licencia, si la licencia fue modificada o si la fecha de la PC es
+  anterior a la última en que se usó el sistema, la sesión queda sólo con los
+  permisos de consulta: ver datos, reportes y exportaciones, crear copias de
+  seguridad y administrar la licencia. No se bloquea el acceso a los datos.
+  Se aplica al iniciar sesión.
+- **Pantalla:** menú **Licencia** (permiso `LICENCIA_ADMINISTRAR`): estado,
+  código de esta PC (para pedir la licencia) y activación desde el archivo
+  `.lic` o pegando la clave. Se activa una vez desde cualquier PC incluida.
+- **Cambio de PC:** se pide al proveedor una licencia nueva con la lista de
+  códigos actualizada, que reemplaza a la anterior. No se acepta una licencia
+  emitida antes que la activa. El código cambia también si se reinstala
+  Windows.
+
+La clave es un texto firmado con Ed25519 (`GC1.<datos>.<firma>`): la
+aplicación sólo tiene la clave pública
+([VerificadorLicencia](src/main/java/org/gestionComercio/licencia/VerificadorLicencia.java)),
+así que modificar la licencia la invalida. La clave pública está fija en el
+código a propósito (no es configurable).
+
+### Emitir licencias (herramienta interna)
+
+[scripts/licencias/GenerarLicencia.java](scripts/licencias/GenerarLicencia.java)
+no forma parte de la aplicación. Usa las clases compiladas:
+
+```bash
+mvn compile
+# Emitir (sin --vence: pago único). Los códigos de equipo los muestra la pantalla Licencia de cada PC.
+java -cp target/classes scripts/licencias/GenerarLicencia.java emitir \
+     --clave-privada <ruta>/licencias-privada.key \
+     --cliente "Almacén Don José SRL" --cuit 30712345679 \
+     --equipos A1B2-C3D4-E5F6-0718,9F8E-7D6C-5B4A-3921 \
+     --vence 2027-12-31 --modulos FACTURACION_ELECTRONICA \
+     --salida licencia_don_jose.lic
+# Verificar un archivo con la clave pública de la aplicación
+java -cp target/classes scripts/licencias/GenerarLicencia.java ver licencia_don_jose.lic
+```
+
+La **clave privada** (`licencias-privada.key`) no se versiona ni se distribuye
+(`*.key` y `*.lic` están en `.gitignore`). Hay que guardarla con copia de
+seguridad: sin ella no se pueden emitir licencias que la aplicación acepte. Si
+se compromete, se genera otro par (`claves <carpeta>`), se reemplaza
+`CLAVE_PUBLICA` y las licencias emitidas antes dejan de valer en las versiones
+nuevas.
+
+Si una PC tuvo la fecha adelantada por error y el sistema quedó en sólo
+consulta por "fecha de la PC incorrecta", se resuelve activando una licencia
+nueva (volver a activar la misma no alcanza).
+
+En desarrollo, una base nueva (`docker compose down -v`) vuelve a tener 30 días
+de prueba; para no depender de eso, emitir una licencia para la PC de desarrollo.
+
+Limitación conocida: sin conexión no se puede revocar una licencia. Una licencia
+reemplazada sigue siendo válida en otra base que la tenga activada.
+
 ## Ejecutar
 
 ```bash

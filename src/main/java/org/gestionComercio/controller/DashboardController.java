@@ -1,14 +1,19 @@
 package org.gestionComercio.controller;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WeakChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import lombok.RequiredArgsConstructor;
 import org.gestionComercio.controller.base.AbstractController;
+import org.gestionComercio.controller.licencia.CambiosLicencia;
+import org.gestionComercio.licencia.EstadoLicencia;
 import org.gestionComercio.navigation.AppView;
 import org.gestionComercio.navigation.Navigator;
 import org.gestionComercio.security.SesionUsuario;
+import org.gestionComercio.service.LicenciaService;
 import org.gestionComercio.service.LogoutService;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -21,6 +26,15 @@ public class DashboardController extends AbstractController {
     private final Navigator navigator;
     private final SesionUsuario sesionUsuario;
     private final LogoutService logoutService;
+    private final LicenciaService licenciaService;
+    private final CambiosLicencia cambiosLicencia;
+
+    /** Referencia fuerte: se registra como WeakChangeListener para no retener el dashboard de sesiones anteriores. */
+    private final ChangeListener<EstadoLicencia> alCambiarLicencia = (obs, anterior, estado) -> {
+        if (estado != null) {
+            mostrarEstadoLicencia(estado);
+        }
+    };
 
     @FXML
     private StackPane contentPane;
@@ -83,6 +97,12 @@ public class DashboardController extends AbstractController {
     private Button btnBackup;
 
     @FXML
+    private Button btnLicencia;
+
+    @FXML
+    private Label lblLicencia;
+
+    @FXML
     private Button btnCambiarPassword;
 
     @FXML
@@ -114,6 +134,14 @@ public class DashboardController extends AbstractController {
         mostrarSiTieneAcceso(btnConfiguracion, AppView.EMPRESA_CONFIG);
         mostrarSiTieneAcceso(btnFacturacion, vistaDeFacturacion());
         mostrarSiTieneAcceso(btnBackup, AppView.BACKUP);
+        mostrarSiTieneAcceso(btnLicencia, AppView.LICENCIA);
+
+        try {
+            mostrarEstadoLicencia(licenciaService.estado());
+        } catch (RuntimeException e) {
+            // Sin indicador.
+        }
+        cambiosLicencia.estadoProperty().addListener(new WeakChangeListener<>(alCambiarLicencia));
 
         navigator.navigate(AppView.INICIO);
     }
@@ -158,6 +186,8 @@ public class DashboardController extends AbstractController {
 
         btnBackup.setOnAction(e -> navigator.navigate(AppView.BACKUP));
 
+        btnLicencia.setOnAction(e -> navigator.navigate(AppView.LICENCIA));
+
         btnCambiarPassword.setOnAction(e -> navigator.navigate(AppView.CAMBIAR_PASSWORD));
 
         btnCerrarSesion.setOnAction(e -> cerrarSesion());
@@ -178,6 +208,37 @@ public class DashboardController extends AbstractController {
     /** "Compras" abre el listado; quien sólo puede registrar compras va al formulario. */
     private AppView vistaDeCompras() {
         return navigator.puedeAcceder(AppView.COMPRA_LIST) ? AppView.COMPRA_LIST : AppView.COMPRA_FORM;
+    }
+
+    /**
+     * Indicador en el encabezado: período de prueba, licencia por vencer o
+     * modo sólo consulta. Con una licencia activa sin novedades no se muestra.
+     * Se actualiza al activar una licencia.
+     */
+    private void mostrarEstadoLicencia(EstadoLicencia estado) {
+
+        boolean visible = estado.requiereAviso();
+        lblLicencia.setVisible(visible);
+        lblLicencia.setManaged(visible);
+
+        if (!visible) {
+            return;
+        }
+
+        String texto = switch (estado.situacion()) {
+            case PRUEBA -> "Período de prueba: " + dias(estado.diasRestantes());
+            case POR_VENCER -> estado.diasRestantes() == 0
+                    ? "La licencia vence hoy"
+                    : "La licencia vence en " + dias(estado.diasRestantes());
+            default -> "Modo sólo consulta: " + estado.situacion().getDescripcion().toLowerCase();
+        };
+
+        lblLicencia.setText(texto);
+        lblLicencia.getStyleClass().setAll(estado.permiteOperar() ? "form-warning" : "form-error");
+    }
+
+    private static String dias(long dias) {
+        return dias + (dias == 1 ? " día" : " días");
     }
 
     private void mostrarSiTieneAcceso(Button boton, AppView view) {

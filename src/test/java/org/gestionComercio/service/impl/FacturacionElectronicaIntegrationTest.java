@@ -56,6 +56,7 @@ import org.gestionComercio.service.ConfiguracionArcaService;
 import org.gestionComercio.service.FacturacionElectronicaService;
 import org.gestionComercio.service.InventarioService;
 import org.gestionComercio.service.VentaService;
+import org.gestionComercio.licencia.ModulosTodosHabilitados;
 import org.gestionComercio.service.impl.arca.ConfiguracionArcaVigente;
 import org.gestionComercio.service.impl.arca.EmisionComprobantesArca;
 import org.gestionComercio.service.impl.arca.TicketAccesoService;
@@ -117,6 +118,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         FacturacionElectronicaServiceImpl.class,
         ConfiguracionArcaServiceImpl.class,
         ConfiguracionArcaVigente.class,
+        ModulosTodosHabilitados.class,
         ClaveCertificadoArca.class,
         AlmacenClaveEnMemoria.class,
         EmisionComprobantesArca.class,
