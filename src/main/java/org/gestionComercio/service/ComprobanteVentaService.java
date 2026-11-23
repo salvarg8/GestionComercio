@@ -1,9 +1,12 @@
 package org.gestionComercio.service;
 
+import org.gestionComercio.dto.configuracion.ConfiguracionDto;
+
 /**
  * Comprobante de venta en PDF, con los datos de la empresa cargados en
- * Configuración. Los tickets y remitos no son fiscales; las facturas
- * electrónicas llevan el CAE y el código QR de ARCA una vez autorizadas.
+ * Configuración y el formato de la configuración del sistema (formato del
+ * ticket, logo y texto de pie). Los tickets y remitos no son fiscales; las
+ * facturas electrónicas llevan el CAE y el código QR de ARCA una vez autorizadas.
  */
 public interface ComprobanteVentaService {
 
@@ -19,5 +22,15 @@ public interface ComprobanteVentaService {
      *         o no hay datos de la empresa cargados
      */
     byte[] generarPdf(Long ventaId);
+
+    /**
+     * Ticket de ejemplo para probar la impresora, con los datos de la empresa
+     * y el formato indicado (puede no estar guardado todavía).
+     * Requiere CONFIGURACION_VER.
+     *
+     * @param formato formato a probar; null = el de la configuración guardada
+     * @return el PDF
+     */
+    byte[] generarPrueba(ConfiguracionDto formato);
 
 }

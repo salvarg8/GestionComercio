@@ -38,6 +38,26 @@ public interface ProductoRepository extends BaseRepository<Producto, Long> {
             @Param("texto") String texto,
             @Param("estado") EstadoRegistro estado);
 
+    /**
+     * Productos activos de la categoría, marca y proveedor indicados (cada
+     * filtro null no filtra), para la actualización masiva de precios.
+     */
+    @Query("""
+            select p from Producto p
+              join fetch p.categoria c
+              join fetch p.marca m
+              join fetch p.proveedor pr
+            where p.estadoRegistro = org.gestionComercio.enums.EstadoRegistro.ACTIVO
+              and (:categoriaId is null or c.id = :categoriaId)
+              and (:marcaId is null or m.id = :marcaId)
+              and (:proveedorId is null or pr.id = :proveedorId)
+            order by p.nombre asc, p.id asc
+            """)
+    List<Producto> buscarParaActualizarPrecios(
+            @Param("categoriaId") Long categoriaId,
+            @Param("marcaId") Long marcaId,
+            @Param("proveedorId") Long proveedorId);
+
     Optional<Producto> findByIdAndEstadoRegistro(Long id, EstadoRegistro estadoRegistro);
 
     long countByEstadoRegistro(EstadoRegistro estadoRegistro);

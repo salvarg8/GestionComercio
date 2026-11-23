@@ -36,9 +36,10 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Comprobante de una venta en PDF. El ticket se arma en rollo de 80 mm
- * ({@link TicketPdf}); los demás comprobantes, en A4: datos de la empresa, del cliente,
- * renglones y totales. Una venta anulada se marca como ANULADA en el
+ * Comprobante de una venta en PDF. El ticket se arma en el rollo de la
+ * impresora térmica ({@link TicketPdf}) o en A4, según la configuración; los
+ * demás comprobantes, en A4: datos de la empresa, del cliente, renglones,
+ * totales y el texto de pie configurado. Una venta anulada se marca como ANULADA en el
  * encabezado y con una marca de agua en cada página.
  *
  * <p>Los remitos (y los tickets) no son comprobantes fiscales, y así lo indica
@@ -92,28 +93,46 @@ public final class ComprobanteVentaPdf {
     private PDPageContentStream contenido;
     private float y;
 
-    private ComprobanteVentaPdf(VentaDto venta, EmpresaDto empresa, ClienteDto cliente) {
+    private final OpcionesComprobante opciones;
+
+    private ComprobanteVentaPdf(VentaDto venta, EmpresaDto empresa, ClienteDto cliente,
+                                OpcionesComprobante opciones) {
         this.venta = Objects.requireNonNull(venta, "venta");
         this.empresa = Objects.requireNonNull(empresa, "empresa");
         this.cliente = cliente;
         this.factura = venta.getFactura();
+        this.opciones = Objects.requireNonNullElse(opciones, OpcionesComprobante.porDefecto());
     }
 
     /**
-     * @param venta   la venta con sus renglones
-     * @param empresa datos de la empresa (Configuración)
-     * @param cliente null para consumidor final
-     * @return el PDF
+     * Con el formato por defecto (ticket de 80 mm, con logo y sin pie).
+     *
+     * @see #generar(VentaDto, EmpresaDto, ClienteDto, OpcionesComprobante)
      */
     public static byte[] generar(VentaDto venta, EmpresaDto empresa, ClienteDto cliente) {
+        return generar(venta, empresa, cliente, OpcionesComprobante.porDefecto());
+    }
+
+    /**
+     * @param venta    la venta con sus renglones
+     * @param empresa  datos de la empresa (Configuración)
+     * @param cliente  null para consumidor final
+     * @param opciones formato del ticket, logo y texto de pie; null = por defecto
+     * @return el PDF
+     */
+    public static byte[] generar(VentaDto venta, EmpresaDto empresa, ClienteDto cliente,
+                                 OpcionesComprobante opciones) {
+
+        OpcionesComprobante formato = Objects.requireNonNullElse(opciones, OpcionesComprobante.porDefecto());
 
         try {
-            // El ticket va en rollo de impresora térmica; el resto, en A4.
-            if (venta != null && venta.getTipoComprobante() == TipoComprobante.TICKET) {
-                return new TicketPdf(venta, empresa, cliente).generar();
+            // El ticket va en rollo de impresora térmica salvo que se configure A4; el resto, en A4.
+            if (venta != null && venta.getTipoComprobante() == TipoComprobante.TICKET
+                    && formato.formatoTicket().esTermico()) {
+                return new TicketPdf(venta, empresa, cliente, formato).generar();
             }
 
-            return new ComprobanteVentaPdf(venta, empresa, cliente).generar();
+            return new ComprobanteVentaPdf(venta, empresa, cliente, formato).generar();
         } catch (IOException e) {
             throw new UncheckedIOException("No se pudo generar el comprobante en PDF.", e);
         }
@@ -136,6 +155,8 @@ public final class ComprobanteVentaPdf {
             if (factura != null) {
                 datosFiscales();
             }
+
+            textoDePie();
 
             contenido.close();
 
@@ -414,6 +435,34 @@ public final class ComprobanteVentaPdf {
         y = abajo - 4;
     }
 
+    /** El texto de pie de la configuración (horario, redes, políticas de cambio), centrado. */
+    private void textoDePie() throws IOException {
+
+        List<String> lineas = new ArrayList<>();
+
+        for (String linea : opciones.lineasPie()) {
+            lineas.addAll(linea.isEmpty() ? List.of("") : partir(normal, 9, linea, ANCHO_UTIL));
+        }
+
+        if (lineas.isEmpty()) {
+            return;
+        }
+
+        if (y < MARGEN + ALTO_PIE + 16 + lineas.size() * 12) {
+            contenido.close();
+            nuevaPagina();
+        }
+
+        y -= 8;
+        linea(y);
+        y -= 16;
+
+        for (String linea : lineas) {
+            texto(normal, 9, (PAGINA.getWidth() - ancho(normal, 9, linea)) / 2, y, linea);
+            y -= 12;
+        }
+    }
+
     /** Recuadro con la letra (A, B, C) y el código de ARCA del comprobante, al centro del encabezado. */
     private void letraDelComprobante(float arriba) throws IOException {
 
@@ -573,7 +622,7 @@ public final class ComprobanteVentaPdf {
     }
 
     private PDImageXObject logo() {
-        return cargarLogo(empresa.getLogo(), documento);
+        return opciones.imprimirLogo() ? cargarLogo(empresa.getLogo(), documento) : null;
     }
 
     /** El logo de la empresa, o null si no tiene o no se puede leer (el comprobante sale igual). */

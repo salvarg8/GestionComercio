@@ -3,6 +3,7 @@ package org.gestionComercio.controller.venta;
 import org.gestionComercio.dto.producto.ProductoDto;
 import org.gestionComercio.dto.venta.DetalleVentaDto;
 import org.gestionComercio.entity.DetalleVenta;
+import org.gestionComercio.enums.Redondeo;
 import org.gestionComercio.util.CantidadUtils;
 
 import java.math.BigDecimal;
@@ -194,25 +195,40 @@ class CarritoVenta {
     /**
      * Resultado de calcular el cobro con lo que escribió el usuario.
      *
-     * @param descuento importe del descuento (cero si no se indicó); null si no es válido
-     * @param total     subtotal − descuento
+     * @param descuento importe del descuento ingresado (cero si no se indicó); null si no es válido
+     * @param total     subtotal − descuento − redondeo
      * @param pagaCon   efectivo recibido; null si no se indicó o no es efectivo
      * @param vuelto    pagaCon − total; null si no se indicó con cuánto paga
      * @param error     mensaje para el usuario; null si se puede confirmar
+     * @param redondeo  lo que se descuenta por redondear el total (cero si no se redondea)
      */
-    record Cobro(BigDecimal descuento, BigDecimal total, BigDecimal pagaCon, BigDecimal vuelto, String error) {
+    record Cobro(BigDecimal descuento, BigDecimal total, BigDecimal pagaCon, BigDecimal vuelto, String error,
+                 BigDecimal redondeo) {
+
+        Cobro(BigDecimal descuento, BigDecimal total, BigDecimal pagaCon, BigDecimal vuelto, String error) {
+            this(descuento, total, pagaCon, vuelto, error, BigDecimal.ZERO);
+        }
 
         boolean valido() {
             return error == null;
         }
     }
 
+    /** Sin redondeo del total. */
+    static Cobro cobrar(BigDecimal subtotal, String descuentoTexto, boolean efectivo, String pagaConTexto) {
+        return cobrar(subtotal, descuentoTexto, efectivo, pagaConTexto, Redondeo.SIN_REDONDEO);
+    }
+
     /**
      * Calcula descuento, total y vuelto a partir de los textos ingresados.
      * Con efectivo, "paga con" es opcional (vacío = paga justo) pero no puede
-     * ser menor que el total.
+     * ser menor que el total. El total se redondea hacia abajo como lo hace
+     * {@code VentaService} al registrar la venta.
+     *
+     * @param redondeo redondeo del total de la configuración; null = sin redondeo
      */
-    static Cobro cobrar(BigDecimal subtotal, String descuentoTexto, boolean efectivo, String pagaConTexto) {
+    static Cobro cobrar(BigDecimal subtotal, String descuentoTexto, boolean efectivo, String pagaConTexto,
+                        Redondeo redondeo) {
 
         BigDecimal descuento;
 
@@ -228,10 +244,12 @@ class CarritoVenta {
                     + ") no puede superar el subtotal (" + VentaFormato.importe(subtotal) + ").");
         }
 
-        BigDecimal total = subtotal.subtract(descuento);
+        BigDecimal sinRedondear = subtotal.subtract(descuento);
+        BigDecimal total = (redondeo == null ? Redondeo.SIN_REDONDEO : redondeo).totalDeVenta(sinRedondear);
+        BigDecimal ajuste = sinRedondear.subtract(total);
 
         if (!efectivo) {
-            return new Cobro(descuento, total, null, null, null);
+            return new Cobro(descuento, total, null, null, null, ajuste);
         }
 
         BigDecimal pagaCon;
@@ -239,18 +257,18 @@ class CarritoVenta {
         try {
             pagaCon = VentaFormato.leerImporte(pagaConTexto, "El importe recibido");
         } catch (IllegalArgumentException ex) {
-            return new Cobro(descuento, total, null, null, ex.getMessage());
+            return new Cobro(descuento, total, null, null, ex.getMessage(), ajuste);
         }
 
         if (pagaCon == null) {
-            return new Cobro(descuento, total, null, null, null);
+            return new Cobro(descuento, total, null, null, null, ajuste);
         }
 
         BigDecimal vuelto = pagaCon.subtract(total);
 
         return new Cobro(descuento, total, pagaCon, vuelto, vuelto.signum() < 0
                 ? "El importe recibido es menor que el total: faltan " + VentaFormato.importe(vuelto.negate()) + "."
-                : null);
+                : null, ajuste);
     }
 
     private Renglon buscar(Long productoId) {

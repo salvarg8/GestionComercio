@@ -14,7 +14,6 @@ import org.gestionComercio.dto.cliente.ClienteDto;
 import org.gestionComercio.dto.empresa.EmpresaDto;
 import org.gestionComercio.dto.venta.DetalleVentaDto;
 import org.gestionComercio.dto.venta.VentaDto;
-import org.gestionComercio.enums.AnchoTicket;
 import org.gestionComercio.enums.EstadoVenta;
 import org.gestionComercio.util.CantidadUtils;
 import org.gestionComercio.util.CuitUtils;
@@ -41,7 +40,7 @@ import static org.gestionComercio.report.ComprobanteVentaPdf.recortar;
 import static org.gestionComercio.report.ComprobanteVentaPdf.unir;
 
 /**
- * Ticket en rollo de impresora térmica: el ancho configurado en la empresa
+ * Ticket en rollo de impresora térmica: el ancho configurado en el sistema
  * (58 u 80 mm) y el largo que necesite el contenido, en una sola página y
  * una sola columna.
  *
@@ -86,13 +85,23 @@ final class TicketPdf {
 
     private final List<Renglon> renglones = new ArrayList<>();
 
-    TicketPdf(VentaDto venta, EmpresaDto empresa, ClienteDto cliente) {
+    private final OpcionesComprobante opciones;
+
+    /**
+     * @param opciones con un formato de ticket térmico
+     * @throws IllegalArgumentException si el formato no es de ticket térmico
+     */
+    TicketPdf(VentaDto venta, EmpresaDto empresa, ClienteDto cliente, OpcionesComprobante opciones) {
         this.venta = Objects.requireNonNull(venta, "venta");
         this.empresa = Objects.requireNonNull(empresa, "empresa");
         this.cliente = cliente;
+        this.opciones = Objects.requireNonNull(opciones, "opciones");
 
-        AnchoTicket rollo = Objects.requireNonNullElse(empresa.getAnchoTicket(), AnchoTicket.porDefecto());
-        this.ancho = rollo.getMilimetros() * PUNTOS_POR_MM;
+        if (!opciones.formatoTicket().esTermico()) {
+            throw new IllegalArgumentException("El formato " + opciones.formatoTicket() + " no es de ticket térmico.");
+        }
+
+        this.ancho = opciones.formatoTicket().getMilimetros() * PUNTOS_POR_MM;
         this.util = ancho - 2 * MARGEN;
     }
 
@@ -103,7 +112,7 @@ final class TicketPdf {
             documento.getDocumentInformation().setTitle(venta.getComprobante());
             documento.getDocumentInformation().setAuthor(empresa.getRazonSocial());
 
-            PDImageXObject logo = cargarLogo(empresa.getLogo(), documento);
+            PDImageXObject logo = opciones.imprimirLogo() ? cargarLogo(empresa.getLogo(), documento) : null;
             float[] tamanioLogo = logo == null ? new float[]{0, 0} : tamanioLogo(logo);
 
             armar();
@@ -231,6 +240,16 @@ final class TicketPdf {
         separador();
 
         centrado(normal, CHICO, LEYENDA_NO_FISCAL);
+
+        // Texto de pie de la configuración: horario, redes, políticas de cambio.
+        if (!opciones.lineasPie().isEmpty()) {
+
+            separador();
+
+            for (String linea : opciones.lineasPie()) {
+                centrado(normal, CHICO, linea);
+            }
+        }
     }
 
     private String numero() {

@@ -30,13 +30,16 @@ import org.gestionComercio.controller.facturacion.AutorizacionComprobantes;
 import org.gestionComercio.controller.facturacion.FacturaElectronicaFormato;
 import org.gestionComercio.dto.arca.ComprobanteArcaDto;
 import org.gestionComercio.dto.cliente.ClienteDto;
+import org.gestionComercio.dto.configuracion.ConfiguracionDto;
 import org.gestionComercio.dto.producto.ProductoDto;
 import org.gestionComercio.dto.venta.VentaDto;
+import org.gestionComercio.enums.ComprobantePorDefecto;
 import org.gestionComercio.enums.FormaPago;
 import org.gestionComercio.enums.TipoComprobante;
 import org.gestionComercio.exception.BusinessException;
 import org.gestionComercio.navigation.AppView;
 import org.gestionComercio.navigation.Navigator;
+import org.gestionComercio.service.ConfiguracionService;
 import org.gestionComercio.service.FacturacionElectronicaService;
 import org.gestionComercio.service.VentaService;
 import org.gestionComercio.util.CantidadUtils;
@@ -63,8 +66,10 @@ import java.util.stream.Collectors;
  * {@link VentaService#registrar}. Pensado para operar sólo con el teclado
  * (ver los atajos en {@link #atajo(KeyEvent)}).
  *
- * <p>Requiere una caja abierta del vendedor; si no la tiene, lo indica y
- * ofrece ir a la caja. Antes de confirmar vuelve a controlar el stock y, si
+ * <p>Requiere una caja abierta del vendedor, salvo que la configuración del
+ * sistema no la exija; si la necesita y no la tiene, lo indica y ofrece ir a
+ * la caja. La forma de pago, el comprobante y el redondeo del total salen de
+ * la configuración. Antes de confirmar vuelve a controlar el stock y, si
  * falta para algún producto, los informa todos juntos sin registrar nada.
  */
 @Controller
@@ -182,19 +187,26 @@ public class PuntoVentaController extends AbstractController {
     private final FacturacionElectronicaService facturacion;
     private final AutorizacionComprobantes autorizacion;
 
+    private final ConfiguracionService configuracionService;
+
     private final CarritoVenta carrito = new CarritoVenta();
 
     /** Si se ofrecen facturas electrónicas (se consulta al abrir la pantalla). */
     private boolean facturacionHabilitada;
 
+    /** Parámetros del sistema, leídos al abrir la pantalla (así rige un cambio sin reiniciar). */
+    private ConfiguracionDto configuracion = ConfiguracionDto.porDefecto();
+
     @Override
     protected void initializeComponents() {
+
+        execute(() -> configuracion = configuracionService.vigente());
 
         configurarTabla();
         configurarCliente();
 
         cmbFormaPago.getItems().setAll(FormaPago.delPuntoDeVenta());
-        cmbFormaPago.setValue(FormaPago.EFECTIVO);
+        cmbFormaPago.setValue(formaPagoPorDefecto());
 
         configurarComprobantes();
 
@@ -407,10 +419,27 @@ public class PuntoVentaController extends AbstractController {
         return cliente == null || cliente == CONSUMIDOR_FINAL ? null : cliente.getId();
     }
 
+    /**
+     * El de la configuración: la factura que corresponde al cliente (o ticket
+     * si no se puede facturar), ticket o remito.
+     */
     private TipoComprobante comprobantePorDefecto() {
-        return cmbTipoComprobante.getItems().isEmpty() || !cmbTipoComprobante.getItems().get(0).esFactura()
-                ? TipoComprobante.TICKET
-                : cmbTipoComprobante.getItems().get(0);
+
+        ComprobantePorDefecto preferido = Objects.requireNonNullElse(
+                configuracion.getComprobantePorDefecto(), ComprobantePorDefecto.FACTURA);
+
+        return switch (preferido) {
+            case TICKET -> TipoComprobante.TICKET;
+            case REMITO -> TipoComprobante.REMITO;
+            case FACTURA -> cmbTipoComprobante.getItems().isEmpty() || !cmbTipoComprobante.getItems().get(0).esFactura()
+                    ? TipoComprobante.TICKET
+                    : cmbTipoComprobante.getItems().get(0);
+        };
+    }
+
+    private FormaPago formaPagoPorDefecto() {
+        FormaPago forma = configuracion.getFormaPagoPorDefecto();
+        return forma != null && cmbFormaPago.getItems().contains(forma) ? forma : FormaPago.EFECTIVO;
     }
 
     private void mostrarAvisoFactura() {
@@ -471,17 +500,21 @@ public class PuntoVentaController extends AbstractController {
 
             boolean abierta = ventaService.tieneCajaAbierta();
 
-            mostrar(panelVenta, abierta);
-            mostrar(panelSinCaja, !abierta);
+            // Si la configuración no exige caja, se vende igual: la venta queda sin caja.
+            boolean puedeVender = abierta || !configuracion.exigeCaja();
 
-            lblCaja.setText(abierta ? "Caja abierta" : "Sin caja abierta");
+            mostrar(panelVenta, puedeVender);
+            mostrar(panelSinCaja, !puedeVender);
+
+            lblCaja.setText(abierta ? "Caja abierta" : puedeVender ? "Sin caja: las ventas no se suman a una caja"
+                    : "Sin caja abierta");
             lblCaja.getStyleClass().setAll("label", "estado-badge", abierta ? "estado-activo" : "estado-inactivo");
 
             boolean accesoCaja = navigator.puedeAcceder(AppView.CAJA);
             mostrar(btnIrACaja, accesoCaja);
             mostrar(lblSinAccesoCaja, !accesoCaja);
 
-            if (abierta) {
+            if (puedeVender) {
                 enfocarBusqueda();
             }
         });
@@ -633,7 +666,7 @@ public class PuntoVentaController extends AbstractController {
 
     private Cobro calcularCobro() {
         return CarritoVenta.cobrar(carrito.subtotal(), txtDescuento.getText(),
-                cmbFormaPago.getValue() == FormaPago.EFECTIVO, txtPagaCon.getText());
+                cmbFormaPago.getValue() == FormaPago.EFECTIVO, txtPagaCon.getText(), configuracion.getRedondeo());
     }
 
     private void actualizarTotales() {
@@ -735,6 +768,10 @@ public class PuntoVentaController extends AbstractController {
             texto.append("Descuento: ").append(VentaFormato.importe(cobro.descuento())).append('\n');
         }
 
+        if (cobro.redondeo() != null && cobro.redondeo().signum() > 0) {
+            texto.append("Redondeo: −").append(VentaFormato.importe(cobro.redondeo())).append('\n');
+        }
+
         texto.append("Total: ").append(VentaFormato.importe(cobro.total()));
 
         if (cobro.vuelto() != null) {
@@ -764,7 +801,7 @@ public class PuntoVentaController extends AbstractController {
         txtDescuento.clear();
         txtPagaCon.clear();
         cmbCliente.setValue(CONSUMIDOR_FINAL);
-        cmbFormaPago.setValue(FormaPago.EFECTIVO);
+        cmbFormaPago.setValue(formaPagoPorDefecto());
         cmbTipoComprobante.setValue(comprobantePorDefecto());
 
         refrescarCarrito();

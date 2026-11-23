@@ -25,7 +25,7 @@ public interface VentaRepository extends JpaRepository<Venta, Long> {
             select v from Venta v
               left join fetch v.cliente
               join fetch v.usuario
-              join fetch v.caja
+              left join fetch v.caja
               left join fetch v.usuarioAnulacion
               left join fetch v.detalles d
               left join fetch d.producto
@@ -50,7 +50,7 @@ public interface VentaRepository extends JpaRepository<Venta, Long> {
             select v from Venta v
               left join fetch v.cliente
               join fetch v.usuario
-              join fetch v.caja
+              left join fetch v.caja
               left join fetch v.usuarioAnulacion
             where (cast(:desde as LocalDateTime) is null or v.fecha >= :desde)
               and (cast(:hasta as LocalDateTime) is null or v.fecha <= :hasta)
@@ -89,6 +89,34 @@ public interface VentaRepository extends JpaRepository<Venta, Long> {
             order by c.fechaApertura, c.id
             """)
     List<VentasPorCaja> totalizarPorCaja(
+            @Param("desde") LocalDateTime desde,
+            @Param("hasta") LocalDateTime hasta,
+            @Param("usuarioId") Long usuarioId);
+
+    /**
+     * Lo vendido sin caja (si la configuración no exige caja abierta) entre
+     * las dos fechas, por vendedor, sin las ventas anuladas ni las canceladas.
+     * Cada resultado tiene la caja, su estado y su apertura en null.
+     *
+     * @param usuarioId vendedor; null para todos
+     */
+    @Query("""
+            select new org.gestionComercio.dto.venta.VentasPorCaja(
+                     concat(u.nombre, ' ', u.apellido),
+                     count(v),
+                     sum(v.total))
+            from Venta v
+              join v.usuario u
+            where v.caja is null
+              and v.fecha >= :desde
+              and v.fecha <= :hasta
+              and v.estadoVenta not in (org.gestionComercio.enums.EstadoVenta.ANULADA,
+                                        org.gestionComercio.enums.EstadoVenta.CANCELADA)
+              and (:usuarioId is null or u.id = :usuarioId)
+            group by u.id, u.nombre, u.apellido
+            order by u.nombre, u.apellido
+            """)
+    List<VentasPorCaja> totalizarSinCaja(
             @Param("desde") LocalDateTime desde,
             @Param("hasta") LocalDateTime hasta,
             @Param("usuarioId") Long usuarioId);

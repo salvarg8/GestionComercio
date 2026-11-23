@@ -11,10 +11,10 @@ import org.gestionComercio.dto.cliente.ClienteDto;
 import org.gestionComercio.dto.empresa.EmpresaDto;
 import org.gestionComercio.dto.venta.DetalleVentaDto;
 import org.gestionComercio.dto.venta.VentaDto;
-import org.gestionComercio.enums.AnchoTicket;
 import org.gestionComercio.enums.CondicionIVA;
 import org.gestionComercio.enums.EstadoVenta;
 import org.gestionComercio.enums.FormaPago;
+import org.gestionComercio.enums.FormatoTicket;
 import org.gestionComercio.enums.TipoComprobante;
 import org.gestionComercio.enums.TipoDocumento;
 import org.junit.jupiter.api.DisplayName;
@@ -188,6 +188,10 @@ class ComprobanteVentaPdfTest {
         }
     }
 
+    private static OpcionesComprobante formato(FormatoTicket formato) {
+        return new OpcionesComprobante(formato, true, null);
+    }
+
     @Test
     @DisplayName("El ticket sale en una sola página con el ancho del rollo configurado (80 mm por defecto)")
     void ticketAnchoDelRollo() throws IOException {
@@ -196,10 +200,40 @@ class ComprobanteVentaPdfTest {
         assertThat(pagina(ComprobanteVentaPdf.generar(ticket(3), empresa, null)).getWidth())
                 .isCloseTo(80 * 72f / 25.4f, within(0.01f));
 
-        empresa.setAnchoTicket(AnchoTicket.MM_58);
-
-        assertThat(pagina(ComprobanteVentaPdf.generar(ticket(3), empresa, null)).getWidth())
+        assertThat(pagina(ComprobanteVentaPdf.generar(ticket(3), empresa, null,
+                formato(FormatoTicket.TERMICO_58))).getWidth())
                 .isCloseTo(58 * 72f / 25.4f, within(0.01f));
+    }
+
+    @Test
+    @DisplayName("Con el formato A4, el ticket sale en una hoja A4")
+    void ticketEnA4() throws IOException {
+        byte[] pdf = ComprobanteVentaPdf.generar(ticket(3), empresa(), null, formato(FormatoTicket.A4));
+
+        PDRectangle hoja = pagina(pdf);
+        assertThat(hoja.getWidth()).isCloseTo(PDRectangle.A4.getWidth(), within(0.01f));
+        assertThat(hoja.getHeight()).isCloseTo(PDRectangle.A4.getHeight(), within(0.01f));
+        assertThat(texto(pdf)).contains("TICKET").contains("Producto 3");
+    }
+
+    @Test
+    @DisplayName("El texto de pie sale en el ticket térmico y en A4, renglón por renglón")
+    void textoDePie() throws IOException {
+        String pie = "Lunes a sábados de 9 a 20 h\nCambios dentro de los 30 días";
+
+        for (FormatoTicket formato : FormatoTicket.values()) {
+            String texto = texto(ComprobanteVentaPdf.generar(ticket(2), empresa(), null,
+                    new OpcionesComprobante(formato, true, pie)));
+
+            assertThat(texto).as(formato.name())
+                    .contains("Lunes a sábados de 9 a 20 h")
+                    .contains("Cambios dentro de los 30 días");
+        }
+
+        // Las facturas y remitos (A4) también lo llevan.
+        assertThat(texto(ComprobanteVentaPdf.generar(venta(List.of(renglon("Yerba", "1", "100.00"))), empresa(), null,
+                new OpcionesComprobante(FormatoTicket.TERMICO_80, true, pie))))
+                .contains("Cambios dentro de los 30 días");
     }
 
     @Test
@@ -237,10 +271,7 @@ class ComprobanteVentaPdfTest {
         venta.setFechaAnulacion(LocalDateTime.of(2026, 11, 20, 11, 0));
         venta.setMotivoAnulacion("Error en la carga");
 
-        EmpresaDto empresa = empresa();
-        empresa.setAnchoTicket(AnchoTicket.MM_58);
-
-        String texto = texto(ComprobanteVentaPdf.generar(venta, empresa, null));
+        String texto = texto(ComprobanteVentaPdf.generar(venta, empresa(), null, formato(FormatoTicket.TERMICO_58)));
 
         assertThat(texto).contains(ComprobanteVentaPdf.ANULADA).contains("Error en la carga");
     }

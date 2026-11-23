@@ -2,6 +2,7 @@ package org.gestionComercio.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.gestionComercio.dto.cliente.ClienteDto;
+import org.gestionComercio.dto.configuracion.ConfiguracionDto;
 import org.gestionComercio.dto.inventario.LineaInventario;
 import org.gestionComercio.dto.producto.ProductoDto;
 import org.gestionComercio.dto.venta.DetalleVentaDto;
@@ -22,6 +23,7 @@ import org.gestionComercio.enums.EstadoVenta;
 import org.gestionComercio.enums.FormaPago;
 import org.gestionComercio.enums.OrigenMovimientoInventario;
 import org.gestionComercio.enums.PermisoCodigo;
+import org.gestionComercio.enums.Redondeo;
 import org.gestionComercio.enums.TipoComprobante;
 import org.gestionComercio.enums.TipoMovimientoCaja;
 import org.gestionComercio.exception.BusinessException;
@@ -38,6 +40,7 @@ import org.gestionComercio.repository.ProductoRepository;
 import org.gestionComercio.repository.VentaRepository;
 import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.util.DateUtils;
+import org.gestionComercio.service.ConfiguracionService;
 import org.gestionComercio.service.InventarioComprobanteService;
 import org.gestionComercio.service.VentaService;
 import org.gestionComercio.service.impl.arca.EmisionComprobantesArca;
@@ -85,6 +88,7 @@ public class VentaServiceImpl implements VentaService {
     private final ProductoMapper productoMapper;
     private final ClienteMapper clienteMapper;
     private final SesionUsuario sesionUsuario;
+    private final ConfiguracionService configuracionService;
 
     @Override
     public VentaDto registrar(VentaDto dto) {
@@ -96,10 +100,17 @@ public class VentaServiceImpl implements VentaService {
         }
 
         Usuario usuario = sesionUsuario.getUsuario();
+        ConfiguracionDto configuracion = configuracionService.vigente();
+
+        // Sin caja abierta, la venta queda sin caja si la configuración lo permite.
         Caja caja = cajaRepository
                 .findFirstByUsuarioIdAndEstadoCajaOrderByFechaAperturaDesc(usuario.getId(), EstadoCaja.ABIERTA)
-                .orElseThrow(() -> new BusinessException(
-                        "No tiene una caja abierta. Debe abrir la caja antes de registrar una venta."));
+                .orElse(null);
+
+        if (caja == null && configuracion.exigeCaja()) {
+            throw new BusinessException(
+                    "No tiene una caja abierta. Debe abrir la caja antes de registrar una venta.");
+        }
 
         normalizar(dto);
 
@@ -109,7 +120,7 @@ public class VentaServiceImpl implements VentaService {
             throw new ValidationException(result);
         }
 
-        Venta venta = armarVenta(dto, usuario, caja);
+        Venta venta = armarVenta(dto, usuario, caja, configuracion.getRedondeo());
 
         // Las facturas no usan la numeración interna: su número lo da ARCA al autorizarlas.
         if (!venta.getTipoComprobante().esFactura()) {
@@ -127,7 +138,7 @@ public class VentaServiceImpl implements VentaService {
         inventarioComprobanteService.registrarSalidas(
                 OrigenMovimientoInventario.VENTA, venta.getId(), lineasDeInventario(venta), referencia);
 
-        if (venta.getFormaPago() == FormaPago.EFECTIVO && venta.getTotal().signum() > 0) {
+        if (caja != null && venta.getFormaPago() == FormaPago.EFECTIVO && venta.getTotal().signum() > 0) {
 
             movimientoCajaRepository.save(MovimientoCaja.builder()
                     .fecha(venta.getFecha())
@@ -175,7 +186,9 @@ public class VentaServiceImpl implements VentaService {
         emisionComprobantesArca.anularVenta(venta);
 
         // Primero la caja: si no se puede devolver el efectivo, no se toca nada.
-        boolean devuelveEfectivo = venta.getFormaPago() == FormaPago.EFECTIVO && venta.getTotal().signum() > 0;
+        // Una venta registrada sin caja no ingresó efectivo a ninguna, así que no se devuelve de una.
+        boolean devuelveEfectivo = venta.getCaja() != null
+                && venta.getFormaPago() == FormaPago.EFECTIVO && venta.getTotal().signum() > 0;
         Caja caja = devuelveEfectivo ? cajaParaDevolucion(venta, usuario) : null;
 
         inventarioComprobanteService.revertir(OrigenMovimientoInventario.VENTA, venta.getId(),
@@ -254,14 +267,24 @@ public class VentaServiceImpl implements VentaService {
         }
 
         // Las que vendieron hoy (abiertas o ya cerradas) con sus totales.
+        List<VentasPorCaja> sinCaja = new ArrayList<>();
+
         for (VentasPorCaja ventas : totalizarHoyPorCaja(null)) {
-            porCaja.put(ventas.cajaId(), ventas);
+            if (ventas.sinCaja()) {
+                sinCaja.add(ventas);
+            } else {
+                porCaja.put(ventas.cajaId(), ventas);
+            }
         }
 
-        return porCaja.values().stream()
+        // Lo vendido sin caja (si la configuración lo permite) va al final, por vendedor.
+        List<VentasPorCaja> resultado = new ArrayList<>(porCaja.values().stream()
                 .sorted(Comparator.comparing(VentasPorCaja::fechaApertura)
                         .thenComparing(VentasPorCaja::cajaId))
-                .toList();
+                .toList());
+        resultado.addAll(sinCaja);
+
+        return resultado;
     }
 
     @Transactional(readOnly = true)
@@ -273,12 +296,21 @@ public class VentaServiceImpl implements VentaService {
         return ResumenVentas.de(totalizarHoyPorCaja(sesionUsuario.getUsuario().getId()));
     }
 
-    /** @param usuarioId responsable de las cajas; null para todas */
+    /**
+     * Lo vendido hoy en cada caja y, después, lo vendido sin caja por vendedor.
+     *
+     * @param usuarioId responsable de las cajas (o vendedor); null para todos
+     */
     private List<VentasPorCaja> totalizarHoyPorCaja(Long usuarioId) {
 
         LocalDate hoy = LocalDate.now();
+        LocalDateTime desde = hoy.atStartOfDay();
+        LocalDateTime hasta = DateUtils.finDelDia(hoy);
 
-        return ventaRepository.totalizarPorCaja(hoy.atStartOfDay(), DateUtils.finDelDia(hoy), usuarioId);
+        List<VentasPorCaja> ventas = new ArrayList<>(ventaRepository.totalizarPorCaja(desde, hasta, usuarioId));
+        ventas.addAll(ventaRepository.totalizarSinCaja(desde, hasta, usuarioId));
+
+        return ventas;
     }
 
     // ------------------------------------------------------------------
@@ -452,8 +484,14 @@ public class VentaServiceImpl implements VentaService {
         }
     }
 
-    /** Arma la venta ya validada con el precio actual de cada producto y calcula los totales. */
-    private Venta armarVenta(VentaDto dto, Usuario usuario, Caja caja) {
+    /**
+     * Arma la venta ya validada con el precio actual de cada producto y calcula
+     * los totales. El total se redondea hacia abajo según la configuración y
+     * la diferencia se suma al descuento.
+     *
+     * @param caja null si se vende sin caja
+     */
+    private Venta armarVenta(VentaDto dto, Usuario usuario, Caja caja, Redondeo redondeo) {
 
         Map<Long, Producto> productos = productoRepository
                 .findAllById(dto.getDetalles().stream().map(DetalleVentaDto::getProductoId).distinct().toList())
@@ -498,10 +536,12 @@ public class VentaServiceImpl implements VentaService {
         }
 
         BigDecimal descuento = dto.getDescuento().setScale(2);
+        BigDecimal total = subtotal.subtract(descuento);
+        BigDecimal redondeado = (redondeo == null ? Redondeo.SIN_REDONDEO : redondeo).totalDeVenta(total);
 
         venta.setSubtotal(subtotal);
-        venta.setDescuento(descuento);
-        venta.setTotal(subtotal.subtract(descuento));
+        venta.setDescuento(descuento.add(total.subtract(redondeado)));
+        venta.setTotal(redondeado);
 
         return venta;
     }

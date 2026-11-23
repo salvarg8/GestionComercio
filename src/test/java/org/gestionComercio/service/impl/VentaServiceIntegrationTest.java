@@ -42,6 +42,7 @@ import org.gestionComercio.arca.ArcaConfig;
 import org.gestionComercio.arca.ClaveCertificadoArca;
 import org.gestionComercio.mapper.ClienteMapperImpl;
 import org.gestionComercio.mapper.ComprobanteArcaMapperImpl;
+import org.gestionComercio.mapper.ConfiguracionMapperImpl;
 import org.gestionComercio.mapper.DetalleVentaMapperImpl;
 import org.gestionComercio.mapper.EmpresaMapperImpl;
 import org.gestionComercio.mapper.ProductoMapperImpl;
@@ -60,6 +61,7 @@ import org.gestionComercio.service.impl.arca.ConfiguracionArcaVigente;
 import org.gestionComercio.service.impl.arca.EmisionComprobantesArca;
 import org.gestionComercio.support.PostgresTestcontainersConfig;
 import org.gestionComercio.validation.VentaValidator;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -101,6 +103,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Import({
         PostgresTestcontainersConfig.class,
         VentaServiceImpl.class,
+        ConfiguracionServiceImpl.class,
+        ConfiguracionMapperImpl.class,
         NumeradorComprobanteRepository.class,
         ComprobanteVentaServiceImpl.class,
         EmpresaMapperImpl.class,
@@ -404,6 +408,89 @@ class VentaServiceIntegrationTest {
 
         assertThat(ventaRepository.count()).isEqualTo(ventasAntes);
         assertThat(stockDe(gaseosa)).isEqualByComparingTo("10");
+    }
+
+    // ------------------------------------------------------------------
+    // Configuración del sistema
+    // ------------------------------------------------------------------
+
+    /** Cambia la fila única de configuración; {@link #restaurarConfiguracion} la deja como estaba. */
+    private void configurar(String asignaciones) {
+        transaccion.executeWithoutResult(status ->
+                entityManager.createNativeQuery("update configuracion set " + asignaciones).executeUpdate());
+    }
+
+    @AfterEach
+    void restaurarConfiguracion() {
+        configurar("venta_exige_caja = true, redondeo = 'SIN_REDONDEO'");
+    }
+
+    @Test
+    @DisplayName("Si la configuración no exige caja, se vende sin caja: no hay movimiento de caja y se anula sin devolver efectivo")
+    void ventaSinCajaPermitida() {
+        configurar("venta_exige_caja = false");
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+        long movimientosAntes = movimientoCajaRepository.count();
+
+        VentaDto guardada = ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "2")));
+
+        assertThat(guardada.getCajaId()).isNull();
+        assertThat(guardada.getTotal()).isEqualByComparingTo("3000");
+        assertThat(stockDe(gaseosa)).isEqualByComparingTo("8");
+        assertThat(movimientoCajaRepository.count()).isEqualTo(movimientosAntes);
+
+        // Lo vendido sin caja aparece en los totales del día.
+        assertThat(ventaService.ventasDelDiaPropias().total()).isEqualByComparingTo("3000");
+        assertThat(ventaService.ventasDelDiaPorCaja())
+                .filteredOn(VentasPorCaja::sinCaja)
+                .filteredOn(v -> v.usuarioNombreCompleto().equals("Ana Pérez"))
+                .singleElement()
+                .satisfies(v -> {
+                    assertThat(v.cantidad()).isGreaterThanOrEqualTo(1L);
+                    assertThat(v.total()).isGreaterThanOrEqualTo(new BigDecimal("3000"));
+                });
+
+        // Se lee y se imprime aunque no tenga caja.
+        assertThat(ventaService.obtener(guardada.getId()).getCajaId()).isNull();
+        assertThat(comprobanteVentaService.generarPdf(guardada.getId())).isNotEmpty();
+
+        VentaDto anulada = ventaService.anular(guardada.getId(), "Prueba");
+
+        assertThat(anulada.getEstadoVenta()).isEqualTo(EstadoVenta.ANULADA);
+        assertThat(stockDe(gaseosa)).isEqualByComparingTo("10");
+        assertThat(movimientoCajaRepository.count()).isEqualTo(movimientosAntes);
+    }
+
+    @Test
+    @DisplayName("Con caja abierta, la venta va a la caja aunque la configuración no la exija")
+    void ventaConCajaSinExigirla() {
+        configurar("venta_exige_caja = false");
+        Long cajaId = abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+
+        VentaDto guardada = ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "1")));
+
+        assertThat(guardada.getCajaId()).isEqualTo(cajaId);
+        assertThat(movimientosDeCaja(cajaId)).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("El total se redondea hacia abajo según la configuración y la diferencia se suma al descuento")
+    void redondeoDelTotal() {
+        configurar("redondeo = 'UN_PESO'");
+        Long cajaId = abrirCaja();
+        Long yerba = crearProducto("Yerba", "1234.56", "10", UnidadMedida.UNIDAD, true);
+
+        VentaDto dto = venta(FormaPago.EFECTIVO, renglon(yerba, "1"));
+        dto.setDescuento(new BigDecimal("10.00"));
+
+        VentaDto guardada = ventaService.registrar(dto);
+
+        // 1234,56 − 10 = 1224,56 → 1224,00; descuento 10 + 0,56
+        assertThat(guardada.getSubtotal()).isEqualByComparingTo("1234.56");
+        assertThat(guardada.getDescuento()).isEqualByComparingTo("10.56");
+        assertThat(guardada.getTotal()).isEqualByComparingTo("1224.00");
+        assertThat(movimientosDeCaja(cajaId).get(0).getImporte()).isEqualByComparingTo("1224.00");
     }
 
     // ------------------------------------------------------------------

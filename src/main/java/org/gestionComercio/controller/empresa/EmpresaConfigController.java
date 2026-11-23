@@ -14,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.gestionComercio.controller.base.AbstractController;
 import org.gestionComercio.controller.base.ErroresPorCampo;
 import org.gestionComercio.dto.empresa.EmpresaDto;
-import org.gestionComercio.enums.AnchoTicket;
 import org.gestionComercio.enums.CondicionIVA;
 import org.gestionComercio.enums.PermisoCodigo;
 import org.gestionComercio.exception.BusinessException;
@@ -72,9 +71,6 @@ public class EmpresaConfigController extends AbstractController {
 
     @FXML
     private ComboBox<CondicionIVA> cmbCondicionIva;
-
-    @FXML
-    private ComboBox<AnchoTicket> cmbAnchoTicket;
 
     @FXML
     private DatePicker dpInicioActividades;
@@ -145,7 +141,6 @@ public class EmpresaConfigController extends AbstractController {
                 CondicionIVA.EXENTO
         );
 
-        cmbAnchoTicket.getItems().setAll(AnchoTicket.values());
         SelectorFecha.configurar(dpInicioActividades);
 
         errores
@@ -207,7 +202,6 @@ public class EmpresaConfigController extends AbstractController {
         }
 
         cmbCondicionIva.setDisable(!puedeEditar);
-        cmbAnchoTicket.setDisable(!puedeEditar);
         dpInicioActividades.setDisable(!puedeEditar);
 
         mostrar(lblSoloLectura, !puedeEditar);
@@ -236,7 +230,6 @@ public class EmpresaConfigController extends AbstractController {
             cmbCondicionIva.getItems().add(empresa.getCondicionIva());
         }
         cmbCondicionIva.setValue(empresa.getCondicionIva());
-        cmbAnchoTicket.setValue(empresa.getAnchoTicket() == null ? AnchoTicket.porDefecto() : empresa.getAnchoTicket());
         dpInicioActividades.setValue(empresa.getFechaInicioActividades());
 
         mostrarLogo(ImageUtils.cargar(rutaLogo));
@@ -355,7 +348,6 @@ public class EmpresaConfigController extends AbstractController {
                 .ingresosBrutos(txtIngresosBrutos.getText())
                 .condicionIva(cmbCondicionIva.getValue())
                 .fechaInicioActividades(dpInicioActividades.getValue())
-                .anchoTicket(cmbAnchoTicket.getValue())
                 .telefono(txtTelefono.getText())
                 .email(txtEmail.getText())
                 .direccion(txtDireccion.getText())

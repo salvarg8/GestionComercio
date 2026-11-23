@@ -58,6 +58,9 @@ public class DashboardController extends AbstractController {
     private Button btnProductos;
 
     @FXML
+    private Button btnPrecios;
+
+    @FXML
     private Button btnStock;
 
     @FXML
@@ -91,6 +94,9 @@ public class DashboardController extends AbstractController {
     private Button btnConfiguracion;
 
     @FXML
+    private Button btnSistema;
+
+    @FXML
     private Button btnFacturacion;
 
     @FXML
@@ -121,6 +127,7 @@ public class DashboardController extends AbstractController {
         mostrarSiTieneAcceso(btnPermisos, AppView.PERMISO_LIST);
         mostrarSiTieneAcceso(btnUsuarios, AppView.USUARIO_LIST);
         mostrarSiTieneAcceso(btnProductos, AppView.PRODUCTO_LIST);
+        mostrarSiTieneAcceso(btnPrecios, AppView.ACTUALIZACION_PRECIOS);
         mostrarSiTieneAcceso(btnStock, AppView.STOCK_CONSULTA);
         mostrarSiTieneAcceso(btnMovimientos, AppView.MOVIMIENTO_HISTORIAL);
         mostrarSiTieneAcceso(btnCategorias, AppView.CATEGORIA_LIST);
@@ -132,6 +139,7 @@ public class DashboardController extends AbstractController {
         mostrarSiTieneAcceso(btnCompras, vistaDeCompras());
         mostrarSiTieneAcceso(btnReportes, AppView.REPORTES);
         mostrarSiTieneAcceso(btnConfiguracion, AppView.EMPRESA_CONFIG);
+        mostrarSiTieneAcceso(btnSistema, AppView.CONFIGURACION_SISTEMA);
         mostrarSiTieneAcceso(btnFacturacion, vistaDeFacturacion());
         mostrarSiTieneAcceso(btnBackup, AppView.BACKUP);
         mostrarSiTieneAcceso(btnLicencia, AppView.LICENCIA);
@@ -160,6 +168,8 @@ public class DashboardController extends AbstractController {
 
         btnProductos.setOnAction(e -> navigator.navigate(AppView.PRODUCTO_LIST));
 
+        btnPrecios.setOnAction(e -> navigator.navigate(AppView.ACTUALIZACION_PRECIOS));
+
         btnStock.setOnAction(e -> navigator.navigate(AppView.STOCK_CONSULTA));
 
         btnMovimientos.setOnAction(e -> navigator.navigate(AppView.MOVIMIENTO_HISTORIAL));
@@ -181,6 +191,8 @@ public class DashboardController extends AbstractController {
         btnReportes.setOnAction(e -> navigator.navigate(AppView.REPORTES));
 
         btnConfiguracion.setOnAction(e -> navigator.navigate(AppView.EMPRESA_CONFIG));
+
+        btnSistema.setOnAction(e -> navigator.navigate(AppView.CONFIGURACION_SISTEMA));
 
         btnFacturacion.setOnAction(e -> navigator.navigate(vistaDeFacturacion()));
 

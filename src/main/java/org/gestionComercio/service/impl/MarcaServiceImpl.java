@@ -154,7 +154,8 @@ public class MarcaServiceImpl implements MarcaService {
         sesionUsuario.requerirAlgunPermiso(
                 PermisoCodigo.MARCA_VER,
                 PermisoCodigo.PRODUCTO_CREAR,
-                PermisoCodigo.PRODUCTO_EDITAR);
+                PermisoCodigo.PRODUCTO_EDITAR,
+                PermisoCodigo.PRODUCTO_ACTUALIZAR_PRECIOS);
 
         return porEstado("", EstadoRegistro.ACTIVO).stream()
                 .map(marcaMapper::toDto)

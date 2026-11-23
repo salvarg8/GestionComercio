@@ -26,6 +26,11 @@ public enum PermisoCodigo {
     EMPRESA_VER("Empresa", "Ver empresas"),
     EMPRESA_EDITAR("Empresa", "Editar empresas"),
 
+    // Configuración del sistema
+    CONFIGURACION_VER("Configuración", "Ver los parámetros del sistema y el formato de los comprobantes"),
+    CONFIGURACION_EDITAR("Configuración",
+            "Modificar los parámetros del sistema, el formato de los comprobantes y cargar datos iniciales"),
+
     // Clientes
     CLIENTE_VER("Clientes", "Ver clientes"),
     CLIENTE_CREAR("Clientes", "Crear clientes"),
@@ -39,6 +44,8 @@ public enum PermisoCodigo {
     PRODUCTO_EDITAR("Productos", "Editar productos"),
     PRODUCTO_DAR_BAJA("Productos", "Dar de baja productos"),
     PRODUCTO_HABILITAR("Productos", "Volver a habilitar productos dados de baja"),
+    PRODUCTO_ACTUALIZAR_PRECIOS("Productos",
+            "Actualizar los precios de muchos productos a la vez por porcentaje y ver el historial"),
 
     // Inventario
     INVENTARIO_VER("Inventario", "Consultar stock y ver movimientos de stock"),

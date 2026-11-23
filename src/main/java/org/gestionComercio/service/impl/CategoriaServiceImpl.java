@@ -134,7 +134,8 @@ public class CategoriaServiceImpl implements CategoriaService {
                 PermisoCodigo.CATEGORIA_VER,
                 PermisoCodigo.PRODUCTO_CREAR,
                 PermisoCodigo.PRODUCTO_EDITAR,
-                PermisoCodigo.INVENTARIO_VER);
+                PermisoCodigo.INVENTARIO_VER,
+                PermisoCodigo.PRODUCTO_ACTUALIZAR_PRECIOS);
 
         return listarActivas();
     }

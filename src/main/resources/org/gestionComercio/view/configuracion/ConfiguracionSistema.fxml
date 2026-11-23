@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="org.gestionComercio.controller.configuracion.ConfiguracionSistemaController"
+            fitToWidth="true"
+            styleClass="form-scroll">
+
+    <content>
+
+        <VBox spacing="15.0"
+              prefWidth="820"
+              maxWidth="820">
+
+            <padding>
+                <Insets top="30" right="30" bottom="30" left="30"/>
+            </padding>
+
+            <children>
+
+                <Label text="Parámetros del sistema"
+                       style="-fx-font-size: 22px; -fx-font-weight: bold;"/>
+
+                <Label text="Adaptan el sistema a la forma de trabajar del comercio. Los cambios rigen desde la próxima operación en todas las PC, sin reiniciar."
+                       styleClass="form-hint"
+                       wrapText="true"/>
+
+                <Label fx:id="lblSoloLectura"
+                       text="Sólo lectura: no tiene permiso para modificar la configuración."
+                       styleClass="form-warning"
+                       wrapText="true"
+                       maxWidth="Infinity"
+                       visible="false"
+                       managed="false"/>
+
+                <!-- ============================================= -->
+                <!-- VENTAS -->
+                <!-- ============================================= -->
+
+                <Label text="Ventas" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+                <VBox spacing="5.0">
+                    <children>
+                        <CheckBox fx:id="chkVentaExigeCaja" text="Exigir una caja abierta para vender"/>
+                        <Label text="Si no se exige, quien no tiene caja abierta puede vender igual: la venta queda sin caja y el efectivo no se suma a ninguna."
+                               styleClass="form-hint"
+                               wrapText="true"/>
+                    </children>
+                </VBox>
+
+                <HBox spacing="15.0">
+                    <children>
+
+                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                            <children>
+                                <Label text="Forma de pago por defecto"/>
+                                <ComboBox fx:id="cmbFormaPago" maxWidth="Infinity"/>
+                                <Label fx:id="lblErrorFormaPago"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                            <children>
+                                <Label text="Comprobante por defecto"/>
+                                <ComboBox fx:id="cmbComprobante" maxWidth="Infinity"/>
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                            <children>
+                                <Label text="Redondeo del total"/>
+                                <ComboBox fx:id="cmbRedondeo" maxWidth="Infinity"/>
+                                <Label text="Siempre hacia abajo: la diferencia se descuenta."
+                                       styleClass="form-hint"
+                                       wrapText="true"/>
+                            </children>
+                        </VBox>
+
+                    </children>
+                </HBox>
+
+                <Separator/>
+
+                <!-- ============================================= -->
+                <!-- PRODUCTOS -->
+                <!-- ============================================= -->
+
+                <Label text="Productos nuevos" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+                <HBox spacing="15.0" alignment="CENTER_LEFT">
+                    <children>
+
+                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                            <children>
+                                <CheckBox fx:id="chkStockNegativo" text="Permitir vender sin stock"/>
+                                <Label text="Valor que se propone al crear un producto; se puede cambiar en cada uno."
+                                       styleClass="form-hint"
+                                       wrapText="true"/>
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="5.0" prefWidth="240" maxWidth="240">
+                            <children>
+                                <Label text="Unidad de medida por defecto"/>
+                                <ComboBox fx:id="cmbUnidadMedida" maxWidth="Infinity"/>
+                            </children>
+                        </VBox>
+
+                    </children>
+                </HBox>
+
+                <Separator/>
+
+                <!-- ============================================= -->
+                <!-- COMPROBANTES -->
+                <!-- ============================================= -->
+
+                <Label text="Comprobantes" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+                <HBox spacing="15.0" alignment="CENTER_LEFT">
+                    <children>
+
+                        <VBox spacing="5.0" prefWidth="260" maxWidth="260">
+                            <children>
+                                <Label text="Formato del ticket"/>
+                                <ComboBox fx:id="cmbFormatoTicket" maxWidth="Infinity"/>
+                                <Label text="Las facturas y los remitos salen en A4."
+                                       styleClass="form-hint"
+                                       wrapText="true"/>
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                            <children>
+                                <CheckBox fx:id="chkImprimirLogo" text="Imprimir el logo de la empresa"/>
+                                <Label fx:id="lblLogo"
+                                       styleClass="form-hint"
+                                       wrapText="true"/>
+                            </children>
+                        </VBox>
+
+                    </children>
+                </HBox>
+
+                <VBox spacing="5.0">
+                    <children>
+                        <Label text="Texto al pie de los comprobantes"/>
+                        <TextArea fx:id="txtPie"
+                                  prefRowCount="4"
+                                  wrapText="true"
+                                  promptText="Opcional. Ej.: Lunes a sábados de 9 a 20 h · @micomercio · Cambios dentro de los 30 días con el ticket."/>
+                        <HBox spacing="10">
+                            <children>
+                                <Label fx:id="lblErrorPie"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       HBox.hgrow="ALWAYS"
+                                       maxWidth="Infinity"
+                                       visible="false"
+                                       managed="false"/>
+                                <Label fx:id="lblContadorPie" styleClass="form-hint"/>
+                            </children>
+                        </HBox>
+                    </children>
+                </VBox>
+
+                <Separator/>
+
+                <!-- ============================================= -->
+                <!-- IMPRESORA -->
+                <!-- ============================================= -->
+
+                <Label text="Impresora de esta PC" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+                <Label text="Se guarda sólo en esta PC: cada caja puede tener la suya. Sin impresora, los comprobantes se abren en el visor de PDF."
+                       styleClass="form-hint"
+                       wrapText="true"/>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <children>
+                        <ComboBox fx:id="cmbImpresora" prefWidth="420"/>
+                        <Button fx:id="btnActualizarImpresoras" styleClass="btn-secondary" text="Actualizar lista"/>
+                        <Button fx:id="btnProbar" styleClass="btn-secondary" text="Imprimir prueba"/>
+                    </children>
+                </HBox>
+
+                <Label text="La prueba usa el formato elegido arriba aunque todavía no esté guardado."
+                       styleClass="form-hint"
+                       wrapText="true"/>
+
+                <Separator/>
+
+                <!-- ============================================= -->
+                <!-- DATOS INICIALES -->
+                <!-- ============================================= -->
+
+                <VBox fx:id="boxDatosIniciales" spacing="8.0">
+                    <children>
+
+                        <Label text="Datos iniciales por rubro" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+                        <Label text="Para una instalación nueva: crea las categorías típicas del rubro y propone su unidad de medida para los productos. No duplica las categorías que ya existen."
+                               styleClass="form-hint"
+                               wrapText="true"/>
+
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <children>
+                                <ComboBox fx:id="cmbRubro" prefWidth="300" promptText="Elegir rubro..."/>
+                                <Button fx:id="btnCargarRubro" styleClass="btn-secondary" text="Cargar datos iniciales"/>
+                            </children>
+                        </HBox>
+
+                        <Label fx:id="lblRubro"
+                               styleClass="form-hint"
+                               wrapText="true"/>
+
+                    </children>
+                </VBox>
+
+                <HBox spacing="10"
+                      alignment="CENTER_RIGHT">
+
+                    <children>
+
+                        <Button fx:id="btnDescartar" styleClass="btn-secondary"
+                                cancelButton="true"
+                                text="Descartar cambios"/>
+
+                        <Button fx:id="btnGuardar" styleClass="btn-primary"
+                                defaultButton="true"
+                                text="Guardar"/>
+
+                    </children>
+
+                </HBox>
+
+            </children>
+
+        </VBox>
+
+    </content>
+
+</ScrollPane>
