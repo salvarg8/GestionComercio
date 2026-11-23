@@ -2,14 +2,18 @@ package org.gestionComercio.controller.inicio;
 
 import javafx.beans.property.SimpleStringProperty;
 import javafx.fxml.FXML;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lombok.RequiredArgsConstructor;
 import org.gestionComercio.controller.base.AbstractController;
+import org.gestionComercio.dto.arca.ConfiguracionArcaDto;
 import org.gestionComercio.dto.caja.CajaDto;
 import org.gestionComercio.dto.inventario.ResumenStock;
 import org.gestionComercio.dto.venta.ResumenVentas;
@@ -20,7 +24,9 @@ import org.gestionComercio.navigation.AppView;
 import org.gestionComercio.navigation.Navigator;
 import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.CajaService;
+import org.gestionComercio.service.ConfiguracionArcaService;
 import org.gestionComercio.service.ConsultaStockService;
+import org.gestionComercio.service.FacturacionElectronicaService;
 import org.gestionComercio.service.VentaService;
 import org.gestionComercio.util.CurrencyUtils;
 import org.gestionComercio.util.DateUtils;
@@ -29,6 +35,7 @@ import org.springframework.stereotype.Controller;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Function;
@@ -65,6 +72,9 @@ public class InicioController extends AbstractController {
 
     @FXML
     private Button btnActualizar;
+
+    @FXML
+    private VBox seccionAvisos;
 
     @FXML
     private VBox seccionResumen;
@@ -152,6 +162,8 @@ public class InicioController extends AbstractController {
     private final ConsultaStockService consultaStockService;
     private final SesionUsuario sesionUsuario;
     private final Navigator navigator;
+    private final ConfiguracionArcaService configuracionArca;
+    private final FacturacionElectronicaService facturacion;
 
     /** Ve las ventas de todas las cajas (VENTA_VER). */
     private boolean veVentasDeTodos;
@@ -161,6 +173,8 @@ public class InicioController extends AbstractController {
 
     private boolean veCaja;
     private boolean veStock;
+    private boolean veCertificadoArca;
+    private boolean vePendientesCae;
 
     @Override
     protected void initializeComponents() {
@@ -171,6 +185,8 @@ public class InicioController extends AbstractController {
         veVentasPropias = !veVentasDeTodos && sesionUsuario.tienePermiso(PermisoCodigo.VENTA_CREAR);
         veCaja = sesionUsuario.tienePermiso(PermisoCodigo.CAJA_VER);
         veStock = sesionUsuario.tienePermiso(PermisoCodigo.INVENTARIO_VER);
+        veCertificadoArca = navigator.puedeAcceder(AppView.FACTURACION_CONFIG);
+        vePendientesCae = navigator.puedeAcceder(AppView.FACTURACION_PENDIENTES);
 
         configurarTarjetasDeVentas();
         configurarTablaVentasPorCaja();
@@ -250,6 +266,71 @@ public class InicioController extends AbstractController {
         if (veStock) {
             execute(() -> mostrarStock(consultaStockService.resumen()));
         }
+
+        mostrarAvisosFacturacion();
+    }
+
+    /**
+     * Avisa si el certificado de ARCA está vencido o por vencer
+     * (FACTURACION_CONFIGURAR) y si hay comprobantes sin CAE
+     * (FACTURACION_REINTENTAR). Un error al consultar no se muestra: son avisos.
+     */
+    private void mostrarAvisosFacturacion() {
+
+        List<Node> avisos = new ArrayList<>();
+
+        if (veCertificadoArca) {
+            try {
+                ConfiguracionArcaDto config = configuracionArca.obtener();
+                Long dias = config.getDiasParaVencer();
+
+                if (dias != null && (config.isHabilitada() || dias >= 0) && config.isCertificadoPorVencer()) {
+                    String texto = dias < 0
+                            ? "El certificado de ARCA está vencido: no se pueden emitir facturas electrónicas."
+                            : "El certificado de ARCA vence " + (dias == 0 ? "hoy" : "en " + dias
+                            + (dias == 1 ? " día" : " días")) + ". Renuévelo para seguir facturando.";
+                    avisos.add(aviso(texto, dias < 0 ? "form-error" : "form-warning",
+                            "Renovar certificado", AppView.FACTURACION_CONFIG));
+                }
+            } catch (RuntimeException e) {
+                // Sin aviso.
+            }
+        }
+
+        if (vePendientesCae) {
+            try {
+                int pendientes = facturacion.listarSinAutorizar().size();
+
+                if (pendientes > 0) {
+                    avisos.add(aviso(pendientes == 1 ? "Hay 1 comprobante electrónico sin CAE."
+                                    : "Hay " + pendientes + " comprobantes electrónicos sin CAE.",
+                            "form-warning", "Ver pendientes", AppView.FACTURACION_PENDIENTES));
+                }
+            } catch (RuntimeException e) {
+                // Sin aviso.
+            }
+        }
+
+        seccionAvisos.getChildren().setAll(avisos);
+        mostrar(seccionAvisos, !avisos.isEmpty());
+    }
+
+    private HBox aviso(String texto, String estilo, String accion, AppView destino) {
+
+        Label mensaje = new Label(texto);
+        mensaje.setWrapText(true);
+        mensaje.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(mensaje, Priority.ALWAYS);
+
+        Button boton = new Button(accion);
+        boton.getStyleClass().add("btn-secondary");
+        boton.setOnAction(e -> navigator.navigate(destino));
+
+        HBox aviso = new HBox(12, mensaje, boton);
+        aviso.setAlignment(Pos.CENTER_LEFT);
+        aviso.getStyleClass().add(estilo);
+        aviso.setMaxWidth(900);
+        return aviso;
     }
 
     private void mostrarVentasPorCaja(List<VentasPorCaja> cajas) {

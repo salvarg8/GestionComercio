@@ -48,6 +48,13 @@
 
         </HBox>
 
+        <!-- Avisos de facturación electrónica (certificado por vencer, comprobantes sin CAE) -->
+
+        <VBox fx:id="seccionAvisos"
+              spacing="8"
+              visible="false"
+              managed="false"/>
+
         <!-- ===================================================== -->
         <!-- RESUMEN DEL DÍA -->
         <!-- ===================================================== -->

@@ -37,6 +37,12 @@
 
                 <Region HBox.hgrow="ALWAYS"/>
 
+                <Button fx:id="btnPendientesCae"
+                        styleClass="btn-secondary"
+                        text="Pendientes de CAE"
+                        visible="false"
+                        managed="false"/>
+
                 <Button fx:id="btnNuevaVenta"
                         styleClass="btn-primary"
                         text="Nueva venta"/>
@@ -129,9 +135,14 @@
                              prefWidth="110"
                              sortable="false"/>
 
+                <TableColumn fx:id="colFactura"
+                             text="Factura electrónica"
+                             prefWidth="150"
+                             sortable="false"/>
+
                 <TableColumn fx:id="colAcciones"
                              text="Acciones"
-                             prefWidth="130"
+                             prefWidth="160"
                              sortable="false"/>
 
             </columns>

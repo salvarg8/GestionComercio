@@ -16,6 +16,7 @@ import lombok.experimental.SuperBuilder;
 import org.gestionComercio.enums.AnchoTicket;
 import org.gestionComercio.enums.CondicionIVA;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -55,6 +56,9 @@ public class Empresa extends BaseEntity {
 
     @Column(length = 30)
     private String ingresosBrutos;
+
+    /** Se imprime en los comprobantes electrónicos. */
+    private LocalDate fechaInicioActividades;
 
     /** Ancho del rollo donde se imprimen los tickets. */
     @Enumerated(EnumType.STRING)

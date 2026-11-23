@@ -9,6 +9,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,6 +17,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.BatchSize;
 import org.gestionComercio.enums.EstadoVenta;
 import org.gestionComercio.enums.FormaPago;
 import org.gestionComercio.enums.TipoComprobante;
@@ -41,8 +43,11 @@ public class Venta extends BaseEntity {
     @Column(nullable = false)
     private TipoComprobante tipoComprobante;
 
-    /** Correlativo dentro del tipo de comprobante (lo asigna {@code NumeradorComprobanteRepository}). */
-    @Column(nullable = false)
+    /**
+     * Correlativo dentro del tipo de comprobante (lo asigna
+     * {@code NumeradorComprobanteRepository}). Null en las facturas: su número
+     * lo da ARCA y está en {@link #getFacturaArca()}.
+     */
     private Long numeroComprobante;
 
     @Column(nullable = false, precision = 12, scale = 2)
@@ -94,5 +99,28 @@ public class Venta extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_anulacion_id")
     private Usuario usuarioAnulacion;
+
+    /** Factura electrónica y, si se anuló después de autorizada, su nota de crédito. */
+    @Builder.Default
+    @OneToMany(mappedBy = "venta")
+    @OrderBy("id")
+    @BatchSize(size = 50)
+    private List<ComprobanteArca> comprobantesArca = new ArrayList<>();
+
+    /** La factura electrónica de la venta; null si no es una factura. */
+    public ComprobanteArca getFacturaArca() {
+        return comprobantesArca.stream()
+                .filter(c -> c.getTipoComprobante().esFactura())
+                .findFirst()
+                .orElse(null);
+    }
+
+    /** La nota de crédito que anula la factura; null si no tiene. */
+    public ComprobanteArca getNotaCreditoArca() {
+        return comprobantesArca.stream()
+                .filter(c -> c.getTipoComprobante().esNotaCredito())
+                .findFirst()
+                .orElse(null);
+    }
 
 }

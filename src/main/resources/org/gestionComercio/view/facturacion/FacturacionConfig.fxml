@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="org.gestionComercio.controller.facturacion.FacturacionConfigController"
+            fitToWidth="true"
+            styleClass="form-scroll">
+
+    <content>
+
+        <VBox spacing="15.0"
+              prefWidth="900"
+              maxWidth="900">
+
+            <padding>
+                <Insets top="30" right="30" bottom="30" left="30"/>
+            </padding>
+
+            <children>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+
+                    <children>
+
+                        <Label text="Facturación electrónica (ARCA)"
+                               style="-fx-font-size: 22px; -fx-font-weight: bold;"/>
+
+                        <Region HBox.hgrow="ALWAYS"/>
+
+                        <Button fx:id="btnPendientes"
+                                styleClass="btn-secondary"
+                                text="Comprobantes pendientes de CAE"/>
+
+                        <Button fx:id="btnActualizar"
+                                styleClass="btn-secondary"
+                                text="Actualizar"/>
+
+                    </children>
+
+                </HBox>
+
+                <Label text="Para emitir facturas A, B o C con CAE, el sistema se conecta con ARCA usando un certificado digital propio del comercio. Siga los pasos en orden: los que se hacen en el sitio de ARCA los puede hacer usted o su contador."
+                       styleClass="form-hint"
+                       wrapText="true"/>
+
+                <!-- Avisos -->
+
+                <VBox fx:id="panelAvisos" spacing="8"/>
+
+                <!-- ============================================= -->
+                <!-- ESTADO -->
+                <!-- ============================================= -->
+
+                <VBox spacing="8" styleClass="paso-guia">
+
+                    <children>
+
+                        <Label text="Estado actual" styleClass="paso-titulo"/>
+
+                        <GridPane hgap="12" vgap="6">
+
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="150"/>
+                                <ColumnConstraints hgrow="ALWAYS"/>
+                            </columnConstraints>
+
+                            <children>
+
+                                <Label text="Facturación electrónica:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                                <HBox fx:id="boxEstado" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                                <Label text="Ambiente:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                                <Label fx:id="lblAmbiente" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                                <Label text="Punto de venta:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                                <Label fx:id="lblPuntoVenta" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+                                <Label text="Certificado:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                                <Label fx:id="lblCertificado" wrapText="true" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+                            </children>
+
+                        </GridPane>
+
+                    </children>
+
+                </VBox>
+
+                <!-- ============================================= -->
+                <!-- GUÍA PASO A PASO (la arma el controlador) -->
+                <!-- ============================================= -->
+
+                <Label text="Pasos para configurar la facturación"
+                       style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+                <VBox fx:id="contenedorPasos" spacing="10"/>
+
+            </children>
+
+        </VBox>
+
+    </content>
+
+</ScrollPane>

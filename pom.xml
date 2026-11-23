@@ -33,6 +33,10 @@
 
         <poi.version>5.4.1</poi.version>
 
+        <bouncycastle.version>1.80</bouncycastle.version>
+
+        <zxing.version>3.5.3</zxing.version>
+
     </properties>
 
     <dependencies>
@@ -116,6 +120,24 @@
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
             <version>${poi.version}</version>
+        </dependency>
+
+        <!-- ===================================== -->
+        <!-- Facturación electrónica (ARCA) -->
+        <!-- ===================================== -->
+
+        <!-- Firma CMS del ticket de acceso (WSAA) y pedido de certificado (CSR) -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <version>${bouncycastle.version}</version>
+        </dependency>
+
+        <!-- Código QR de los comprobantes electrónicos -->
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>${zxing.version}</version>
         </dependency>
 
         <!-- ===================================== -->

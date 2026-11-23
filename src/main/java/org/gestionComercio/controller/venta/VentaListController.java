@@ -13,14 +13,19 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import lombok.RequiredArgsConstructor;
 import org.gestionComercio.controller.base.AbstractController;
+import org.gestionComercio.controller.facturacion.AutorizacionComprobantes;
+import org.gestionComercio.controller.facturacion.FacturaElectronicaFormato;
+import org.gestionComercio.dto.arca.ComprobanteArcaDto;
 import org.gestionComercio.dto.venta.VentaDto;
 import org.gestionComercio.enums.EstadoVenta;
 import org.gestionComercio.enums.PermisoCodigo;
 import org.gestionComercio.navigation.AppView;
 import org.gestionComercio.navigation.Navigator;
 import org.gestionComercio.security.SesionUsuario;
+import org.gestionComercio.service.FacturacionElectronicaService;
 import org.gestionComercio.service.VentaService;
 import org.gestionComercio.util.DateUtils;
 import org.gestionComercio.view.component.ComboBoxBusqueda;
@@ -49,6 +54,9 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @Scope("prototype")
 public class VentaListController extends AbstractController {
+
+    @FXML
+    private Button btnPendientesCae;
 
     @FXML
     private Button btnNuevaVenta;
@@ -93,6 +101,9 @@ public class VentaListController extends AbstractController {
     private TableColumn<VentaDto, EstadoVenta> colEstado;
 
     @FXML
+    private TableColumn<VentaDto, VentaDto> colFactura;
+
+    @FXML
     private TableColumn<VentaDto, Void> colAcciones;
 
     @FXML
@@ -108,6 +119,8 @@ public class VentaListController extends AbstractController {
     private final Navigator navigator;
     private final SesionUsuario sesionUsuario;
     private final ImpresionComprobante impresionComprobante;
+    private final FacturacionElectronicaService facturacion;
+    private final AutorizacionComprobantes autorizacion;
 
     /** Ventas del período y estado elegidos, antes de filtrar por cliente. */
     private List<VentaDto> consultadas = List.of();
@@ -145,6 +158,7 @@ public class VentaListController extends AbstractController {
         txtCliente.textProperty().addListener((obs, o, n) -> filtrarPorCliente());
         btnLimpiar.setOnAction(e -> limpiarFiltros());
         btnNuevaVenta.setOnAction(e -> navigator.navigate(AppView.PUNTO_VENTA));
+        btnPendientesCae.setOnAction(e -> navigator.navigate(AppView.FACTURACION_PENDIENTES));
     }
 
     /** "Todos los estados" es el valor null del combo. */
@@ -188,6 +202,28 @@ public class VentaListController extends AbstractController {
                 setGraphic(empty || estado == null ? null : VentaFormato.badgeEstado(estado));
             }
         });
+
+        // Facturada / pendiente de CAE / rechazada; vacía en tickets y remitos.
+        colFactura.setCellValueFactory(c -> new SimpleObjectProperty<>(c.getValue()));
+        colFactura.setCellFactory(column -> new TableCell<>() {
+
+            @Override
+            protected void updateItem(VentaDto venta, boolean empty) {
+
+                super.updateItem(venta, empty);
+
+                Label badge = empty ? null : FacturaElectronicaFormato.badgeVenta(venta);
+
+                if (badge != null) {
+                    ComprobanteArcaDto comprobante = FacturaElectronicaFormato.comprobanteDeReferencia(venta);
+                    if (comprobante.getObservaciones() != null && comprobante.getEstado().faltaAutorizar()) {
+                        badge.setTooltip(new Tooltip(comprobante.getObservaciones()));
+                    }
+                }
+
+                setGraphic(badge);
+            }
+        });
     }
 
     /**
@@ -207,6 +243,11 @@ public class VentaListController extends AbstractController {
         if (sesionUsuario.tienePermiso(PermisoCodigo.VENTA_ANULAR)) {
             acciones.add(new Accion<>(FontAwesomeSolid.BAN, "Anular", "btn-icon-delete",
                     venta -> VentaFormato.anulable(venta.getEstadoVenta()), this::anular));
+        }
+
+        if (sesionUsuario.tienePermiso(PermisoCodigo.FACTURACION_REINTENTAR)) {
+            acciones.add(new Accion<>(FontAwesomeSolid.SYNC, "Reintentar la autorización en ARCA", "btn-icon-edit",
+                    FacturaElectronicaFormato::faltaAutorizar, this::reintentarAutorizacion));
         }
 
         colAcciones.setCellFactory(column -> new RowActionsTableCell<>(acciones));
@@ -237,9 +278,26 @@ public class VentaListController extends AbstractController {
     private void anular(VentaDto venta) {
 
         new AnularVentaDialog(ventaService, venta).mostrar().ifPresent(anulada -> {
-            cargar();
-            success("Venta " + anulada.getComprobante() + " anulada correctamente.");
+
+            String anulacion = "Venta " + anulada.getComprobante() + " anulada correctamente.";
+
+            // Anular una factura autorizada emite la nota de crédito: se pide su CAE.
+            if (!FacturaElectronicaFormato.faltaAutorizar(anulada.getNotaCredito())) {
+                cargar();
+                success(anulacion);
+                return;
+            }
+
+            autorizacion.autorizar(anulada.getId(), (comprobantes, resultado) -> {
+                cargar();
+                AutorizacionComprobantes.mostrar(new FacturaElectronicaFormato.Resultado(resultado.tipo(),
+                        resultado.titulo(), anulacion + "\n\n" + resultado.mensaje(), false));
+            });
         });
+    }
+
+    private void reintentarAutorizacion(VentaDto venta) {
+        autorizacion.autorizarYMostrar(venta.getId(), this::cargar);
     }
 
     private void limpiarFiltros() {
@@ -264,6 +322,26 @@ public class VentaListController extends AbstractController {
             consultadas = ventaService.listar(dpDesde.getValue(), dpHasta.getValue(), cmbEstado.getValue());
             filtrarPorCliente();
         });
+
+        actualizarPendientesCae();
+    }
+
+    /** "Pendientes de CAE (n)", sólo con acceso a esa pantalla y si hay alguno (de cualquier fecha). */
+    private void actualizarPendientesCae() {
+
+        int pendientes = 0;
+
+        if (navigator.puedeAcceder(AppView.FACTURACION_PENDIENTES)) {
+            try {
+                pendientes = facturacion.listarSinAutorizar().size();
+            } catch (RuntimeException e) {
+                pendientes = 0;
+            }
+        }
+
+        btnPendientesCae.setText("Pendientes de CAE (" + pendientes + ")");
+        btnPendientesCae.setVisible(pendientes > 0);
+        btnPendientesCae.setManaged(pendientes > 0);
     }
 
     private void filtrarPorCliente() {

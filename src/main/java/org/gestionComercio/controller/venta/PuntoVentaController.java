@@ -26,13 +26,18 @@ import lombok.RequiredArgsConstructor;
 import org.gestionComercio.controller.base.AbstractController;
 import org.gestionComercio.controller.venta.CarritoVenta.Cobro;
 import org.gestionComercio.controller.venta.CarritoVenta.Renglon;
+import org.gestionComercio.controller.facturacion.AutorizacionComprobantes;
+import org.gestionComercio.controller.facturacion.FacturaElectronicaFormato;
+import org.gestionComercio.dto.arca.ComprobanteArcaDto;
 import org.gestionComercio.dto.cliente.ClienteDto;
 import org.gestionComercio.dto.producto.ProductoDto;
 import org.gestionComercio.dto.venta.VentaDto;
 import org.gestionComercio.enums.FormaPago;
 import org.gestionComercio.enums.TipoComprobante;
+import org.gestionComercio.exception.BusinessException;
 import org.gestionComercio.navigation.AppView;
 import org.gestionComercio.navigation.Navigator;
+import org.gestionComercio.service.FacturacionElectronicaService;
 import org.gestionComercio.service.VentaService;
 import org.gestionComercio.util.CantidadUtils;
 import org.gestionComercio.util.NumberUtils;
@@ -136,6 +141,9 @@ public class PuntoVentaController extends AbstractController {
     private ComboBox<TipoComprobante> cmbTipoComprobante;
 
     @FXML
+    private Label lblFactura;
+
+    @FXML
     private ComboBox<ClienteDto> cmbCliente;
 
     @FXML
@@ -171,8 +179,13 @@ public class PuntoVentaController extends AbstractController {
     private final VentaService ventaService;
     private final Navigator navigator;
     private final ImpresionComprobante impresionComprobante;
+    private final FacturacionElectronicaService facturacion;
+    private final AutorizacionComprobantes autorizacion;
 
     private final CarritoVenta carrito = new CarritoVenta();
+
+    /** Si se ofrecen facturas electrónicas (se consulta al abrir la pantalla). */
+    private boolean facturacionHabilitada;
 
     @Override
     protected void initializeComponents() {
@@ -183,8 +196,7 @@ public class PuntoVentaController extends AbstractController {
         cmbFormaPago.getItems().setAll(FormaPago.delPuntoDeVenta());
         cmbFormaPago.setValue(FormaPago.EFECTIVO);
 
-        cmbTipoComprobante.getItems().setAll(TipoComprobante.delPuntoDeVenta());
-        cmbTipoComprobante.setValue(TipoComprobante.TICKET);
+        configurarComprobantes();
 
         mostrar(btnHistorial, navigator.puedeAcceder(AppView.VENTA_LIST));
 
@@ -217,6 +229,9 @@ public class PuntoVentaController extends AbstractController {
         });
 
         tblCarrito.setOnKeyPressed(this::teclaEnTabla);
+
+        cmbCliente.valueProperty().addListener((obs, o, n) -> actualizarFactura());
+        cmbTipoComprobante.valueProperty().addListener((obs, o, n) -> mostrarAvisoFactura());
 
         cmbFormaPago.valueProperty().addListener((obs, o, n) -> {
             mostrar(panelEfectivo, n == FormaPago.EFECTIVO);
@@ -333,6 +348,117 @@ public class PuntoVentaController extends AbstractController {
         cmbCliente.setValue(CONSUMIDOR_FINAL);
         cmbCliente.setVisibleRowCount(12);
         cmbCliente.setPromptText("Buscar cliente por nombre o documento...");
+    }
+
+    // ------------------------------------------------------------------
+    // Comprobante
+    // ------------------------------------------------------------------
+
+    /**
+     * Con la facturación electrónica habilitada se ofrece primero la factura
+     * que corresponde al cliente (A, B o C) y es la opción por defecto; si
+     * no, ticket y remito.
+     */
+    private void configurarComprobantes() {
+
+        execute(() -> facturacionHabilitada = facturacion.estaHabilitada());
+
+        actualizarFactura();
+        cmbTipoComprobante.setValue(comprobantePorDefecto());
+    }
+
+    /** Recalcula la letra de la factura según el cliente elegido, conservando la elección de factura. */
+    private void actualizarFactura() {
+
+        TipoComprobante elegido = cmbTipoComprobante.getValue();
+
+        List<TipoComprobante> tipos = new ArrayList<>();
+        String problema = null;
+
+        if (facturacionHabilitada) {
+            try {
+                tipos.add(facturacion.tipoFactura(clienteElegidoId()));
+            } catch (BusinessException e) {
+                problema = "No se puede emitir factura: " + e.getMessage();
+            } catch (RuntimeException e) {
+                problema = "No se pudo determinar la factura que corresponde al cliente.";
+            }
+        }
+
+        tipos.addAll(List.of(TipoComprobante.delPuntoDeVenta()));
+        cmbTipoComprobante.getItems().setAll(tipos);
+
+        if (elegido != null && elegido.esFactura()) {
+            elegido = tipos.get(0).esFactura() ? tipos.get(0) : TipoComprobante.TICKET;
+        }
+
+        cmbTipoComprobante.setValue(elegido);
+
+        mostrarAvisoFactura();
+
+        if (problema != null) {
+            lblFactura.setText(problema);
+            mostrar(lblFactura, true);
+        }
+    }
+
+    private Long clienteElegidoId() {
+        ClienteDto cliente = cmbCliente.getValue();
+        return cliente == null || cliente == CONSUMIDOR_FINAL ? null : cliente.getId();
+    }
+
+    private TipoComprobante comprobantePorDefecto() {
+        return cmbTipoComprobante.getItems().isEmpty() || !cmbTipoComprobante.getItems().get(0).esFactura()
+                ? TipoComprobante.TICKET
+                : cmbTipoComprobante.getItems().get(0);
+    }
+
+    private void mostrarAvisoFactura() {
+
+        TipoComprobante tipo = cmbTipoComprobante.getValue();
+        boolean factura = tipo != null && tipo.esFactura();
+
+        lblFactura.setText(factura ? tipo.getDescripcion() + ": al confirmar se pide el CAE a ARCA." : "");
+        mostrar(lblFactura, factura);
+    }
+
+    /**
+     * Pide el CAE de la factura recién registrada y, si ARCA la autorizó,
+     * ofrece imprimirla. Si no, la venta queda registrada con la factura
+     * pendiente y se informa el motivo.
+     */
+    private void autorizarFactura(VentaDto guardada, Cobro cobro) {
+
+        autorizacion.autorizar(guardada.getId(), (comprobantes, resultado) -> {
+
+            ComprobanteArcaDto factura = comprobantes.stream()
+                    .filter(c -> c.getTipoComprobante() == guardada.getTipoComprobante())
+                    .findFirst()
+                    .orElse(null);
+
+            String registro = "Se registró la venta.\n" + totales(guardada, cobro) + "\n\n" + resultado.mensaje();
+
+            if (factura != null && factura.isAutorizado()) {
+
+                guardada.setFactura(factura);
+
+                if (Dialogs.confirmar(resultado.titulo(), registro + "\n\n¿Desea imprimir la factura?",
+                        "Imprimir", false)) {
+                    execute(() -> impresionComprobante.imprimir(guardada));
+                }
+
+            } else {
+                AutorizacionComprobantes.mostrar(new FacturaElectronicaFormato.Resultado(
+                        resultado.tipo(), resultado.titulo(), registro, false));
+            }
+
+            enfocarBusqueda();
+        });
+    }
+
+    private static String totales(VentaDto guardada, Cobro cobro) {
+        return "Total: " + VentaFormato.importe(guardada.getTotal())
+                + (cobro.vuelto() == null ? "" : "\nVuelto: " + VentaFormato.importe(cobro.vuelto()));
     }
 
     // ------------------------------------------------------------------
@@ -570,9 +696,13 @@ public class PuntoVentaController extends AbstractController {
 
             nuevaVenta();
 
+            if (guardada.getTipoComprobante() != null && guardada.getTipoComprobante().esElectronico()) {
+                autorizarFactura(guardada, cobro);
+                return;
+            }
+
             String registro = "Se registró la venta " + guardada.getComprobante() + ".\n\n"
-                    + "Total: " + VentaFormato.importe(guardada.getTotal())
-                    + (cobro.vuelto() == null ? "" : "\nVuelto: " + VentaFormato.importe(cobro.vuelto()))
+                    + totales(guardada, cobro)
                     + "\n\n¿Desea imprimir el comprobante?";
 
             // La venta ya quedó registrada: si falla la impresión se avisa aparte
@@ -635,7 +765,7 @@ public class PuntoVentaController extends AbstractController {
         txtPagaCon.clear();
         cmbCliente.setValue(CONSUMIDOR_FINAL);
         cmbFormaPago.setValue(FormaPago.EFECTIVO);
-        cmbTipoComprobante.setValue(TipoComprobante.TICKET);
+        cmbTipoComprobante.setValue(comprobantePorDefecto());
 
         refrescarCarrito();
     }

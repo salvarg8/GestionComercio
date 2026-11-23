@@ -37,7 +37,11 @@ import org.gestionComercio.enums.UnidadMedida;
 import org.gestionComercio.exception.AuthorizationException;
 import org.gestionComercio.exception.BusinessException;
 import org.gestionComercio.exception.ValidationException;
+import org.gestionComercio.arca.AlmacenClaveEnMemoria;
+import org.gestionComercio.arca.ArcaConfig;
+import org.gestionComercio.arca.ClaveCertificadoArca;
 import org.gestionComercio.mapper.ClienteMapperImpl;
+import org.gestionComercio.mapper.ComprobanteArcaMapperImpl;
 import org.gestionComercio.mapper.DetalleVentaMapperImpl;
 import org.gestionComercio.mapper.EmpresaMapperImpl;
 import org.gestionComercio.mapper.ProductoMapperImpl;
@@ -51,6 +55,8 @@ import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.ComprobanteVentaService;
 import org.gestionComercio.service.InventarioService;
 import org.gestionComercio.service.VentaService;
+import org.gestionComercio.service.impl.arca.ConfiguracionArcaVigente;
+import org.gestionComercio.service.impl.arca.EmisionComprobantesArca;
 import org.gestionComercio.support.PostgresTestcontainersConfig;
 import org.gestionComercio.validation.VentaValidator;
 import org.junit.jupiter.api.BeforeEach;
@@ -98,6 +104,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         ComprobanteVentaServiceImpl.class,
         EmpresaMapperImpl.class,
         VentaValidator.class,
+        EmisionComprobantesArca.class,
+        ConfiguracionArcaVigente.class,
+        ClaveCertificadoArca.class,
+        AlmacenClaveEnMemoria.class,
+        ArcaConfig.class,
+        ComprobanteArcaMapperImpl.class,
         VentaMapperImpl.class,
         DetalleVentaMapperImpl.class,
         ProductoMapperImpl.class,
@@ -453,14 +465,16 @@ class VentaServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("No se pueden emitir facturas: requieren facturación electrónica")
+    @DisplayName("Sin facturación electrónica configurada no se pueden emitir facturas y no se guarda nada")
     void facturaRechazada() {
         abrirCaja();
         Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
         long ventasAntes = ventaRepository.count();
 
         assertThatThrownBy(() -> registrarComprobante(TipoComprobante.FACTURA_B, gaseosa))
-                .isInstanceOf(ValidationException.class);
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("facturación electrónica");
+        assertThat(stockDe(gaseosa)).isEqualByComparingTo("10");
 
         assertThat(ventaRepository.count()).isEqualTo(ventasAntes);
     }

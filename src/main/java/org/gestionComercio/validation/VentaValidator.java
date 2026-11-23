@@ -60,7 +60,11 @@ public class VentaValidator implements Validator<VentaDto> {
         return result;
     }
 
-    /** Las facturas y notas requieren ARCA: todavía no se emiten. */
+    /**
+     * Ticket, remito o factura. Las notas de crédito no se registran como
+     * venta: se emiten al anular. Si la factura corresponde (ARCA habilitado,
+     * letra, datos del cliente) lo controla el servicio de ventas.
+     */
     private void validarTipoComprobante(TipoComprobante tipo, ValidationResult result) {
 
         if (tipo == null) {
@@ -68,9 +72,9 @@ public class VentaValidator implements Validator<VentaDto> {
             return;
         }
 
-        if (!tipo.esDelPuntoDeVenta()) {
-            result.addError("tipoComprobante", "No se puede emitir " + tipo.getDescripcion().toLowerCase()
-                    + ": requiere facturación electrónica (ARCA), que todavía no está disponible.");
+        if (!tipo.seRegistraComoVenta()) {
+            result.addError("tipoComprobante", "No se puede registrar una venta con "
+                    + tipo.getDescripcion().toLowerCase() + ": se emite al anular una venta facturada.");
         }
     }
 

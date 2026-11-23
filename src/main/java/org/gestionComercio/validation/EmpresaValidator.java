@@ -5,6 +5,8 @@ import org.gestionComercio.enums.CondicionIVA;
 import org.gestionComercio.util.CuitUtils;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+
 /**
  * Espera el DTO ya normalizado por el servicio (textos recortados, opcionales
  * vacíos en null y CUIT sin guiones, puntos ni espacios).
@@ -39,6 +41,10 @@ public class EmpresaValidator implements Validator<EmpresaDto> {
         validarCondicionIva(dto, result);
         validarEmail(dto, result);
 
+        if (dto.getFechaInicioActividades() != null && dto.getFechaInicioActividades().isAfter(LocalDate.now())) {
+            result.addError("fechaInicioActividades", "La fecha de inicio de actividades no puede ser futura.");
+        }
+
         largoMaximo(dto.getIngresosBrutos(), INGRESOS_BRUTOS_MAX, "ingresosBrutos", "Ingresos brutos", result);
         largoMaximo(dto.getDireccion(), DIRECCION_MAX, "direccion", "La dirección", result);
         largoMaximo(dto.getTelefono(), TELEFONO_MAX, "telefono", "El teléfono", result);
@@ -66,7 +72,10 @@ public class EmpresaValidator implements Validator<EmpresaDto> {
         }
     }
 
-    /** El comercio emite comprobantes: no puede ser consumidor final. */
+    /**
+     * El comercio emite comprobantes: sólo puede ser responsable inscripto,
+     * monotributista o exento (define si factura A/B o C).
+     */
     private void validarCondicionIva(EmpresaDto dto, ValidationResult result) {
 
         ValidationUtils.notNull(
@@ -76,11 +85,13 @@ public class EmpresaValidator implements Validator<EmpresaDto> {
                 result
         );
 
-        if (dto.getCondicionIva() == CondicionIVA.CONSUMIDOR_FINAL) {
+        CondicionIVA condicion = dto.getCondicionIva();
+
+        if (condicion != null && !condicion.esDeEmisor()) {
             result.addError(
                     "condicionIva",
-                    "La empresa no puede ser consumidor final: elija responsable inscripto, "
-                            + "monotributista o exento."
+                    "La empresa no puede ser " + condicion.getDescripcion().toLowerCase()
+                            + ": elija responsable inscripto, monotributista o exento."
             );
         }
     }

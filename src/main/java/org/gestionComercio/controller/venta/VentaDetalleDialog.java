@@ -9,6 +9,8 @@ import javafx.scene.control.TableView;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
+import org.gestionComercio.controller.facturacion.FacturaElectronicaFormato;
+import org.gestionComercio.dto.arca.ComprobanteArcaDto;
 import org.gestionComercio.dto.venta.DetalleVentaDto;
 import org.gestionComercio.dto.venta.VentaDto;
 import org.gestionComercio.enums.EstadoVenta;
@@ -34,7 +36,13 @@ class VentaDetalleDialog {
 
     void mostrar() {
 
-        VBox cuerpo = new VBox(12, datos(), tabla(), totales());
+        VBox cuerpo = new VBox(12, datos());
+
+        if (venta.getFactura() != null) {
+            cuerpo.getChildren().add(facturaElectronica());
+        }
+
+        cuerpo.getChildren().addAll(tabla(), totales());
 
         Dialogs.crear(Dialogs.Tipo.INFORMACION, "Venta " + venta.getComprobante(),
                 cuerpo, Dialogs.ACEPTAR).showAndWait();
@@ -61,6 +69,34 @@ class VentaDetalleDialog {
             motivo.setMaxWidth(600);
             grid.add(new Label("Motivo:"), 0, 4);
             grid.add(motivo, 1, 4, 3, 1);
+        }
+
+        return grid;
+    }
+
+    /** Estado en ARCA de la factura y, si se anuló, de la nota de crédito: CAE u observaciones. */
+    private GridPane facturaElectronica() {
+
+        GridPane grid = grilla();
+        int fila = 0;
+
+        for (ComprobanteArcaDto c : new ComprobanteArcaDto[]{venta.getFactura(), venta.getNotaCredito()}) {
+
+            if (c == null) {
+                continue;
+            }
+
+            grid.addRow(fila++, new Label(c.getTipoComprobante().esNotaCredito() ? "Nota de crédito:" : "Factura:"),
+                    new Label(c.getComprobante()), new Label("ARCA:"), FacturaElectronicaFormato.badge(c));
+
+            String detalle = c.isAutorizado() ? FacturaElectronicaFormato.cae(c) : c.getObservaciones();
+
+            if (detalle != null) {
+                Label lblDetalle = new Label(detalle);
+                lblDetalle.setWrapText(true);
+                lblDetalle.setMaxWidth(600);
+                grid.add(lblDetalle, 1, fila++, 3, 1);
+            }
         }
 
         return grid;

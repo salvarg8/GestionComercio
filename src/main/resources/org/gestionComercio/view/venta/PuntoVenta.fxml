@@ -212,6 +212,12 @@
                         <ComboBox fx:id="cmbTipoComprobante"
                                   maxWidth="Infinity"/>
 
+                        <Label fx:id="lblFactura"
+                               styleClass="form-hint"
+                               wrapText="true"
+                               visible="false"
+                               managed="false"/>
+
                         <Label text="Cliente  (F4)"/>
 
                         <ComboBox fx:id="cmbCliente"

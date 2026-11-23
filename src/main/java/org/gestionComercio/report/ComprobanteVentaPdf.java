@@ -11,6 +11,8 @@ import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState;
 import org.apache.pdfbox.util.Matrix;
+import org.gestionComercio.dto.arca.ComprobanteArcaDto;
+import org.gestionComercio.dto.arca.IvaComprobanteArcaDto;
 import org.gestionComercio.dto.cliente.ClienteDto;
 import org.gestionComercio.dto.empresa.EmpresaDto;
 import org.gestionComercio.dto.venta.DetalleVentaDto;
@@ -39,14 +41,24 @@ import java.util.Objects;
  * renglones y totales. Una venta anulada se marca como ANULADA en el
  * encabezado y con una marca de agua en cada página.
  *
- * <p>No es un comprobante fiscal: la facturación electrónica (ARCA) no está
- * implementada, y así lo indica el pie de cada página.
+ * <p>Los remitos (y los tickets) no son comprobantes fiscales, y así lo indica
+ * el pie de cada página. Las facturas electrónicas llevan la letra y el código
+ * del comprobante, el IVA discriminado (A) o contenido (B), el CAE con su
+ * vencimiento y el código QR de ARCA; mientras ARCA no las autorice, salen
+ * marcadas como no válidas.
  */
 public final class ComprobanteVentaPdf {
 
     static final String LEYENDA_NO_FISCAL = "Documento no válido como factura.";
 
+    static final String LEYENDA_SIN_CAE = "Pendiente de autorización de ARCA: documento no válido como factura.";
+
+    static final String LEYENDA_TRANSPARENCIA = "Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)";
+
     static final String ANULADA = "ANULADA";
+
+    private static final float LADO_QR = 84;
+    private static final float LADO_LETRA = 38;
 
     private static final PDRectangle PAGINA = PDRectangle.A4;
     private static final float MARGEN = 40;
@@ -70,6 +82,9 @@ public final class ComprobanteVentaPdf {
     private final EmpresaDto empresa;
     private final ClienteDto cliente;
 
+    /** Factura electrónica; null en remitos. */
+    private final ComprobanteArcaDto factura;
+
     private final PDFont normal = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
     private final PDFont negrita = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
 
@@ -81,6 +96,7 @@ public final class ComprobanteVentaPdf {
         this.venta = Objects.requireNonNull(venta, "venta");
         this.empresa = Objects.requireNonNull(empresa, "empresa");
         this.cliente = cliente;
+        this.factura = venta.getFactura();
     }
 
     /**
@@ -116,6 +132,11 @@ public final class ComprobanteVentaPdf {
             datosVenta();
             renglones();
             totales();
+
+            if (factura != null) {
+                datosFiscales();
+            }
+
             contenido.close();
 
             marcarPaginas();
@@ -145,17 +166,24 @@ public final class ComprobanteVentaPdf {
             xTexto += ancho + 10;
         }
 
+        // En las facturas, la letra va en un recuadro al centro: el texto de la izquierda se acorta.
+        float limiteIzq = factura == null ? MARGEN + 290 : MARGEN + 245;
+
         // Izquierda: identificación del comercio.
         float yIzq = arriba - 12;
-        texto(negrita, 13, xTexto, yIzq, recortar(negrita, 13, empresa.getRazonSocial(), 290 - xTexto + MARGEN));
+        texto(negrita, 13, xTexto, yIzq, recortar(negrita, 13, empresa.getRazonSocial(), limiteIzq - xTexto));
         yIzq -= 15;
 
         for (String linea : lineasNoVacias(
                 empresa.getNombreFantasia(),
                 empresa.getDireccion(),
                 unir(" · ", prefijo("Tel. ", empresa.getTelefono()), empresa.getEmail()))) {
-            texto(normal, 9, xTexto, yIzq, recortar(normal, 9, linea, 290 - xTexto + MARGEN));
+            texto(normal, 9, xTexto, yIzq, recortar(normal, 9, linea, limiteIzq - xTexto));
             yIzq -= 12;
+        }
+
+        if (factura != null) {
+            letraDelComprobante(arriba);
         }
 
         // Derecha: comprobante y datos fiscales del comercio.
@@ -168,14 +196,20 @@ public final class ComprobanteVentaPdf {
         yDer -= 16;
         texto(negrita, 11, xDer, yDer, numero());
         yDer -= 14;
-        texto(normal, 9, xDer, yDer, "Fecha: " + DateUtils.format(venta.getFecha()));
+
+        boolean conFechaFiscal = factura != null && factura.getFecha() != null;
+        texto(normal, 9, xDer, yDer, conFechaFiscal
+                ? "Fecha de emisión: " + DateUtils.format(factura.getFecha())
+                : "Fecha: " + DateUtils.format(venta.getFecha()));
         yDer -= 14;
 
         for (String linea : lineasNoVacias(
                 prefijo("CUIT: ", CuitUtils.formatear(empresa.getCuit())),
                 prefijo("Condición IVA: ", empresa.getCondicionIva() == null
                         ? null : empresa.getCondicionIva().getDescripcion()),
-                prefijo("Ingresos Brutos: ", empresa.getIngresosBrutos()))) {
+                prefijo("Ingresos Brutos: ", empresa.getIngresosBrutos()),
+                factura == null ? null
+                        : prefijo("Inicio de actividades: ", DateUtils.format(empresa.getFechaInicioActividades())))) {
             texto(normal, 9, xDer, yDer, recortar(normal, 9, linea, anchoDer));
             yDer -= 12;
         }
@@ -231,6 +265,16 @@ public final class ComprobanteVentaPdf {
                 y -= 12;
             }
 
+            ComprobanteArcaDto nota = venta.getNotaCredito();
+
+            if (nota != null) {
+                String detalle = nota.isAutorizado()
+                        ? nota.getComprobante() + " — CAE " + nota.getCae()
+                        : nota.getComprobante();
+                texto(normal, 9, MARGEN, y, recortar(normal, 9, "Anulada con " + detalle, ANCHO_UTIL));
+                y -= 12;
+            }
+
             contenido.setNonStrokingColor(Color.BLACK);
         }
 
@@ -271,8 +315,12 @@ public final class ComprobanteVentaPdf {
 
     private void totales() throws IOException {
 
-        // Subtotal, descuento y total ocupan tres renglones y van juntos.
-        if (y < MARGEN + ALTO_PIE + 3 * ALTO_RENGLON) {
+        boolean discrimina = factura != null && factura.getTipoComprobante() == TipoComprobante.FACTURA_A
+                && factura.getImporteNeto() != null;
+        int renglonesIva = discrimina ? factura.getAlicuotas().size() + 2 : 0;
+
+        // Subtotal, descuento, IVA y total van juntos.
+        if (y < MARGEN + ALTO_PIE + (3 + renglonesIva) * ALTO_RENGLON) {
             contenido.close();
             nuevaPagina();
         }
@@ -285,11 +333,103 @@ public final class ComprobanteVentaPdf {
 
         texto(normal, 10, xEtiqueta, y, "Descuento:");
         derecha(normal, 10, venta.getDescuento());
-        y -= 18;
+        y -= 14;
 
+        // Factura A: neto gravado, IVA por alícuota y exento (con el descuento ya aplicado).
+        if (discrimina) {
+
+            texto(normal, 10, xEtiqueta - 40, y, "Neto gravado:");
+            derecha(normal, 10, factura.getImporteNeto());
+            y -= 14;
+
+            for (IvaComprobanteArcaDto iva : factura.getAlicuotas()) {
+                texto(normal, 10, xEtiqueta - 40, y, iva.getDescripcion() + ":");
+                derecha(normal, 10, iva.importe());
+                y -= 14;
+            }
+
+            texto(normal, 10, xEtiqueta - 40, y, "Exento:");
+            derecha(normal, 10, factura.getImporteExento());
+            y -= 14;
+        }
+
+        y -= 4;
         texto(negrita, 13, xEtiqueta, y, "TOTAL:");
         derecha(negrita, 13, venta.getTotal());
         y -= 14;
+
+        // Factura B: IVA contenido en el precio, para el consumidor final.
+        if (factura != null && factura.getTipoComprobante() == TipoComprobante.FACTURA_B
+                && factura.getImporteIva() != null) {
+            y -= 2;
+            texto(normal, 8, xEtiqueta - 150, y, LEYENDA_TRANSPARENCIA);
+            y -= 11;
+            texto(normal, 9, xEtiqueta - 150, y, "IVA contenido:");
+            derecha(normal, 9, factura.getImporteIva());
+            y -= 12;
+        }
+    }
+
+    /** CAE, vencimiento y código QR; o el aviso de que todavía no está autorizada. */
+    private void datosFiscales() throws IOException {
+
+        float alto = factura.isAutorizado() ? LADO_QR + 8 : 40;
+
+        if (y < MARGEN + ALTO_PIE + alto) {
+            contenido.close();
+            nuevaPagina();
+        }
+
+        y -= 6;
+        linea(y);
+        y -= 6;
+
+        if (!factura.isAutorizado()) {
+            y -= 12;
+            contenido.setNonStrokingColor(ROJO);
+            texto(negrita, 11, MARGEN, y, LEYENDA_SIN_CAE);
+            contenido.setNonStrokingColor(Color.BLACK);
+            y -= 13;
+
+            if (factura.getObservaciones() != null && !factura.getObservaciones().isBlank()) {
+                texto(normal, 8, MARGEN, y, recortar(normal, 8,
+                        factura.getEstado().getDescripcion() + ": " + factura.getObservaciones(), ANCHO_UTIL));
+                y -= 11;
+            }
+            return;
+        }
+
+        float abajo = y - LADO_QR;
+        QrPdf.dibujar(contenido, factura.getQrUrl(), MARGEN, abajo, LADO_QR);
+
+        float xTexto = MARGEN + LADO_QR + 12;
+        float yTexto = y - 22;
+
+        texto(negrita, 11, xTexto, yTexto, "Comprobante autorizado por ARCA");
+        yTexto -= 16;
+        texto(normal, 10, xTexto, yTexto, "CAE N°: " + factura.getCae());
+        yTexto -= 14;
+        texto(normal, 10, xTexto, yTexto, "Vencimiento del CAE: " + DateUtils.format(factura.getVencimientoCae()));
+
+        y = abajo - 4;
+    }
+
+    /** Recuadro con la letra (A, B, C) y el código de ARCA del comprobante, al centro del encabezado. */
+    private void letraDelComprobante(float arriba) throws IOException {
+
+        TipoComprobante tipo = factura.getTipoComprobante();
+        float x = MARGEN + 262;
+
+        contenido.setStrokingColor(Color.BLACK);
+        contenido.setLineWidth(1.2f);
+        contenido.addRect(x, arriba - LADO_LETRA, LADO_LETRA, LADO_LETRA);
+        contenido.stroke();
+
+        String letra = String.valueOf(tipo.getLetra());
+        texto(negrita, 26, x + (LADO_LETRA - ancho(negrita, 26, letra)) / 2, arriba - LADO_LETRA + 10, letra);
+
+        String codigo = "COD. " + String.format("%02d", tipo.getCodigoArca());
+        texto(normal, 7, x + (LADO_LETRA - ancho(normal, 7, codigo)) / 2, arriba - LADO_LETRA - 9, codigo);
     }
 
     /** Pie con la leyenda y el número de página, y la marca de agua si está anulada. */
@@ -308,7 +448,7 @@ public final class ComprobanteVentaPdf {
 
                 cs.setNonStrokingColor(GRIS);
                 texto(normal, 8, MARGEN, MARGEN - 10, limpiar(normal, venta.getComprobante() + " — "
-                        + LEYENDA_NO_FISCAL));
+                        + leyendaPie()));
                 String pag = "Página " + (i + 1) + " de " + total;
                 texto(normal, 8, PAGINA.getWidth() - MARGEN - ancho(normal, 8, pag), MARGEN - 10, pag);
 
@@ -317,6 +457,15 @@ public final class ComprobanteVentaPdf {
                 }
             }
         }
+    }
+
+    private String leyendaPie() {
+
+        if (factura == null) {
+            return LEYENDA_NO_FISCAL;
+        }
+
+        return factura.isAutorizado() ? "CAE " + factura.getCae() : LEYENDA_SIN_CAE;
     }
 
     private void marcaDeAgua(PDPageContentStream cs) throws IOException {

@@ -2,7 +2,8 @@ package org.gestionComercio.service;
 
 /**
  * Comprobante de venta en PDF, con los datos de la empresa cargados en
- * Configuración. No es un comprobante fiscal (sin ARCA).
+ * Configuración. Los tickets y remitos no son fiscales; las facturas
+ * electrónicas llevan el CAE y el código QR de ARCA una vez autorizadas.
  */
 public interface ComprobanteVentaService {
 

@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.gestionComercio.dto.BaseDto;
+import org.gestionComercio.dto.arca.ComprobanteArcaDto;
 import org.gestionComercio.enums.EstadoVenta;
 import org.gestionComercio.enums.FormaPago;
 import org.gestionComercio.enums.TipoComprobante;
@@ -35,10 +36,13 @@ public class VentaDto extends BaseDto {
 
     private LocalDateTime fecha;
 
-    /** Al registrar: null = ticket. Sólo se aceptan los tipos del punto de venta. */
+    /**
+     * Al registrar: null = ticket. Se aceptan ticket, remito y, con la
+     * facturación electrónica habilitada, la factura que corresponda al cliente.
+     */
     private TipoComprobante tipoComprobante;
 
-    /** Correlativo dentro del tipo; lo asigna el servicio. */
+    /** Correlativo dentro del tipo; lo asigna el servicio. Null en las facturas (ver {@link #factura}). */
     private Long numeroComprobante;
 
     /** Null para consumidor final. */
@@ -82,8 +86,22 @@ public class VentaDto extends BaseDto {
     @Builder.Default
     private List<DetalleVentaDto> detalles = new ArrayList<>();
 
-    /** "Ticket N° 00000012"; vacío si la venta todavía no tiene comprobante. */
+    /** Factura electrónica (sólo en facturas). */
+    private ComprobanteArcaDto factura;
+
+    /** Nota de crédito electrónica (sólo en facturas anuladas después de autorizadas). */
+    private ComprobanteArcaDto notaCredito;
+
+    /**
+     * "Ticket N° 00000012", "Factura B N° 0003-00000123" o "Factura B
+     * (pendiente de CAE)"; vacío si la venta todavía no tiene comprobante.
+     */
     public String getComprobante() {
+
+        if (factura != null) {
+            return factura.getComprobante();
+        }
+
         return TipoComprobante.formatear(tipoComprobante, numeroComprobante);
     }
 

@@ -52,6 +52,18 @@ class EmpresaValidatorTest {
     }
 
     @Test
+    @DisplayName("la fecha de inicio de actividades no puede ser futura")
+    void inicioActividadesFutura() {
+        EmpresaDto dto = dtoValido();
+
+        dto.setFechaInicioActividades(java.time.LocalDate.now().minusYears(3));
+        assertFalse(validator.validate(dto).hasErrors());
+
+        dto.setFechaInicioActividades(java.time.LocalDate.now().plusDays(1));
+        assertTrue(tieneError(validator.validate(dto), "fechaInicioActividades", "futura"));
+    }
+
+    @Test
     @DisplayName("la razón social es obligatoria")
     void razonSocialObligatoria() {
         EmpresaDto dto = dtoValido();

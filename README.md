@@ -138,6 +138,51 @@ del proyecto (no se versiona). La aplicación las encuentra ahí sin configurar
 `PG_BIN`. El usuario de la base tiene que ser
 dueño de la base (la restauración renombra el esquema `public`).
 
+## Facturación electrónica (ARCA)
+
+Las facturas A, B y C y sus notas de crédito se autorizan con los web services
+de ARCA (WSAA + WSFEv1). Cada comercio factura con **su propio certificado**:
+la clave privada se genera en el sistema y no sale del comercio.
+
+Se configura desde el menú **Facturación electrónica** (permiso
+`FACTURACION_CONFIGURAR`), con una guía paso a paso: datos de la empresa,
+ambiente, punto de venta, pedido e importación del certificado, autorización
+en ARCA, prueba de conexión y habilitación. La pantalla avisa cuando el
+certificado está por vencer (30 días), igual que la pantalla de Inicio.
+
+Con la facturación habilitada, el punto de venta ofrece la factura que
+corresponde al cliente (A, B o C) y pide el CAE al confirmar. Si ARCA no
+responde, la venta queda registrada con la factura *pendiente de CAE*. Anular
+una venta con factura autorizada emite la nota de crédito asociada. El
+listado de ventas muestra el estado de cada factura (facturada, pendiente,
+rechazada), y en **Comprobantes pendientes de CAE** (permiso
+`FACTURACION_REINTENTAR`) se reintentan los que quedaron sin CAE.
+
+El certificado se guarda en la base **cifrado** con una clave que no queda en
+la base: se carga desde la pantalla en cada PC que factura y se guarda en el
+perfil de Windows del usuario (registro, sin cifrar). Es la misma clave en todas
+las PC; la pantalla verifica que abra el certificado guardado. Así, una copia de
+la base o de un backup no alcanza para facturar a nombre del comercio. La clave
+se puede cambiar desde la misma pantalla (el certificado se vuelve a cifrar y
+las demás PC escriben la nueva). Si se pierde, se descarta el certificado y se
+genera otro en ARCA.
+
+Requisitos en ARCA (los hace el comercio o su contador): clave fiscal nivel 3,
+un **punto de venta exclusivo para web services**, el certificado (se sube el
+pedido que genera el sistema en "Administración de Certificados Digitales", o en
+WSASS para homologación) y la relación del certificado con el servicio
+"Facturación Electrónica" en el Administrador de Relaciones.
+
+| Variable de entorno         | Valor por defecto | Uso |
+|-----------------------------|-------------------|-----|
+| `ARCA_CLAVE_CERTIFICADO`    | (vacío)           | Clave con que se cifra el certificado guardado en la base. Opcional: si no está, se carga desde la pantalla (paso 2 de la guía). Si está, tiene prioridad |
+| `ARCA_TIMEOUT`              | `30s`             | Espera máxima de cada llamada a ARCA |
+| `ARCA_MONTO_IDENTIFICACION` | `10000000`        | Desde este total, la factura a consumidor final debe identificar al comprador |
+
+El reloj de las PC tiene que estar sincronizado (ARCA rechaza el pedido de
+acceso si la hora no coincide). Para ver en el log los pedidos y respuestas
+(sin token, sign ni certificado): `logging.level.org.gestionComercio.arca=DEBUG`.
+
 ## Ejecutar
 
 ```bash

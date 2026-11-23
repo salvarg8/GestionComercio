@@ -59,3 +59,83 @@
     -fx-background-radius: 6;
 
 }
+
+/* Avisos de error y de éxito dentro de un formulario */
+
+.form-error {
+
+    -fx-background-color: #FDECEA;
+    -fx-text-fill: #C62828;
+    -fx-padding: 8 12 8 12;
+    -fx-background-radius: 6;
+
+}
+
+.form-success {
+
+    -fx-background-color: #E8F5E9;
+    -fx-text-fill: #2E7D32;
+    -fx-padding: 8 12 8 12;
+    -fx-background-radius: 6;
+
+}
+
+/* Guía paso a paso (facturación electrónica) */
+
+.paso-guia {
+
+    -fx-background-color: white;
+    -fx-border-color: #E5E7EB;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 14 16 14 16;
+
+}
+
+.paso-guia.paso-hecho {
+
+    -fx-border-color: #A5D6A7;
+
+}
+
+.paso-numero {
+
+    -fx-min-width: 28;
+    -fx-min-height: 28;
+    -fx-max-width: 28;
+    -fx-max-height: 28;
+    -fx-alignment: center;
+    -fx-background-radius: 14;
+    -fx-background-color: #E5E7EB;
+    -fx-text-fill: #374151;
+    -fx-font-weight: bold;
+
+}
+
+.paso-guia.paso-hecho .paso-numero {
+
+    -fx-background-color: #2E7D32;
+    -fx-text-fill: white;
+
+}
+
+.paso-titulo {
+
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+
+}
+
+.paso-estado {
+
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #6B7280;
+
+}
+
+.paso-guia.paso-hecho .paso-estado {
+
+    -fx-text-fill: #2E7D32;
+
+}
