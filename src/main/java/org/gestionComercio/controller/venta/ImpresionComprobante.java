@@ -4,17 +4,21 @@ import javafx.application.HostServices;
 import lombok.RequiredArgsConstructor;
 import org.gestionComercio.dto.venta.VentaDto;
 import org.gestionComercio.exception.BusinessException;
+import org.gestionComercio.impresion.ImpresoraLocal;
+import org.gestionComercio.impresion.ImpresoraPdf;
 import org.gestionComercio.service.ComprobanteVentaService;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 
 /**
- * Genera el comprobante de una venta y lo abre con el visor de PDF del
- * sistema, desde donde se imprime o se guarda. El archivo queda en la
- * carpeta temporal del usuario.
+ * Genera el comprobante de una venta y lo manda a la impresora elegida en
+ * esta PC (Configuración del sistema). Sin impresora elegida, lo abre con el
+ * visor de PDF del sistema, desde donde se imprime o se guarda; el archivo
+ * queda en la carpeta temporal del usuario.
  */
 @Component
 @RequiredArgsConstructor
@@ -25,15 +29,32 @@ public class ImpresionComprobante {
 
     private final ComprobanteVentaService comprobanteVentaService;
     private final HostServices hostServices;
+    private final ImpresoraLocal impresoraLocal;
+    private final ImpresoraPdf impresoraPdf;
 
     /**
-     * @throws BusinessException si no se puede guardar el PDF
+     * @throws BusinessException si no se puede guardar el PDF o falla la impresión
      */
     public void imprimir(VentaDto venta) {
 
         byte[] pdf = comprobanteVentaService.generarPdf(venta.getId());
 
-        Path archivo = guardar(pdf, nombreArchivo(venta));
+        enviar(pdf, nombreArchivo(venta), impresoraLocal.leer());
+    }
+
+    /**
+     * Envía el PDF a la impresora indicada, o lo abre en el visor si no hay.
+     *
+     * @param nombre nombre del archivo (sin extensión) y del trabajo de impresión
+     */
+    public void enviar(byte[] pdf, String nombre, Optional<String> impresora) {
+
+        if (impresora.isPresent()) {
+            impresoraPdf.imprimir(pdf, impresora.get(), nombre);
+            return;
+        }
+
+        Path archivo = guardar(pdf, nombre);
 
         hostServices.showDocument(archivo.toUri().toString());
     }

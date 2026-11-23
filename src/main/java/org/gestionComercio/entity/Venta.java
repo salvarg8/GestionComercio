@@ -73,7 +73,7 @@ public class Venta extends BaseEntity {
     private Usuario usuario;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "caja_id", nullable = false)
+    @JoinColumn(name = "caja_id")
     private Caja caja;
 
     @Builder.Default

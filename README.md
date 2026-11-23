@@ -103,6 +103,48 @@ docker compose up -d
 y arrancar la aplicación una vez. Para recuperar los datos de la base SQLite
 anterior, seguir después la sección siguiente.
 
+## Configuración por comercio
+
+Cada comercio adapta el sistema sin cambiar el código desde el menú
+**Parámetros del sistema** (permisos `CONFIGURACION_VER` y
+`CONFIGURACION_EDITAR`). Los parámetros se guardan en la tabla `configuracion`
+(una sola fila, compartida por todas las PC) y rigen desde la próxima operación,
+sin reiniciar.
+
+| Parámetro | Por defecto | Efecto |
+|-----------|-------------|--------|
+| Exigir caja abierta para vender | Sí | Si no se exige, quien no tiene caja abierta vende igual: la venta queda sin caja y su efectivo no entra a ninguna (en Inicio aparece como "Sin caja"). |
+| Forma de pago por defecto | Efectivo | Con la que empieza cada venta en el punto de venta. |
+| Comprobante por defecto | Factura (si está habilitada; si no, ticket) | También ticket o remito. |
+| Redondeo del total | Sin redondeo | A los 10 centavos, al peso, a los 10 o a los 100 pesos, siempre hacia abajo: la diferencia se suma al descuento de la venta (así también cuadra en ARCA). Un total menor que el múltiplo no se redondea. |
+| Permitir vender sin stock | No | Valor que se propone al crear un producto. |
+| Unidad de medida por defecto | Unidad | Valor que se propone al crear un producto. |
+| Formato del ticket | Térmico de 80 mm | Térmico de 58 u 80 mm, o A4. Facturas y remitos salen siempre en A4. |
+| Imprimir el logo | Sí | El logo se carga en **Datos de la empresa**. |
+| Texto al pie | (vacío) | Horario, redes, políticas de cambio: hasta 500 caracteres, se respetan los renglones. |
+
+- **Impresora:** es de cada PC (se guarda en el registro de Windows del
+  usuario, no en la base). Sin impresora elegida, los comprobantes se abren en
+  el visor de PDF como antes. **Imprimir prueba** manda un ticket de ejemplo
+  con el formato que muestra la pantalla, aunque todavía no esté guardado.
+- **Datos iniciales por rubro:** para una instalación nueva, crea las
+  categorías típicas del rubro (almacén, kiosco, verdulería, ferretería…) y
+  fija la unidad de medida por defecto. No duplica categorías existentes.
+
+### Actualización masiva de precios
+
+Desde **Actualizar precios** (permiso `PRODUCTO_ACTUALIZAR_PRECIOS`) se aumenta
+o rebaja por porcentaje el precio de venta, el de compra o ambos de los
+productos activos de una categoría, marca y/o proveedor (o de todos), con
+redondeo opcional al múltiplo más cercano.
+
+- Primero se genera la **vista previa**; cualquier cambio en el criterio la
+  descarta. Al aplicar, el sistema vuelve a calcular: si desde la vista previa
+  cambió algún precio o la lista de productos, no aplica nada.
+- Cada actualización queda registrada (`actualizaciones_precios` y su detalle)
+  con el usuario, la fecha, el criterio y los precios anteriores y nuevos de
+  cada producto. El historial se ve en la misma pantalla.
+
 ## Copias de seguridad
 
 Desde el menú **Copias de seguridad** (permisos `BACKUP_CREAR` y

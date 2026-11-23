@@ -3,7 +3,6 @@ package org.gestionComercio.service.impl;
 import org.gestionComercio.dto.empresa.EmpresaDto;
 import org.gestionComercio.entity.Empresa;
 import org.gestionComercio.entity.Usuario;
-import org.gestionComercio.enums.AnchoTicket;
 import org.gestionComercio.enums.CondicionIVA;
 import org.gestionComercio.enums.PermisoCodigo;
 import org.gestionComercio.exception.AuthorizationException;
@@ -147,7 +146,6 @@ class EmpresaServiceImplTest {
         assertEquals("351 1234567", dto.getTelefono());
         assertEquals("ventas@comercio.com", dto.getEmail());
         assertNull(dto.getLogo());
-        assertEquals(AnchoTicket.MM_80, dto.getAnchoTicket(), "sin ancho de ticket queda el de por defecto");
 
         verify(empresaValidator).validate(dto);
         verify(empresaMapper).updateEntity(dto, empresa);

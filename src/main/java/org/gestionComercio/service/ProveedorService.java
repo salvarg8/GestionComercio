@@ -31,7 +31,7 @@ public interface ProveedorService extends CrudService<ProveedorDto, Long> {
 
     /**
      * Proveedores activos para elegir en otros formularios (por ejemplo, el de productos).
-     * Acepta PROVEEDOR_VER, PRODUCTO_CREAR o PRODUCTO_EDITAR, para que quien carga
+     * Acepta PROVEEDOR_VER, PRODUCTO_CREAR, PRODUCTO_EDITAR o PRODUCTO_ACTUALIZAR_PRECIOS, para que quien carga
      * productos pueda elegir el proveedor sin tener acceso al ABM de proveedores.
      */
     List<ProveedorDto> findParaSeleccion();

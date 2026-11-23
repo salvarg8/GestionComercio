@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="org.gestionComercio.controller.producto.ActualizacionPreciosController"
+            fitToWidth="true"
+            styleClass="form-scroll">
+
+    <content>
+
+        <VBox spacing="15.0">
+
+            <padding>
+                <Insets top="30" right="30" bottom="30" left="30"/>
+            </padding>
+
+            <children>
+
+                <Label text="Actualizar precios"
+                       style="-fx-font-size: 22px; -fx-font-weight: bold;"/>
+
+                <Label text="Aumenta o rebaja por porcentaje los precios de los productos activos de una categoría, marca o proveedor (o de todos). Primero se revisa la vista previa; al aplicar, queda registrado quién y cuándo lo hizo, con los precios anteriores."
+                       styleClass="form-hint"
+                       wrapText="true"/>
+
+                <!-- ============================================= -->
+                <!-- CRITERIO -->
+                <!-- ============================================= -->
+
+                <HBox spacing="15.0">
+                    <children>
+
+                        <VBox spacing="5.0" prefWidth="160" maxWidth="160">
+                            <children>
+                                <Label text="Porcentaje *"/>
+                                <TextField fx:id="txtPorcentaje" promptText="Ej.: 15 o -10"/>
+                                <Label fx:id="lblErrorPorcentaje"
+                                       styleClass="field-error-label"
+                                       wrapText="true"
+                                       visible="false"
+                                       managed="false"/>
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="5.0" prefWidth="260" maxWidth="260">
+                            <children>
+                                <Label text="Precio a actualizar *"/>
+                                <ComboBox fx:id="cmbPrecio" maxWidth="Infinity"/>
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="5.0" prefWidth="220" maxWidth="220">
+                            <children>
+                                <Label text="Redondear los precios nuevos"/>
+                                <ComboBox fx:id="cmbRedondeo" maxWidth="Infinity"/>
+                                <Label text="Al múltiplo más cercano."
+                                       styleClass="form-hint"
+                                       wrapText="true"/>
+                            </children>
+                        </VBox>
+
+                    </children>
+                </HBox>
+
+                <HBox spacing="15.0">
+                    <children>
+
+                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                            <children>
+                                <Label text="Categoría"/>
+                                <ComboBox fx:id="cmbCategoria" maxWidth="Infinity"/>
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                            <children>
+                                <Label text="Marca"/>
+                                <ComboBox fx:id="cmbMarca" maxWidth="Infinity"/>
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                            <children>
+                                <Label text="Proveedor"/>
+                                <ComboBox fx:id="cmbProveedor" maxWidth="Infinity"/>
+                            </children>
+                        </VBox>
+
+                    </children>
+                </HBox>
+
+                <HBox spacing="10" alignment="CENTER_RIGHT">
+                    <children>
+                        <Button fx:id="btnPrevisualizar" styleClass="btn-secondary" text="Vista previa"/>
+                    </children>
+                </HBox>
+
+                <!-- ============================================= -->
+                <!-- VISTA PREVIA -->
+                <!-- ============================================= -->
+
+                <Label fx:id="lblResumen" wrapText="true" maxWidth="Infinity"/>
+
+                <TableView fx:id="tblVistaPrevia" prefHeight="320">
+
+                    <columnResizePolicy>
+                        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+                    </columnResizePolicy>
+
+                    <placeholder>
+                        <Label text="Elija el criterio y presione Vista previa."/>
+                    </placeholder>
+
+                    <columns>
+                        <TableColumn fx:id="colCodigo" text="Código" prefWidth="90"/>
+                        <TableColumn fx:id="colProducto" text="Producto" prefWidth="240"/>
+                        <TableColumn fx:id="colCategoria" text="Categoría" prefWidth="120"/>
+                        <TableColumn fx:id="colCompraAnterior" text="Compra actual" prefWidth="105"/>
+                        <TableColumn fx:id="colCompraNueva" text="Compra nueva" prefWidth="105"/>
+                        <TableColumn fx:id="colVentaAnterior" text="Venta actual" prefWidth="105"/>
+                        <TableColumn fx:id="colVentaNueva" text="Venta nueva" prefWidth="105"/>
+                    </columns>
+
+                </TableView>
+
+                <HBox spacing="10" alignment="CENTER_RIGHT">
+                    <children>
+                        <Button fx:id="btnDescartar" styleClass="btn-secondary" text="Descartar vista previa"/>
+                        <Button fx:id="btnAplicar" styleClass="btn-primary" text="Aplicar"/>
+                    </children>
+                </HBox>
+
+                <Separator/>
+
+                <!-- ============================================= -->
+                <!-- HISTORIAL -->
+                <!-- ============================================= -->
+
+                <Label text="Historial" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+                <Label text="Doble clic en una actualización para ver los precios anteriores y nuevos de cada producto."
+                       styleClass="form-hint"
+                       wrapText="true"/>
+
+                <TableView fx:id="tblHistorial" prefHeight="220">
+
+                    <columnResizePolicy>
+                        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+                    </columnResizePolicy>
+
+                    <placeholder>
+                        <Label text="Todavía no se actualizaron precios."/>
+                    </placeholder>
+
+                    <columns>
+                        <TableColumn fx:id="colHistFecha" text="Fecha" prefWidth="130"/>
+                        <TableColumn fx:id="colHistUsuario" text="Usuario" prefWidth="140"/>
+                        <TableColumn fx:id="colHistPorcentaje" text="Porcentaje" prefWidth="85"/>
+                        <TableColumn fx:id="colHistPrecio" text="Precio" prefWidth="150"/>
+                        <TableColumn fx:id="colHistFiltro" text="Productos" prefWidth="240"/>
+                        <TableColumn fx:id="colHistCantidad" text="Cantidad" prefWidth="75"/>
+                    </columns>
+
+                </TableView>
+
+            </children>
+
+        </VBox>
+
+    </content>
+
+</ScrollPane>

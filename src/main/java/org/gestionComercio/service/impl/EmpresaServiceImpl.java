@@ -3,7 +3,6 @@ package org.gestionComercio.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.gestionComercio.dto.empresa.EmpresaDto;
 import org.gestionComercio.entity.Empresa;
-import org.gestionComercio.enums.AnchoTicket;
 import org.gestionComercio.enums.PermisoCodigo;
 import org.gestionComercio.exception.EntityNotFoundException;
 import org.gestionComercio.exception.ValidationException;
@@ -73,7 +72,7 @@ public class EmpresaServiceImpl implements EmpresaService {
 
     /**
      * Recorta espacios, deja en null los opcionales vacíos y normaliza el CUIT
-     * (sin guiones, puntos ni espacios). Sin ancho de ticket, el de por defecto.
+     * (sin guiones, puntos ni espacios).
      */
     private void normalizar(EmpresaDto dto) {
 
@@ -88,10 +87,6 @@ public class EmpresaServiceImpl implements EmpresaService {
         dto.setTelefono(opcional(dto.getTelefono()));
         dto.setEmail(opcional(dto.getEmail()));
         dto.setLogo(opcional(dto.getLogo()));
-
-        if (dto.getAnchoTicket() == null) {
-            dto.setAnchoTicket(AnchoTicket.porDefecto());
-        }
     }
 
     private String opcional(String valor) {

@@ -157,7 +157,8 @@ public class ProveedorServiceImpl implements ProveedorService {
         sesionUsuario.requerirAlgunPermiso(
                 PermisoCodigo.PROVEEDOR_VER,
                 PermisoCodigo.PRODUCTO_CREAR,
-                PermisoCodigo.PRODUCTO_EDITAR);
+                PermisoCodigo.PRODUCTO_EDITAR,
+                PermisoCodigo.PRODUCTO_ACTUALIZAR_PRECIOS);
 
         return proveedorRepository.findByEstadoRegistroOrderByRazonSocialAsc(EstadoRegistro.ACTIVO)
                 .stream()

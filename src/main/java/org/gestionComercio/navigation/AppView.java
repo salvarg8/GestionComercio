@@ -281,6 +281,29 @@ public enum AppView {
             PermisoCodigo.EMPRESA_VER
     ),
 
+    /**
+     * Parámetros del sistema, formato de los comprobantes, impresora de esta PC
+     * y datos iniciales por rubro. Sin CONFIGURACION_EDITAR es de sólo lectura.
+     */
+    CONFIGURACION_SISTEMA(
+            "/org/gestionComercio/view/configuracion/ConfiguracionSistema.fxml",
+            "Configuración del sistema",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.CONFIGURACION_VER
+    ),
+
+    /** Actualización masiva de precios por porcentaje, con vista previa e historial. */
+    ACTUALIZACION_PRECIOS(
+            "/org/gestionComercio/view/producto/ActualizacionPrecios.fxml",
+            "Actualizar precios",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.PRODUCTO_ACTUALIZAR_PRECIOS
+    ),
+
     /** Certificado de ARCA, ambiente, punto de venta y guía para configurar la facturación electrónica. */
     FACTURACION_CONFIG(
             "/org/gestionComercio/view/facturacion/FacturacionConfig.fxml",

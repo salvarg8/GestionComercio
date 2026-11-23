@@ -4,6 +4,7 @@ import org.gestionComercio.controller.venta.CarritoVenta.Cobro;
 import org.gestionComercio.controller.venta.CarritoVenta.Renglon;
 import org.gestionComercio.dto.producto.ProductoDto;
 import org.gestionComercio.dto.venta.DetalleVentaDto;
+import org.gestionComercio.enums.Redondeo;
 import org.gestionComercio.enums.UnidadMedida;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -194,6 +195,23 @@ class CarritoVentaTest {
         assertThat(CarritoVenta.cobrar(bd("100"), "1,234", true, "").error()).contains("dos decimales");
         assertThat(CarritoVenta.cobrar(bd("100"), "100,01", true, "").error()).contains("no puede superar");
         assertThat(CarritoVenta.cobrar(bd("100"), "100", true, "").valido()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Con redondeo, el total baja al múltiplo y el vuelto se calcula sobre el total redondeado")
+    void cobroConRedondeo() {
+        Cobro cobro = CarritoVenta.cobrar(bd("1234.56"), "10", true, "2000", Redondeo.UN_PESO);
+
+        assertThat(cobro.valido()).isTrue();
+        assertThat(cobro.descuento()).isEqualByComparingTo("10");
+        assertThat(cobro.redondeo()).isEqualByComparingTo("0.56");
+        assertThat(cobro.total()).isEqualByComparingTo("1224");
+        assertThat(cobro.vuelto()).isEqualByComparingTo("776");
+
+        // Un total menor que el múltiplo no se redondea a cero.
+        Cobro chico = CarritoVenta.cobrar(bd("50"), "", false, "", Redondeo.CIEN_PESOS);
+        assertThat(chico.total()).isEqualByComparingTo("50");
+        assertThat(chico.redondeo()).isEqualByComparingTo("0");
     }
 
 }

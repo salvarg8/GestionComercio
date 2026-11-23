@@ -28,7 +28,7 @@ public interface MarcaService extends CrudService<MarcaDto, Long> {
 
     /**
      * Marcas activas para elegir en otros formularios (por ejemplo, el de productos).
-     * Acepta MARCA_VER, PRODUCTO_CREAR o PRODUCTO_EDITAR, para que quien carga
+     * Acepta MARCA_VER, PRODUCTO_CREAR, PRODUCTO_EDITAR o PRODUCTO_ACTUALIZAR_PRECIOS, para que quien carga
      * productos pueda elegir la marca sin tener acceso al ABM de marcas.
      */
     List<MarcaDto> findParaSeleccion();

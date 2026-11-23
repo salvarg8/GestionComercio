@@ -40,6 +40,7 @@ import org.gestionComercio.exception.AuthorizationException;
 import org.gestionComercio.exception.BusinessException;
 import org.gestionComercio.mapper.ClienteMapperImpl;
 import org.gestionComercio.mapper.ComprobanteArcaMapperImpl;
+import org.gestionComercio.mapper.ConfiguracionMapperImpl;
 import org.gestionComercio.mapper.DetalleVentaMapperImpl;
 import org.gestionComercio.mapper.EmpresaMapperImpl;
 import org.gestionComercio.mapper.MovimientoInventarioMapperImpl;
@@ -113,6 +114,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         FacturacionElectronicaIntegrationTest.ArcaDePrueba.class,
         ArcaConfig.class,
         VentaServiceImpl.class,
+        ConfiguracionServiceImpl.class,
+        ConfiguracionMapperImpl.class,
         NumeradorComprobanteRepository.class,
         ComprobanteVentaServiceImpl.class,
         FacturacionElectronicaServiceImpl.class,

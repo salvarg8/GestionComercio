@@ -243,8 +243,9 @@ public class InicioController extends AbstractController {
     private void configurarTablaVentasPorCaja() {
 
         columna(colCajaUsuario, VentasPorCaja::usuarioNombreCompleto);
-        columna(colCajaApertura, v -> DateUtils.format(v.fechaApertura()));
-        columna(colCajaEstado, v -> v.estadoCaja() == EstadoCaja.ABIERTA ? "Abierta" : "Cerrada");
+        columna(colCajaApertura, v -> v.sinCaja() ? "—" : DateUtils.format(v.fechaApertura()));
+        columna(colCajaEstado, v -> v.sinCaja() ? "Sin caja"
+                : v.estadoCaja() == EstadoCaja.ABIERTA ? "Abierta" : "Cerrada");
         columna(colCajaCantidad, v -> String.valueOf(v.cantidad()));
         columna(colCajaTotal, v -> CurrencyUtils.format(v.total()));
 

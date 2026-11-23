@@ -6,7 +6,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.gestionComercio.dto.BaseDto;
-import org.gestionComercio.enums.AnchoTicket;
 import org.gestionComercio.enums.CondicionIVA;
 import org.gestionComercio.util.CuitUtils;
 
@@ -44,9 +43,6 @@ public class EmpresaDto extends BaseDto {
 
     /** Ruta del archivo de imagen del logo. */
     private String logo;
-
-    /** Ancho del rollo de los tickets; null = 80 mm. */
-    private AnchoTicket anchoTicket;
 
     /** CUIT con guiones (XX-XXXXXXXX-X). */
     public String getCuitFormateado() {

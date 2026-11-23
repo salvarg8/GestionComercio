@@ -34,7 +34,7 @@
                 <Label text="Configuración de la empresa"
                        style="-fx-font-size: 22px; -fx-font-weight: bold;"/>
 
-                <Label text="Estos datos se imprimen en los comprobantes y reportes."
+                <Label text="Estos datos se imprimen en los comprobantes y reportes. El formato de los comprobantes se configura en Parámetros del sistema."
                        styleClass="form-hint"/>
 
                 <Label fx:id="lblSoloLectura"
@@ -147,7 +147,7 @@
 
                                 </HBox>
 
-                                <!-- Condición frente al IVA y ancho del ticket -->
+                                <!-- Condición frente al IVA e inicio de actividades -->
 
                                 <HBox spacing="15.0">
 
@@ -167,23 +167,6 @@
                                                        wrapText="true"
                                                        visible="false"
                                                        managed="false"/>
-
-                                            </children>
-
-                                        </VBox>
-
-                                        <VBox spacing="5.0" prefWidth="180" maxWidth="180">
-
-                                            <children>
-
-                                                <Label text="Ancho del ticket"/>
-
-                                                <ComboBox fx:id="cmbAnchoTicket"
-                                                          maxWidth="Infinity"/>
-
-                                                <Label text="Rollo de la impresora térmica."
-                                                       styleClass="form-hint"
-                                                       wrapText="true"/>
 
                                             </children>
 

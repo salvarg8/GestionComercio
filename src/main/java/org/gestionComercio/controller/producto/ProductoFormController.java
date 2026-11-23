@@ -12,6 +12,7 @@ import javafx.scene.layout.VBox;
 import lombok.RequiredArgsConstructor;
 import org.gestionComercio.controller.base.AbstractController;
 import org.gestionComercio.controller.base.ErroresPorCampo;
+import org.gestionComercio.dto.configuracion.ConfiguracionDto;
 import org.gestionComercio.dto.producto.ProductoDto;
 import org.gestionComercio.enums.AlicuotaIVA;
 import org.gestionComercio.enums.UnidadMedida;
@@ -20,6 +21,7 @@ import org.gestionComercio.navigation.AppView;
 import org.gestionComercio.navigation.DataReceiver;
 import org.gestionComercio.navigation.Navigator;
 import org.gestionComercio.service.CategoriaService;
+import org.gestionComercio.service.ConfiguracionService;
 import org.gestionComercio.service.MarcaService;
 import org.gestionComercio.service.ProductoService;
 import org.gestionComercio.service.ProveedorService;
@@ -44,6 +46,7 @@ public class ProductoFormController extends AbstractController implements DataRe
     private final MarcaService marcaService;
     private final ProveedorService proveedorService;
     private final Navigator navigator;
+    private final ConfiguracionService configuracionService;
 
     @FXML
     private Label lblTitulo;
@@ -184,10 +187,19 @@ public class ProductoFormController extends AbstractController implements DataRe
 
         cargarCombos();
 
+        // Valores por defecto de un producto nuevo según la configuración del sistema.
+        ConfiguracionDto configuracion = ConfiguracionDto.porDefecto();
+        try {
+            configuracion = configuracionService.vigente();
+        } catch (RuntimeException e) {
+            // Se usan los valores por defecto del sistema.
+        }
+
         lblTitulo.setText("Nuevo producto");
-        cmbUnidadMedida.setValue(UnidadMedida.UNIDAD);
+        cmbUnidadMedida.setValue(Objects.requireNonNullElse(configuracion.getUnidadMedidaPorDefecto(), UnidadMedida.UNIDAD));
         cmbAlicuotaIva.setValue(AlicuotaIVA.IVA_21);
         chkManejaStock.setSelected(true);
+        chkPermiteStockNegativo.setSelected(Boolean.TRUE.equals(configuracion.getStockNegativoPorDefecto()));
         txtStockMinimo.setText("0");
 
         mostrar(lblAvisoDadoDeBaja, false);

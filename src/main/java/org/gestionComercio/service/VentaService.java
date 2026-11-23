@@ -23,19 +23,22 @@ import java.util.Optional;
 public interface VentaService {
 
     /**
-     * Registra una venta del usuario de la sesión en su caja abierta.
+     * Registra una venta del usuario de la sesión en su caja abierta. Si no
+     * tiene y la configuración no exige caja abierta, la venta queda sin caja.
      * Requiere VENTA_CREAR.
      *
      * <p>De cada renglón se usan sólo el producto y la cantidad: el precio
      * unitario es el precio de venta actual del producto y queda guardado en
-     * el renglón. Subtotal = suma de renglones; total = subtotal − descuento.
-     * Sin cliente, la venta es a consumidor final.
+     * el renglón. Subtotal = suma de renglones; total = subtotal − descuento,
+     * redondeado hacia abajo según la configuración (la diferencia se suma al
+     * descuento). Sin cliente, la venta es a consumidor final.
      *
      * <p>Las ventas en cuenta corriente quedan PENDIENTES; el resto, PAGADAS.
-     * Sólo las ventas en efectivo generan un movimiento de caja (tipo VENTA).
+     * Sólo las ventas en efectivo con caja generan un movimiento de caja (tipo VENTA).
      *
      * @return la venta guardada, con sus renglones
      * @throws org.gestionComercio.exception.BusinessException si el usuario no tiene caja abierta
+     *         y la configuración la exige
      * @throws org.gestionComercio.exception.ValidationException si los datos no son válidos
      * @throws org.gestionComercio.exception.BusinessException si algún producto no tiene stock
      *         suficiente (se informan todos los faltantes juntos)
@@ -49,7 +52,8 @@ public interface VentaService {
      * (revirtiendo sus movimientos de inventario), y si se cobró en efectivo
      * registra un egreso de caja (tipo ANULACION_VENTA) por el total. El
      * egreso va a la caja de la venta si sigue abierta; si ya se cerró, a la
-     * caja abierta del usuario de la sesión. La venta queda ANULADA con la
+     * caja abierta del usuario de la sesión. Una venta registrada sin caja no
+     * registra egreso (su efectivo no entró a ninguna). La venta queda ANULADA con la
      * fecha, el usuario y el motivo, y sigue apareciendo en el listado.
      *
      * @param motivo obligatorio, hasta 255 caracteres
@@ -78,13 +82,14 @@ public interface VentaService {
      * Lo vendido hoy en cada caja, de todos los usuarios, sin contar las
      * ventas anuladas ni las canceladas. Aparecen todas las cajas abiertas
      * (con cero si hoy no vendieron) y las ya cerradas que vendieron hoy,
-     * ordenadas por apertura. Requiere VENTA_VER.
+     * ordenadas por apertura; al final, lo vendido sin caja por cada vendedor
+     * (con la caja en null). Requiere VENTA_VER.
      */
     List<VentasPorCaja> ventasDelDiaPorCaja();
 
     /**
      * Cantidad e importe de lo vendido hoy en las cajas del usuario de la
-     * sesión, sin contar las ventas anuladas ni las canceladas. Requiere
+     * sesión (y sin caja), sin contar las ventas anuladas ni las canceladas. Requiere
      * VENTA_CREAR: es lo que un vendedor puede ver de sus propias ventas.
      */
     ResumenVentas ventasDelDiaPropias();

@@ -86,6 +86,8 @@
 
             <Button fx:id="btnProductos" maxWidth="Infinity" styleClass="menu-button" text="Productos" />
 
+            <Button fx:id="btnPrecios" maxWidth="Infinity" styleClass="menu-button" text="Actualizar precios" />
+
             <Button fx:id="btnStock" maxWidth="Infinity" styleClass="menu-button" text="Stock" />
 
             <Button fx:id="btnMovimientos" maxWidth="Infinity" styleClass="menu-button" text="Movimientos" />
@@ -106,7 +108,9 @@
 
             <Button fx:id="btnReportes" maxWidth="Infinity" styleClass="menu-button" text="Reportes" />
 
-            <Button fx:id="btnConfiguracion" maxWidth="Infinity" styleClass="menu-button" text="Configuración" />
+            <Button fx:id="btnConfiguracion" maxWidth="Infinity" styleClass="menu-button" text="Datos de la empresa" />
+
+            <Button fx:id="btnSistema" maxWidth="Infinity" styleClass="menu-button" text="Parámetros del sistema" />
 
             <Button fx:id="btnFacturacion" maxWidth="Infinity" styleClass="menu-button" text="Facturación electrónica" />
 
