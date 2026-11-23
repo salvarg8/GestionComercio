@@ -55,6 +55,7 @@ import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.ComprobanteVentaService;
 import org.gestionComercio.service.InventarioService;
 import org.gestionComercio.service.VentaService;
+import org.gestionComercio.licencia.ModulosTodosHabilitados;
 import org.gestionComercio.service.impl.arca.ConfiguracionArcaVigente;
 import org.gestionComercio.service.impl.arca.EmisionComprobantesArca;
 import org.gestionComercio.support.PostgresTestcontainersConfig;
@@ -106,6 +107,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         VentaValidator.class,
         EmisionComprobantesArca.class,
         ConfiguracionArcaVigente.class,
+        ModulosTodosHabilitados.class,
         ClaveCertificadoArca.class,
         AlmacenClaveEnMemoria.class,
         ArcaConfig.class,

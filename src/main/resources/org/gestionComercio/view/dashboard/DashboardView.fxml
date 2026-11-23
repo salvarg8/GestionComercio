@@ -50,6 +50,11 @@
             <!-- Espaciador -->
             <Region HBox.hgrow="ALWAYS"/>
 
+            <!-- Estado de la licencia: sólo si hay algo que avisar (prueba, por vencer, sólo consulta) -->
+            <Label fx:id="lblLicencia"
+                   visible="false"
+                   managed="false"/>
+
             <!-- Usuario -->
             <Label fx:id="lblUsuario"
                    text="Administrador"
@@ -106,6 +111,8 @@
             <Button fx:id="btnFacturacion" maxWidth="Infinity" styleClass="menu-button" text="Facturación electrónica" />
 
             <Button fx:id="btnBackup" maxWidth="Infinity" styleClass="menu-button" text="Copias de seguridad" />
+
+            <Button fx:id="btnLicencia" maxWidth="Infinity" styleClass="menu-button" text="Licencia" />
 
             <Button fx:id="btnUsuarios" maxWidth="Infinity" styleClass="menu-button" text="Usuarios" />
 

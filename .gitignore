@@ -50,3 +50,7 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Licencias: la clave privada y las licencias emitidas no se versionan ###
+*.key
+*.lic

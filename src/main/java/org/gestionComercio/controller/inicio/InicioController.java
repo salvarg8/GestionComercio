@@ -20,6 +20,7 @@ import org.gestionComercio.dto.venta.ResumenVentas;
 import org.gestionComercio.dto.venta.VentasPorCaja;
 import org.gestionComercio.enums.EstadoCaja;
 import org.gestionComercio.enums.PermisoCodigo;
+import org.gestionComercio.licencia.EstadoLicencia;
 import org.gestionComercio.navigation.AppView;
 import org.gestionComercio.navigation.Navigator;
 import org.gestionComercio.security.SesionUsuario;
@@ -27,6 +28,7 @@ import org.gestionComercio.service.CajaService;
 import org.gestionComercio.service.ConfiguracionArcaService;
 import org.gestionComercio.service.ConsultaStockService;
 import org.gestionComercio.service.FacturacionElectronicaService;
+import org.gestionComercio.service.LicenciaService;
 import org.gestionComercio.service.VentaService;
 import org.gestionComercio.util.CurrencyUtils;
 import org.gestionComercio.util.DateUtils;
@@ -164,6 +166,7 @@ public class InicioController extends AbstractController {
     private final Navigator navigator;
     private final ConfiguracionArcaService configuracionArca;
     private final FacturacionElectronicaService facturacion;
+    private final LicenciaService licenciaService;
 
     /** Ve las ventas de todas las cajas (VENTA_VER). */
     private boolean veVentasDeTodos;
@@ -267,17 +270,30 @@ public class InicioController extends AbstractController {
             execute(() -> mostrarStock(consultaStockService.resumen()));
         }
 
-        mostrarAvisosFacturacion();
+        mostrarAvisos();
     }
 
     /**
-     * Avisa si el certificado de ARCA está vencido o por vencer
+     * Avisa el estado de la licencia si hay algo que avisar, si el certificado
+     * de ARCA está vencido o por vencer
      * (FACTURACION_CONFIGURAR) y si hay comprobantes sin CAE
      * (FACTURACION_REINTENTAR). Un error al consultar no se muestra: son avisos.
      */
-    private void mostrarAvisosFacturacion() {
+    private void mostrarAvisos() {
 
         List<Node> avisos = new ArrayList<>();
+
+        try {
+            EstadoLicencia licencia = licenciaService.estado();
+
+            if (licencia.requiereAviso()) {
+                // Quien no administra la licencia ve el aviso sin el botón.
+                avisos.add(aviso(licencia.mensaje(), licencia.permiteOperar() ? "form-warning" : "form-error",
+                        "Ver licencia", navigator.puedeAcceder(AppView.LICENCIA) ? AppView.LICENCIA : null));
+            }
+        } catch (RuntimeException e) {
+            // Sin aviso.
+        }
 
         if (veCertificadoArca) {
             try {
@@ -322,11 +338,15 @@ public class InicioController extends AbstractController {
         mensaje.setMaxWidth(Double.MAX_VALUE);
         HBox.setHgrow(mensaje, Priority.ALWAYS);
 
-        Button boton = new Button(accion);
-        boton.getStyleClass().add("btn-secondary");
-        boton.setOnAction(e -> navigator.navigate(destino));
+        HBox aviso = new HBox(12, mensaje);
 
-        HBox aviso = new HBox(12, mensaje, boton);
+        if (destino != null) {
+            Button boton = new Button(accion);
+            boton.getStyleClass().add("btn-secondary");
+            boton.setOnAction(e -> navigator.navigate(destino));
+            aviso.getChildren().add(boton);
+        }
+
         aviso.setAlignment(Pos.CENTER_LEFT);
         aviso.getStyleClass().add(estilo);
         aviso.setMaxWidth(900);

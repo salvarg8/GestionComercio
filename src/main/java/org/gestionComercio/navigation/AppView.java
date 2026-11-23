@@ -301,6 +301,16 @@ public enum AppView {
             PermisoCodigo.FACTURACION_REINTENTAR
     ),
 
+    /** Estado de la licencia, código de esta PC y activación de una licencia nueva. */
+    LICENCIA(
+            "/org/gestionComercio/view/licencia/Licencia.fxml",
+            "Licencia",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.LICENCIA_ADMINISTRAR
+    ),
+
     /** Crear y restaurar se habilitan según BACKUP_CREAR y BACKUP_RESTAURAR. */
     BACKUP(
             "/org/gestionComercio/view/backup/Backup.fxml",

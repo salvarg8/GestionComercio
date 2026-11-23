@@ -9,10 +9,13 @@ import org.gestionComercio.entity.Permiso;
 import org.gestionComercio.entity.Usuario;
 import org.gestionComercio.enums.PermisoCodigo;
 import org.gestionComercio.exception.AuthenticationException;
+import org.gestionComercio.licencia.EstadoLicencia;
+import org.gestionComercio.licencia.PermisosLicencia;
 import org.gestionComercio.navigation.AppView;
 import org.gestionComercio.navigation.Navigator;
 import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.AuthenticationService;
+import org.gestionComercio.service.LicenciaService;
 import org.gestionComercio.util.dialog.Dialogs;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -40,15 +43,18 @@ public class LoginController extends AbstractController {
     private final AuthenticationService authenticationService;
     private final SesionUsuario sesionUsuario;
     private final Navigator navigator;
+    private final LicenciaService licenciaService;
 
     public LoginController(
             AuthenticationService authenticationService,
             SesionUsuario sesionUsuario,
-            Navigator navigator) {
+            Navigator navigator,
+            LicenciaService licenciaService) {
 
         this.authenticationService = authenticationService;
         this.sesionUsuario = sesionUsuario;
         this.navigator = navigator;
+        this.licenciaService = licenciaService;
         System.out.println("Constructor -> " + this);
 
     }
@@ -74,7 +80,7 @@ public class LoginController extends AbstractController {
     private void ingresar() {
 
         try {
-            performLogin(txtUsuario.getText(), txtPassword.getText());
+            avisarLicencia(performLogin(txtUsuario.getText(), txtPassword.getText()));
 
         } catch (AuthenticationException e) {
 
@@ -88,13 +94,25 @@ public class LoginController extends AbstractController {
     /**
      * Lógica de autenticación.
      */
-    void performLogin(String username, String password) {
+    EstadoLicencia performLogin(String username, String password) {
 
         Usuario usuario = authenticationService.authenticate(username, password);
 
-        sesionUsuario.iniciarSesion(usuario, obtenerPermisos(usuario));
+        // Sin una licencia que permita operar, la sesión queda con los permisos de consulta.
+        EstadoLicencia licencia = licenciaService.verificarAlIniciarSesion();
+
+        sesionUsuario.iniciarSesion(usuario, PermisosLicencia.habilitados(obtenerPermisos(usuario), licencia));
 
         navigator.navigate(AppView.DASHBOARD);
+
+        return licencia;
+    }
+
+    /** Al quedar en modo sólo consulta se avisa una vez, al entrar; los demás avisos están en Inicio. */
+    private static void avisarLicencia(EstadoLicencia licencia) {
+        if (!licencia.permiteOperar()) {
+            Dialogs.advertencia(licencia.situacion().getDescripcion(), licencia.mensaje());
+        }
     }
 
     private Set<PermisoCodigo> obtenerPermisos(Usuario usuario) {
