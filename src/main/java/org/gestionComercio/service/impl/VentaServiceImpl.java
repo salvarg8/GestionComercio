@@ -10,6 +10,7 @@ import org.gestionComercio.dto.venta.VentaDto;
 import org.gestionComercio.dto.venta.VentasPorCaja;
 import org.gestionComercio.entity.Caja;
 import org.gestionComercio.entity.Cliente;
+import org.gestionComercio.entity.ComprobanteArca;
 import org.gestionComercio.entity.DetalleVenta;
 import org.gestionComercio.entity.MovimientoCaja;
 import org.gestionComercio.entity.Producto;
@@ -39,6 +40,7 @@ import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.util.DateUtils;
 import org.gestionComercio.service.InventarioComprobanteService;
 import org.gestionComercio.service.VentaService;
+import org.gestionComercio.service.impl.arca.EmisionComprobantesArca;
 import org.gestionComercio.util.CantidadUtils;
 import org.gestionComercio.util.CurrencyUtils;
 import org.gestionComercio.validation.ValidationResult;
@@ -77,6 +79,7 @@ public class VentaServiceImpl implements VentaService {
     private final CajaRepository cajaRepository;
     private final MovimientoCajaRepository movimientoCajaRepository;
     private final InventarioComprobanteService inventarioComprobanteService;
+    private final EmisionComprobantesArca emisionComprobantesArca;
     private final VentaValidator ventaValidator;
     private final VentaMapper ventaMapper;
     private final ProductoMapper productoMapper;
@@ -107,11 +110,19 @@ public class VentaServiceImpl implements VentaService {
         }
 
         Venta venta = armarVenta(dto, usuario, caja);
-        venta.setNumeroComprobante(numeradorComprobanteRepository.siguiente(venta.getTipoComprobante()));
+
+        // Las facturas no usan la numeración interna: su número lo da ARCA al autorizarlas.
+        if (!venta.getTipoComprobante().esFactura()) {
+            venta.setNumeroComprobante(numeradorComprobanteRepository.siguiente(venta.getTipoComprobante()));
+        }
 
         venta = ventaRepository.save(venta);
 
-        String referencia = TipoComprobante.formatear(venta.getTipoComprobante(), venta.getNumeroComprobante());
+        if (venta.getTipoComprobante().esFactura()) {
+            emisionComprobantesArca.registrarFactura(venta);
+        }
+
+        String referencia = referencia(venta);
 
         inventarioComprobanteService.registrarSalidas(
                 OrigenMovimientoInventario.VENTA, venta.getId(), lineasDeInventario(venta), referencia);
@@ -145,8 +156,7 @@ public class VentaServiceImpl implements VentaService {
         Venta venta = ventaRepository.findParaModificar(ventaId)
                 .orElseThrow(() -> new EntityNotFoundException("No existe una venta con ID: " + ventaId));
 
-        String referencia = "venta "
-                + TipoComprobante.formatear(venta.getTipoComprobante(), venta.getNumeroComprobante());
+        String referencia = "venta " + referencia(venta);
 
         if (venta.getEstadoVenta() == EstadoVenta.ANULADA) {
             throw new BusinessException("La " + referencia + " ya está anulada.");
@@ -159,6 +169,10 @@ public class VentaServiceImpl implements VentaService {
         }
 
         Usuario usuario = sesionUsuario.getUsuario();
+
+        // Si estaba facturada: nota de crédito pendiente, o se cancela la factura no enviada.
+        // Falla (sin tocar nada) si la factura se envió y no se sabe si ARCA la autorizó.
+        emisionComprobantesArca.anularVenta(venta);
 
         // Primero la caja: si no se puede devolver el efectivo, no se toca nada.
         boolean devuelveEfectivo = venta.getFormaPago() == FormaPago.EFECTIVO && venta.getTotal().signum() > 0;
@@ -372,6 +386,23 @@ public class VentaServiceImpl implements VentaService {
         }
 
         return recortado;
+    }
+
+    /**
+     * "Ticket N° 00000012", "Factura B N° 0003-00000123", o para una factura
+     * todavía sin número, "Factura B (venta 45)".
+     */
+    private static String referencia(Venta venta) {
+
+        if (!venta.getTipoComprobante().esFactura()) {
+            return TipoComprobante.formatear(venta.getTipoComprobante(), venta.getNumeroComprobante());
+        }
+
+        ComprobanteArca factura = venta.getFacturaArca();
+
+        return factura != null && factura.getNumero() != null
+                ? TipoComprobante.formatear(factura.getTipoComprobante(), factura.getPuntoVenta(), factura.getNumero())
+                : venta.getTipoComprobante().getDescripcion() + " (venta " + venta.getId() + ")";
     }
 
     private static String recortar(String texto) {

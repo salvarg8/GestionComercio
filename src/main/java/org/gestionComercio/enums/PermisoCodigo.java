@@ -81,6 +81,12 @@ public enum PermisoCodigo {
     VENTA_CREAR("Ventas", "Crear ventas"),
     VENTA_ANULAR("Ventas", "Anular ventas"),
 
+    // Facturación electrónica
+    FACTURACION_CONFIGURAR("Facturación electrónica",
+            "Configurar la facturación electrónica: certificado de ARCA, ambiente y punto de venta"),
+    FACTURACION_REINTENTAR("Facturación electrónica",
+            "Ver los comprobantes pendientes de CAE y reintentar su autorización en ARCA"),
+
     // Compras
     COMPRA_VER("Compras", "Ver compras"),
     COMPRA_CREAR("Compras", "Registrar y recibir compras"),

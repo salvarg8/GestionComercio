@@ -175,8 +175,9 @@ public class ClienteValidator implements Validator<ClienteDto> {
     }
 
     /**
-     * Responsable inscripto, monotributista y exento se identifican con CUIT
-     * (lo exige la factura A/B a nombre del cliente).
+     * Responsables inscriptos, monotributistas, exentos y demás sujetos
+     * inscriptos se identifican con CUIT (lo exige la factura a nombre del
+     * cliente). Consumidor final, no categorizado y del exterior, no.
      */
     private void validarCondicionIva(ClienteDto dto, ValidationResult result) {
 
@@ -187,14 +188,16 @@ public class ClienteValidator implements Validator<ClienteDto> {
                 result
         );
 
-        if (dto.getCondicionIva() != null
-                && dto.getCondicionIva() != CondicionIVA.CONSUMIDOR_FINAL
+        CondicionIVA condicion = dto.getCondicionIva();
+
+        if (condicion != null
+                && condicion.requiereCuit()
                 && dto.getTipoDocumento() != null
                 && dto.getTipoDocumento() != TipoDocumento.CUIT) {
 
             result.addError(
                     "condicionIva",
-                    "Un cliente que no es consumidor final debe identificarse con CUIT."
+                    "Un cliente " + condicion.getDescripcion().toLowerCase() + " debe identificarse con CUIT."
             );
         }
     }

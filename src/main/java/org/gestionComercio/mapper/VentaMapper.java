@@ -21,10 +21,12 @@ import java.util.List;
 @Mapper(
         componentModel = "spring",
         unmappedTargetPolicy = ReportingPolicy.IGNORE,
-        uses = DetalleVentaMapper.class
+        uses = {DetalleVentaMapper.class, ComprobanteArcaMapper.class}
 )
 public interface VentaMapper {
 
+    @Mapping(target = "factura", source = "facturaArca")
+    @Mapping(target = "notaCredito", source = "notaCreditoArca")
     @Mapping(target = "clienteId", source = "cliente.id")
     @Mapping(target = "clienteNombre", expression = "java(nombreCliente(entity.getCliente()))")
     @Mapping(target = "cajaId", source = "caja.id")
@@ -37,6 +39,8 @@ public interface VentaMapper {
 
     @Named("resumen")
     @Mapping(target = "detalles", ignore = true)
+    @Mapping(target = "factura", source = "facturaArca")
+    @Mapping(target = "notaCredito", source = "notaCreditoArca")
     @Mapping(target = "clienteId", source = "cliente.id")
     @Mapping(target = "clienteNombre", expression = "java(nombreCliente(entity.getCliente()))")
     @Mapping(target = "cajaId", source = "caja.id")

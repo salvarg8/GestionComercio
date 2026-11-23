@@ -281,6 +281,26 @@ public enum AppView {
             PermisoCodigo.EMPRESA_VER
     ),
 
+    /** Certificado de ARCA, ambiente, punto de venta y guía para configurar la facturación electrónica. */
+    FACTURACION_CONFIG(
+            "/org/gestionComercio/view/facturacion/FacturacionConfig.fxml",
+            "Facturación electrónica",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.FACTURACION_CONFIGURAR
+    ),
+
+    /** Comprobantes electrónicos sin CAE (pendientes, sin respuesta o rechazados) y su reintento. */
+    FACTURACION_PENDIENTES(
+            "/org/gestionComercio/view/facturacion/ComprobantesPendientes.fxml",
+            "Comprobantes pendientes de CAE",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.FACTURACION_REINTENTAR
+    ),
+
     /** Crear y restaurar se habilitan según BACKUP_CREAR y BACKUP_RESTAURAR. */
     BACKUP(
             "/org/gestionComercio/view/backup/Backup.fxml",

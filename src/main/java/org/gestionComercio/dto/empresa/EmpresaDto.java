@@ -10,6 +10,8 @@ import org.gestionComercio.enums.AnchoTicket;
 import org.gestionComercio.enums.CondicionIVA;
 import org.gestionComercio.util.CuitUtils;
 
+import java.time.LocalDate;
+
 /**
  * Datos del comercio que se imprimen en comprobantes y reportes.
  */
@@ -30,6 +32,9 @@ public class EmpresaDto extends BaseDto {
     private String ingresosBrutos;
 
     private CondicionIVA condicionIva;
+
+    /** Se imprime en los comprobantes electrónicos. */
+    private LocalDate fechaInicioActividades;
 
     private String direccion;
 

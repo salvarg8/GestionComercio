@@ -77,6 +77,9 @@ public class DashboardController extends AbstractController {
     private Button btnConfiguracion;
 
     @FXML
+    private Button btnFacturacion;
+
+    @FXML
     private Button btnBackup;
 
     @FXML
@@ -109,6 +112,7 @@ public class DashboardController extends AbstractController {
         mostrarSiTieneAcceso(btnCompras, vistaDeCompras());
         mostrarSiTieneAcceso(btnReportes, AppView.REPORTES);
         mostrarSiTieneAcceso(btnConfiguracion, AppView.EMPRESA_CONFIG);
+        mostrarSiTieneAcceso(btnFacturacion, vistaDeFacturacion());
         mostrarSiTieneAcceso(btnBackup, AppView.BACKUP);
 
         navigator.navigate(AppView.INICIO);
@@ -150,6 +154,8 @@ public class DashboardController extends AbstractController {
 
         btnConfiguracion.setOnAction(e -> navigator.navigate(AppView.EMPRESA_CONFIG));
 
+        btnFacturacion.setOnAction(e -> navigator.navigate(vistaDeFacturacion()));
+
         btnBackup.setOnAction(e -> navigator.navigate(AppView.BACKUP));
 
         btnCambiarPassword.setOnAction(e -> navigator.navigate(AppView.CAMBIAR_PASSWORD));
@@ -160,6 +166,13 @@ public class DashboardController extends AbstractController {
     /** "Ventas" abre el punto de venta; quien sólo puede ver ventas va al listado. */
     private AppView vistaDeVentas() {
         return navigator.puedeAcceder(AppView.PUNTO_VENTA) ? AppView.PUNTO_VENTA : AppView.VENTA_LIST;
+    }
+
+    /** "Facturación electrónica" abre la configuración; quien sólo puede reintentar va a los pendientes de CAE. */
+    private AppView vistaDeFacturacion() {
+        return navigator.puedeAcceder(AppView.FACTURACION_CONFIG)
+                ? AppView.FACTURACION_CONFIG
+                : AppView.FACTURACION_PENDIENTES;
     }
 
     /** "Compras" abre el listado; quien sólo puede registrar compras va al formulario. */

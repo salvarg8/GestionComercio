@@ -112,15 +112,24 @@ class VentaValidatorTest {
     }
 
     @Test
-    @DisplayName("Las facturas no se pueden emitir: requieren facturación electrónica")
-    void facturaNoPermitida() {
+    @DisplayName("Una nota de crédito no se registra como venta: se emite al anular")
+    void notaCreditoNoPermitida() {
         VentaDto dto = venta(renglon(1L, "1"));
-        dto.setTipoComprobante(TipoComprobante.FACTURA_B);
+        dto.setTipoComprobante(TipoComprobante.NOTA_CREDITO_B);
 
         ValidationResult result = validator.validate(dto);
 
         assertThat(campos(result)).containsExactly("tipoComprobante");
-        assertThat(result.getErrors().get(0).getMessage()).contains("ARCA");
+        assertThat(result.getErrors().get(0).getMessage()).contains("anular");
+    }
+
+    @Test
+    @DisplayName("Las facturas pasan la validación: las reglas fiscales las controla el servicio")
+    void facturaPermitida() {
+        VentaDto dto = venta(renglon(1L, "1"));
+        dto.setTipoComprobante(TipoComprobante.FACTURA_B);
+
+        assertThat(campos(validator.validate(dto))).doesNotContain("tipoComprobante");
     }
 
     @Test

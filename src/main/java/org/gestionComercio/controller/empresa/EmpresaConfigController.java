@@ -3,6 +3,7 @@ package org.gestionComercio.controller.empresa;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
@@ -21,6 +22,7 @@ import org.gestionComercio.exception.ValidationException;
 import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.EmpresaService;
 import org.gestionComercio.util.ImageUtils;
+import org.gestionComercio.view.component.SelectorFecha;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
@@ -73,6 +75,12 @@ public class EmpresaConfigController extends AbstractController {
 
     @FXML
     private ComboBox<AnchoTicket> cmbAnchoTicket;
+
+    @FXML
+    private DatePicker dpInicioActividades;
+
+    @FXML
+    private Label lblErrorInicioActividades;
 
     @FXML
     private Label lblErrorCondicionIva;
@@ -138,6 +146,7 @@ public class EmpresaConfigController extends AbstractController {
         );
 
         cmbAnchoTicket.getItems().setAll(AnchoTicket.values());
+        SelectorFecha.configurar(dpInicioActividades);
 
         errores
                 .registrar("razonSocial", txtRazonSocial, lblErrorRazonSocial, txtRazonSocial.textProperty())
@@ -147,6 +156,8 @@ public class EmpresaConfigController extends AbstractController {
                 .registrar("ingresosBrutos", txtIngresosBrutos, lblErrorIngresosBrutos,
                         txtIngresosBrutos.textProperty())
                 .registrar("condicionIva", cmbCondicionIva, lblErrorCondicionIva, cmbCondicionIva.valueProperty())
+                .registrar("fechaInicioActividades", dpInicioActividades, lblErrorInicioActividades,
+                        dpInicioActividades.valueProperty())
                 .registrar("telefono", txtTelefono, lblErrorTelefono, txtTelefono.textProperty())
                 .registrar("email", txtEmail, lblErrorEmail, txtEmail.textProperty())
                 .registrar("direccion", txtDireccion, lblErrorDireccion, txtDireccion.textProperty())
@@ -197,6 +208,7 @@ public class EmpresaConfigController extends AbstractController {
 
         cmbCondicionIva.setDisable(!puedeEditar);
         cmbAnchoTicket.setDisable(!puedeEditar);
+        dpInicioActividades.setDisable(!puedeEditar);
 
         mostrar(lblSoloLectura, !puedeEditar);
         mostrar(btnSeleccionarLogo, puedeEditar);
@@ -225,6 +237,7 @@ public class EmpresaConfigController extends AbstractController {
         }
         cmbCondicionIva.setValue(empresa.getCondicionIva());
         cmbAnchoTicket.setValue(empresa.getAnchoTicket() == null ? AnchoTicket.porDefecto() : empresa.getAnchoTicket());
+        dpInicioActividades.setValue(empresa.getFechaInicioActividades());
 
         mostrarLogo(ImageUtils.cargar(rutaLogo));
 
@@ -285,6 +298,10 @@ public class EmpresaConfigController extends AbstractController {
 
     private void guardar() {
 
+        // Una fecha escrita a mano no pasa al valor del DatePicker hasta que pierde el foco.
+        dpInicioActividades.setValue(dpInicioActividades.getConverter()
+                .fromString(dpInicioActividades.getEditor().getText()));
+
         errores.limpiar();
 
         execute(() -> {
@@ -337,6 +354,7 @@ public class EmpresaConfigController extends AbstractController {
                 .cuit(txtCuit.getText())
                 .ingresosBrutos(txtIngresosBrutos.getText())
                 .condicionIva(cmbCondicionIva.getValue())
+                .fechaInicioActividades(dpInicioActividades.getValue())
                 .anchoTicket(cmbAnchoTicket.getValue())
                 .telefono(txtTelefono.getText())
                 .email(txtEmail.getText())
