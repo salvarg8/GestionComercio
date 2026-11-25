@@ -1,5 +1,6 @@
 package org.gestionComercio.service;
 
+import org.gestionComercio.dto.caja.EstadoEfectivoCaja;
 import org.gestionComercio.dto.cliente.ClienteDto;
 import org.gestionComercio.dto.producto.ProductoDto;
 import org.gestionComercio.dto.venta.DetalleVentaDto;
@@ -103,6 +104,14 @@ public interface VentaService {
 
     /** @return true si el usuario de la sesión tiene una caja abierta donde registrar ventas. */
     boolean tieneCajaAbierta();
+
+    /**
+     * Situación del efectivo de la caja abierta del usuario de la sesión frente
+     * al monto máximo de la empresa (aviso de retiro y bloqueo de ventas).
+     *
+     * @return vacío si no tiene caja abierta o la empresa no configuró un monto máximo
+     */
+    Optional<EstadoEfectivoCaja> estadoEfectivoCaja();
 
     /**
      * Productos activos por nombre, código interno o código de barras (texto

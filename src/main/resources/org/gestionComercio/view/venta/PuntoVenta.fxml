@@ -98,6 +98,23 @@
 
             <BorderPane fx:id="panelVenta">
 
+                <!-- Aviso de retiro / caja bloqueada (control del efectivo) -->
+
+                <top>
+
+                    <Label fx:id="lblAvisoEfectivo"
+                           styleClass="form-warning"
+                           wrapText="true"
+                           maxWidth="Infinity"
+                           visible="false"
+                           managed="false">
+                        <BorderPane.margin>
+                            <Insets right="15" bottom="10" left="15"/>
+                        </BorderPane.margin>
+                    </Label>
+
+                </top>
+
                 <!-- Carrito -->
 
                 <center>

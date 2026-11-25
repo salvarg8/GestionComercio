@@ -70,4 +70,17 @@ public class CajaDto extends BaseDto {
 
     private String usuarioCierreNombreCompleto;
 
+    /**
+     * Situación del efectivo frente al monto máximo de la empresa. Sólo en la
+     * caja abierta de {@code CajaService.obtenerCajaAbierta}; null si no hay
+     * monto máximo configurado.
+     */
+    private EstadoEfectivoCaja estadoEfectivo;
+
+    /**
+     * Si los retiros los debe confirmar un encargado. Sólo en la caja abierta
+     * de {@code CajaService.obtenerCajaAbierta}.
+     */
+    private boolean retiroRequiereConfirmacion;
+
 }

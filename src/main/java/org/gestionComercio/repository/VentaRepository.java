@@ -14,11 +14,20 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface VentaRepository extends JpaRepository<Venta, Long> {
+
+    /**
+     * Ventas de una caja registradas después de la fecha indicada (sin
+     * incluirla), sin contar las de los estados indicados. Para el control
+     * del efectivo en caja.
+     */
+    long countByCajaIdAndFechaAfterAndEstadoVentaNotIn(
+            Long cajaId, LocalDateTime fecha, Collection<EstadoVenta> estados);
 
     /** Una venta con su cliente, vendedor, caja y renglones (con sus productos). */
     @Query("""

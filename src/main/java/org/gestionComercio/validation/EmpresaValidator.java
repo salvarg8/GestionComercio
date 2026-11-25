@@ -5,6 +5,7 @@ import org.gestionComercio.enums.CondicionIVA;
 import org.gestionComercio.util.CuitUtils;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
@@ -21,6 +22,9 @@ public class EmpresaValidator implements Validator<EmpresaDto> {
     public static final int TELEFONO_MAX = 50;
     public static final int EMAIL_MAX = 100;
     public static final int LOGO_MAX = 255;
+
+    /** Mayor importe que admite una columna precision 12, scale 2. */
+    public static final BigDecimal MONTO_MAXIMO_CAJA_TOPE = new BigDecimal("9999999999.99");
 
     @Override
     public ValidationResult validate(EmpresaDto dto) {
@@ -50,7 +54,42 @@ public class EmpresaValidator implements Validator<EmpresaDto> {
         largoMaximo(dto.getTelefono(), TELEFONO_MAX, "telefono", "El teléfono", result);
         largoMaximo(dto.getLogo(), LOGO_MAX, "logo", "La ruta del logo", result);
 
+        validarControlEfectivo(dto, result);
+
         return result;
+    }
+
+    /**
+     * Monto máximo en caja: opcional, mayor que cero y con hasta dos decimales.
+     * Clientes antes de bloquear: opcional, cero o más, y sólo con monto máximo.
+     */
+    private void validarControlEfectivo(EmpresaDto dto, ValidationResult result) {
+
+        BigDecimal monto = dto.getMontoMaximoCaja();
+
+        if (monto != null) {
+
+            if (monto.signum() <= 0) {
+                result.addError("montoMaximoCaja", "El monto máximo en caja debe ser mayor que cero.");
+            } else if (monto.stripTrailingZeros().scale() > 2) {
+                result.addError("montoMaximoCaja", "El monto máximo en caja admite hasta dos decimales.");
+            } else if (monto.compareTo(MONTO_MAXIMO_CAJA_TOPE) > 0) {
+                result.addError("montoMaximoCaja", "El monto máximo en caja supera el máximo permitido.");
+            }
+        }
+
+        Integer clientes = dto.getClientesAntesDeBloqueo();
+
+        if (clientes == null) {
+            return;
+        }
+
+        if (monto == null) {
+            result.addError("clientesAntesDeBloqueo",
+                    "Para bloquear la caja primero indique el monto máximo en caja.");
+        } else if (clientes < 0) {
+            result.addError("clientesAntesDeBloqueo", "La cantidad de clientes no puede ser negativa.");
+        }
     }
 
     private void validarCuit(EmpresaDto dto, ValidationResult result) {

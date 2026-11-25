@@ -10,6 +10,7 @@ import javafx.scene.layout.VBox;
 import lombok.RequiredArgsConstructor;
 import org.gestionComercio.controller.base.AbstractController;
 import org.gestionComercio.dto.caja.CajaDto;
+import org.gestionComercio.dto.caja.EstadoEfectivoCaja;
 import org.gestionComercio.dto.caja.MovimientoCajaDto;
 import org.gestionComercio.enums.PermisoCodigo;
 import org.gestionComercio.enums.TipoMovimientoCaja;
@@ -68,6 +69,9 @@ public class CajaController extends AbstractController {
 
     @FXML
     private Label lblApertura;
+
+    @FXML
+    private Label lblAvisoEfectivo;
 
     @FXML
     private Label lblSaldoInicial;
@@ -192,15 +196,30 @@ public class CajaController extends AbstractController {
             return;
         }
 
-        new MovimientoCajaDialog(cajaService, caja).mostrar().ifPresent(m -> {
+        // Con confirmación de retiros, quien no puede confirmarlos tiene que ingresar los datos de un encargado.
+        boolean pedirEncargado = caja.isRetiroRequiereConfirmacion()
+                && !sesionUsuario.tienePermiso(PermisoCodigo.CAJA_CONFIRMAR_RETIRO);
+
+        new MovimientoCajaDialog(cajaService, caja, pedirEncargado).mostrar().ifPresent(m -> {
+
+            boolean estabaBloqueada = caja != null && caja.getEstadoEfectivo() != null
+                    && caja.getEstadoEfectivo().bloqueada();
 
             cargar();
+
+            String confirmo = m.getUsuarioAutorizacionId() == null ? "" : "Confirmó: " + CajaFormato.usuario(
+                    m.getUsuarioAutorizacionNombreCompleto(), m.getUsuarioAutorizacionNombre()) + "\n";
+
+            boolean desbloqueada = estabaBloqueada && caja != null
+                    && (caja.getEstadoEfectivo() == null || !caja.getEstadoEfectivo().bloqueada());
 
             success("Se registró el movimiento.\n\n"
                     + "Tipo: " + m.getTipo().getDescripcion() + "\n"
                     + "Importe: " + CajaFormato.importeConSigno(m.getTipo(), m.getImporte()) + "\n"
                     + "Descripción: " + m.getDescripcion() + "\n"
-                    + "Saldo actual: " + CajaFormato.importe(caja == null ? null : caja.getSaldoEsperado()));
+                    + confirmo
+                    + "Saldo actual: " + CajaFormato.importe(caja == null ? null : caja.getSaldoEsperado())
+                    + (desbloqueada ? "\n\nLa caja ya no está bloqueada: se pueden registrar ventas." : ""));
         });
     }
 
@@ -259,12 +278,25 @@ public class CajaController extends AbstractController {
             lblEgresos.setText("− " + CajaFormato.importe(caja.getTotalEgresos()));
             lblSaldoActual.setText(CajaFormato.importe(caja.getSaldoEsperado()));
 
+            mostrarAvisoEfectivo(caja.getEstadoEfectivo());
+
             List<MovimientoCajaDto> movimientos = cajaService.listarMovimientos(caja.getId());
             tblMovimientos.getItems().setAll(movimientos);
 
             lblTotal.setText("Total: " + movimientos.size()
                     + (movimientos.size() == 1 ? " movimiento" : " movimientos"));
         });
+    }
+
+    /** Franja que avisa que hay que retirar dinero o que la caja está bloqueada para vender. */
+    private void mostrarAvisoEfectivo(EstadoEfectivoCaja estado) {
+
+        String mensaje = estado == null ? null : estado.mensaje();
+
+        mostrar(lblAvisoEfectivo, mensaje != null);
+        lblAvisoEfectivo.setText(Objects.toString(mensaje, ""));
+        lblAvisoEfectivo.getStyleClass().setAll("label",
+                estado != null && estado.bloqueada() ? "form-error" : "form-warning");
     }
 
     private static void mostrar(Node nodo, boolean visible) {

@@ -103,6 +103,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Import({
         PostgresTestcontainersConfig.class,
         VentaServiceImpl.class,
+        ControlEfectivoCaja.class,
         ConfiguracionServiceImpl.class,
         ConfiguracionMapperImpl.class,
         NumeradorComprobanteRepository.class,
@@ -999,6 +1000,152 @@ class VentaServiceIntegrationTest {
 
         sesionUsuario.iniciarSesion(ana, EnumSet.of(PermisoCodigo.VENTA_VER));
         assertThatThrownBy(() -> ventaService.ventasDelDiaPropias()).isInstanceOf(AuthorizationException.class);
+    }
+
+    // ------------------------------------------------------------------
+    // Control del efectivo en caja
+    // ------------------------------------------------------------------
+
+    /**
+     * Configura el control del efectivo en la empresa que usa el sistema (la
+     * primera); {@link #quitarControlEfectivo} lo deja sin control.
+     */
+    private void controlEfectivo(String montoMaximo, Integer clientesAntesDeBloqueo) {
+        transaccion.executeWithoutResult(status -> entityManager.createNativeQuery(
+                        "update empresas set monto_maximo_caja = " + montoMaximo
+                                + ", clientes_antes_de_bloqueo = " + clientesAntesDeBloqueo
+                                + " where id = (select min(id) from empresas)")
+                .executeUpdate());
+    }
+
+    @AfterEach
+    void quitarControlEfectivo() {
+        controlEfectivo(null, null);
+    }
+
+    @Test
+    @DisplayName("Sin monto máximo no hay control del efectivo: se vende como siempre")
+    void sinControlDeEfectivo() {
+        abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "50000.00", "10", UnidadMedida.UNIDAD, true);
+
+        ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "1")));
+        ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "1")));
+
+        assertThat(ventaService.estadoEfectivoCaja()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Al alcanzar el monto se avisa; superados los clientes permitidos se bloquea y un retiro desbloquea")
+    void avisoBloqueoYDesbloqueo() {
+        controlEfectivo("2000", 1);
+        Long cajaId = abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+
+        // Saldo 1000: todavía no alcanza el monto.
+        assertThat(ventaService.estadoEfectivoCaja()).hasValueSatisfying(estado -> {
+            assertThat(estado.montoAlcanzado()).isFalse();
+            assertThat(estado.bloqueada()).isFalse();
+        });
+
+        // 1000 + 1500 = 2500: alcanza el monto con esta venta, que no cuenta para el bloqueo.
+        ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "1")));
+
+        assertThat(ventaService.estadoEfectivoCaja()).hasValueSatisfying(estado -> {
+            assertThat(estado.montoAlcanzado()).isTrue();
+            assertThat(estado.saldo()).isEqualByComparingTo("2500");
+            assertThat(estado.clientesRestantes()).isEqualTo(1);
+            assertThat(estado.bloqueada()).isFalse();
+            assertThat(estado.mensaje()).contains("1 cliente más");
+        });
+
+        // Las ventas que no son en efectivo también cuentan.
+        ventaService.registrar(venta(FormaPago.TARJETA_DEBITO, renglon(gaseosa, "1")));
+
+        assertThat(ventaService.estadoEfectivoCaja()).hasValueSatisfying(estado -> {
+            assertThat(estado.clientesRestantes()).isZero();
+            assertThat(estado.bloqueada()).isTrue();
+        });
+
+        long ventasAntes = ventaRepository.count();
+
+        assertThatThrownBy(() -> ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "1"))))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("bloqueada");
+
+        assertThat(ventaRepository.count()).isEqualTo(ventasAntes);
+        assertThat(stockDe(gaseosa)).isEqualByComparingTo("8");
+
+        // Un retiro que baja el saldo del monto (2500 − 600 = 1900) desbloquea la caja.
+        retirar(cajaId, "600");
+
+        assertThat(ventaService.estadoEfectivoCaja()).hasValueSatisfying(estado -> {
+            assertThat(estado.montoAlcanzado()).isFalse();
+            assertThat(estado.bloqueada()).isFalse();
+        });
+
+        // Si vuelve a alcanzar el monto, la cuenta de clientes empieza de nuevo.
+        ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "1")));
+
+        assertThat(ventaService.estadoEfectivoCaja()).hasValueSatisfying(estado -> {
+            assertThat(estado.montoAlcanzado()).isTrue();
+            assertThat(estado.clientesRestantes()).isEqualTo(1);
+        });
+    }
+
+    @Test
+    @DisplayName("Con cero clientes la caja se bloquea apenas alcanza el monto")
+    void bloqueoInmediato() {
+        controlEfectivo("2000", 0);
+        abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+
+        ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "1")));
+
+        assertThat(ventaService.estadoEfectivoCaja()).hasValueSatisfying(estado ->
+                assertThat(estado.bloqueada()).isTrue());
+        assertThatThrownBy(() -> ventaService.registrar(venta(FormaPago.TARJETA_DEBITO, renglon(gaseosa, "1"))))
+                .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    @DisplayName("Sin cantidad de clientes se avisa pero nunca se bloquea")
+    void avisoSinBloqueo() {
+        controlEfectivo("2000", null);
+        abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+
+        for (int i = 0; i < 4; i++) {
+            ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "1")));
+        }
+
+        assertThat(ventaService.estadoEfectivoCaja()).hasValueSatisfying(estado -> {
+            assertThat(estado.montoAlcanzado()).isTrue();
+            assertThat(estado.bloqueada()).isFalse();
+            assertThat(estado.clientesRestantes()).isNull();
+            assertThat(estado.mensaje()).contains("Debe retirar dinero");
+        });
+    }
+
+    @Test
+    @DisplayName("Las ventas anuladas no cuentan como clientes atendidos")
+    void anuladasNoCuentan() {
+        controlEfectivo("2000", 1);
+        abrirCaja();
+        Long gaseosa = crearProducto("Gaseosa", "1500.00", "10", UnidadMedida.UNIDAD, true);
+
+        ventaService.registrar(venta(FormaPago.EFECTIVO, renglon(gaseosa, "1")));
+        Long conTarjeta = ventaService.registrar(venta(FormaPago.TARJETA_DEBITO, renglon(gaseosa, "1"))).getId();
+
+        assertThat(ventaService.estadoEfectivoCaja()).hasValueSatisfying(estado ->
+                assertThat(estado.bloqueada()).isTrue());
+
+        ventaService.anular(conTarjeta, "Error en la carga");
+
+        assertThat(ventaService.estadoEfectivoCaja()).hasValueSatisfying(estado -> {
+            assertThat(estado.bloqueada()).isFalse();
+            assertThat(estado.clientesRestantes()).isEqualTo(1);
+        });
     }
 
     // ------------------------------------------------------------------

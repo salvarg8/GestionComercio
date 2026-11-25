@@ -117,8 +117,11 @@ abstract class FormularioCajaDialog<R> {
     // Para las subclases
     // ------------------------------------------------------------------
 
-    protected void fila(String etiqueta, Node campo) {
-        grid.addRow(fila++, new Label(etiqueta), campo);
+    /** @return la etiqueta de la fila, por ejemplo para ocultarla junto con el campo */
+    protected Label fila(String etiqueta, Node campo) {
+        Label label = new Label(etiqueta);
+        grid.addRow(fila++, label, campo);
+        return label;
     }
 
     protected void mostrarError(String mensaje) {

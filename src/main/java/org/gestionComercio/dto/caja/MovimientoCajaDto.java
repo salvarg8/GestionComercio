@@ -40,4 +40,11 @@ public class MovimientoCajaDto extends BaseDto {
     /** Nombre y apellido del responsable. */
     private String usuarioNombreCompleto;
 
+    /** Encargado que confirmó el retiro; null si no hizo falta confirmación. */
+    private Long usuarioAutorizacionId;
+
+    private String usuarioAutorizacionNombre;
+
+    private String usuarioAutorizacionNombreCompleto;
+
 }

@@ -24,6 +24,12 @@ public interface MovimientoCajaMapper {
     @Mapping(target = "usuarioNombreCompleto",
             expression = "java(entity.getUsuario() == null ? null : "
                     + "entity.getUsuario().getNombre() + \" \" + entity.getUsuario().getApellido())")
+    @Mapping(target = "usuarioAutorizacionId", source = "usuarioAutorizacion.id")
+    @Mapping(target = "usuarioAutorizacionNombre", source = "usuarioAutorizacion.usuario")
+    @Mapping(target = "usuarioAutorizacionNombreCompleto",
+            expression = "java(entity.getUsuarioAutorizacion() == null ? null : "
+                    + "entity.getUsuarioAutorizacion().getNombre() + \" \" "
+                    + "+ entity.getUsuarioAutorizacion().getApellido())")
     MovimientoCajaDto toDto(MovimientoCaja entity);
 
     List<MovimientoCajaDto> toDtoList(List<MovimientoCaja> entities);

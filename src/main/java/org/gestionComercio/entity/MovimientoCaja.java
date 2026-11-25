@@ -48,4 +48,9 @@ public class MovimientoCaja extends BaseEntity {
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
 
+    /** Encargado que confirmó el retiro; null si no hizo falta confirmación. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_autorizacion_id")
+    private Usuario usuarioAutorizacion;
+
 }

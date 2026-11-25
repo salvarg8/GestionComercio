@@ -179,6 +179,45 @@ class MigracionesIntegrationTest {
         }
     }
 
+    @Test
+    @DisplayName("V10 agrega el control del efectivo en caja sin control en las empresas existentes")
+    void controlEfectivoEnEmpresasExistentes() {
+        // En un esquema aparte: hasta V9, se carga una empresa y recién entonces se aplica V10.
+        String esquema = "prueba_v10";
+
+        try {
+            flyway(esquema).target("9").load().migrate();
+
+            jdbc.execute("insert into " + esquema + ".empresas (estado_registro, fecha_creacion, "
+                    + "fecha_modificacion, razon_social, cuit, condicion_iva) "
+                    + "values ('ACTIVO', now(), now(), 'Empresa', '30000000007', 'RESPONSABLE_INSCRIPTO')");
+
+            flyway(esquema).load().migrate();
+
+            assertEquals(Arrays.asList(null, null, false), jdbc.queryForList("select monto_maximo_caja, "
+                    + "clientes_antes_de_bloqueo, retiro_requiere_confirmacion from " + esquema + ".empresas")
+                    .stream()
+                    .flatMap(fila -> fila.values().stream())
+                    .toList());
+
+            // Clientes antes de bloquear sólo con monto máximo, y ninguno de los dos negativo.
+            String actualizar = "update " + esquema + ".empresas set ";
+            assertThrows(DataIntegrityViolationException.class,
+                    () -> jdbc.update(actualizar + "clientes_antes_de_bloqueo = 3"));
+            assertThrows(DataIntegrityViolationException.class,
+                    () -> jdbc.update(actualizar + "monto_maximo_caja = 0"));
+            assertThrows(DataIntegrityViolationException.class,
+                    () -> jdbc.update(actualizar + "monto_maximo_caja = 1000, clientes_antes_de_bloqueo = -1"));
+            assertEquals(1, jdbc.update(actualizar + "monto_maximo_caja = 1000, clientes_antes_de_bloqueo = 0"));
+
+            List<String> restricciones = jdbc.queryForList("select conname from pg_constraint "
+                    + "where conrelid = '" + esquema + ".movimientos_caja'::regclass", String.class);
+            assertTrue(restricciones.contains("fk_movimientos_caja_usuario_autorizacion"));
+        } finally {
+            jdbc.execute("drop schema if exists " + esquema + " cascade");
+        }
+    }
+
     private FluentConfiguration flyway(String esquema) {
         return Flyway.configure()
                 .dataSource(dataSource)
