@@ -105,8 +105,8 @@ anterior, seguir después la sección siguiente.
 
 ## Configuración por comercio
 
-Cada comercio adapta el sistema sin cambiar el código desde el menú
-**Parámetros del sistema** (permisos `CONFIGURACION_VER` y
+Cada comercio adapta el sistema sin cambiar el código desde **Configuración**,
+pestaña **Sistema** (permisos `CONFIGURACION_VER` y
 `CONFIGURACION_EDITAR`). Los parámetros se guardan en la tabla `configuracion`
 (una sola fila, compartida por todas las PC) y rigen desde la próxima operación,
 sin reiniciar.
@@ -120,7 +120,7 @@ sin reiniciar.
 | Permitir vender sin stock | No | Valor que se propone al crear un producto. |
 | Unidad de medida por defecto | Unidad | Valor que se propone al crear un producto. |
 | Formato del ticket | Térmico de 80 mm | Térmico de 58 u 80 mm, o A4. Facturas y remitos salen siempre en A4. |
-| Imprimir el logo | Sí | El logo se carga en **Datos de la empresa**. |
+| Imprimir el logo | Sí | El logo se carga en **Configuración > Empresa**. |
 | Texto al pie | (vacío) | Horario, redes, políticas de cambio: hasta 500 caracteres, se respetan los renglones. |
 
 - **Impresora:** es de cada PC (se guarda en el registro de Windows del
@@ -133,7 +133,7 @@ sin reiniciar.
 
 ### Control del efectivo en caja
 
-Se configura en **Datos de la empresa**, sección "Control del efectivo en caja"
+Se configura en **Configuración > Empresa**, sección "Control del efectivo en caja"
 (columnas de `empresas`). Sin monto máximo, la caja funciona sin control.
 
 | Parámetro | Efecto |
@@ -164,7 +164,7 @@ redondeo opcional al múltiplo más cercano.
 
 ## Copias de seguridad
 
-Desde el menú **Copias de seguridad** (permisos `BACKUP_CREAR` y
+Desde **Configuración > Copias de seguridad** (permisos `BACKUP_CREAR` y
 `BACKUP_RESTAURAR`) se crea una copia de la base en una carpeta a elección y se
 restaura una copia anterior.
 
@@ -203,7 +203,7 @@ Las facturas A, B y C y sus notas de crédito se autorizan con los web services
 de ARCA (WSAA + WSFEv1). Cada comercio factura con **su propio certificado**:
 la clave privada se genera en el sistema y no sale del comercio.
 
-Se configura desde el menú **Facturación electrónica** (permiso
+Se configura desde **Configuración > Facturación electrónica** (permiso
 `FACTURACION_CONFIGURAR`), con una guía paso a paso: datos de la empresa,
 ambiente, punto de venta, pedido e importación del certificado, autorización
 en ARCA, prueba de conexión y habilitación. La pantalla avisa cuando el
@@ -215,7 +215,10 @@ responde, la venta queda registrada con la factura *pendiente de CAE*. Anular
 una venta con factura autorizada emite la nota de crédito asociada. El
 listado de ventas muestra el estado de cada factura (facturada, pendiente,
 rechazada), y en **Comprobantes pendientes de CAE** (permiso
-`FACTURACION_REINTENTAR`) se reintentan los que quedaron sin CAE.
+`FACTURACION_REINTENTAR`) se reintentan los que quedaron sin CAE. Es operación
+diaria, así que se abre desde **Ventas** (botón "Pendientes de CAE" del
+listado, o el aviso de Inicio), no desde Configuración; quien sólo tiene ese
+permiso llega directo con el botón **Ventas** del menú.
 
 El certificado se guarda en la base **cifrado** con una clave que no queda en
 la base: se carga desde la pantalla en cada PC que factura y se guarda en el
@@ -261,7 +264,7 @@ habilitadas. Funciona sin internet.
   permisos de consulta: ver datos, reportes y exportaciones, crear copias de
   seguridad y administrar la licencia. No se bloquea el acceso a los datos.
   Se aplica al iniciar sesión.
-- **Pantalla:** menú **Licencia** (permiso `LICENCIA_ADMINISTRAR`): estado,
+- **Pantalla:** **Configuración > Licencia** (permiso `LICENCIA_ADMINISTRAR`): estado,
   código de esta PC (para pedir la licencia) y activación desde el archivo
   `.lic` o pegando la clave. Se activa una vez desde cualquier PC incluida.
 - **Cambio de PC:** se pide al proveedor una licencia nueva con la lista de

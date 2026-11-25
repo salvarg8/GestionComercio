@@ -37,10 +37,6 @@
 
                         <Region HBox.hgrow="ALWAYS"/>
 
-                        <Button fx:id="btnPendientes"
-                                styleClass="btn-secondary"
-                                text="Comprobantes pendientes de CAE"/>
-
                         <Button fx:id="btnActualizar"
                                 styleClass="btn-secondary"
                                 text="Actualizar"/>

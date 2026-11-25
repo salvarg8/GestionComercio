@@ -41,6 +41,12 @@ public class Navigator {
             return;
         }
 
+        // Las vistas de administración se muestran dentro de Configuración, en su pestaña.
+        if (PestanaConfiguracion.de(view).isPresent()) {
+            data = view;
+            view = AppView.CONFIGURACION;
+        }
+
         LoadedView loadedView = viewLoader.load(view);
 
         if (data != null && loadedView.controller() instanceof DataReceiver receiver) {

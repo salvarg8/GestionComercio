@@ -15,8 +15,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -98,25 +100,77 @@ class NavigatorTest {
     void sinPermisoNoNavega() {
         loguearCon(PermisoCodigo.ROL_VER);
 
-        navigator.navigate(AppView.PERMISO_LIST);
+        navigator.navigate(AppView.CATEGORIA_LIST);
 
-        verify(viewLoader, never()).load(AppView.PERMISO_LIST);
+        verify(viewLoader, never()).load(any());
         verify(errorHandler).handle(any(AuthorizationException.class));
     }
 
     @Test
     @DisplayName("✓ con el permiso requerido se muestra la vista")
     void conPermisoNavega() {
+        loguearCon(PermisoCodigo.CATEGORIA_VER);
+        LoadedView categorias = vista(AppView.CATEGORIA_LIST);
+        when(viewLoader.load(AppView.CATEGORIA_LIST)).thenReturn(categorias);
+        StackPane contentPane = mock(StackPane.class);
+        navigator.setContentPane(contentPane);
+
+        navigator.navigate(AppView.CATEGORIA_LIST);
+
+        verify(stageManager).showContent(categorias, contentPane);
+        verify(errorHandler, never()).handle(any());
+    }
+
+    @Test
+    @DisplayName("✓ una vista de administración se abre dentro de Configuración, en su pestaña")
+    @SuppressWarnings("unchecked")
+    void vistaDeAdministracionAbreConfiguracion() {
         loguearCon(PermisoCodigo.ROL_VER);
-        LoadedView rolList = vista(AppView.ROL_LIST);
-        when(viewLoader.load(AppView.ROL_LIST)).thenReturn(rolList);
+        DataReceiver<AppView> configuracion = mock(DataReceiver.class);
+        LoadedView vista = new LoadedView(AppView.CONFIGURACION, null, configuracion);
+        when(viewLoader.load(AppView.CONFIGURACION)).thenReturn(vista);
         StackPane contentPane = mock(StackPane.class);
         navigator.setContentPane(contentPane);
 
         navigator.navigate(AppView.ROL_LIST);
 
-        verify(stageManager).showContent(rolList, contentPane);
-        verify(errorHandler, never()).handle(any());
+        verify(viewLoader, never()).load(AppView.ROL_LIST);
+        verify(configuracion).setData(AppView.ROL_LIST);
+        verify(stageManager).showContent(vista, contentPane);
+    }
+
+    @Test
+    @DisplayName("✓ sin permiso para la vista de administración no se abre Configuración")
+    void vistaDeAdministracionSinPermiso() {
+        loguearCon(PermisoCodigo.ROL_VER);
+
+        navigator.navigate(AppView.LICENCIA);
+
+        verify(viewLoader, never()).load(any());
+        verify(errorHandler).handle(any(AuthorizationException.class));
+    }
+
+    @Test
+    @DisplayName("✓ Configuración se ve con el permiso de cualquiera de sus pestañas, y sólo así")
+    void configuracionRequiereAlgunaPestana() {
+        Set<PermisoCodigo> deLasPestanas = Arrays.stream(PestanaConfiguracion.values())
+                .flatMap(pestana -> pestana.getVistas().stream())
+                .flatMap(vista -> vista.getPermisosRequeridos().stream())
+                .collect(Collectors.toSet());
+
+        assertEquals(deLasPestanas, AppView.CONFIGURACION.getPermisosRequeridos());
+
+        loguearCon(PermisoCodigo.CATEGORIA_VER, PermisoCodigo.FACTURACION_REINTENTAR);
+        assertFalse(navigator.puedeAcceder(AppView.CONFIGURACION));
+    }
+
+    @Test
+    @DisplayName("✓ quien sólo puede reintentar facturas sigue llegando a los pendientes de CAE")
+    void pendientesDeCaeFueraDeConfiguracion() {
+        assertTrue(PestanaConfiguracion.de(AppView.FACTURACION_PENDIENTES).isEmpty());
+
+        loguearCon(PermisoCodigo.FACTURACION_REINTENTAR);
+        assertTrue(navigator.puedeAcceder(AppView.FACTURACION_PENDIENTES));
     }
 
     @Test
@@ -146,7 +200,7 @@ class NavigatorTest {
     }
 
     @Test
-    @DisplayName("✓ el formulario de roles admite crear o editar")
+    @DisplayName("✓ el formulario de roles admite crear, editar o sólo ver (modo lectura)")
     void formularioRolAceptaCualquieraDeSusPermisos() {
         loguearCon(PermisoCodigo.ROL_EDITAR);
         assertTrue(navigator.puedeAcceder(AppView.ROL_FORM));
@@ -155,6 +209,9 @@ class NavigatorTest {
         assertTrue(navigator.puedeAcceder(AppView.ROL_FORM));
 
         loguearCon(PermisoCodigo.ROL_VER);
+        assertTrue(navigator.puedeAcceder(AppView.ROL_FORM));
+
+        loguearCon(PermisoCodigo.USUARIO_VER);
         assertFalse(navigator.puedeAcceder(AppView.ROL_FORM));
     }
 

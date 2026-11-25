@@ -10,6 +10,7 @@ import org.gestionComercio.service.PermisoService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -29,33 +30,17 @@ public class PermisoServiceImpl implements PermisoService {
         return permisoRepository.findAll()
                 .stream()
                 .map(permisoMapper::toDto)
-                .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<PermisoDto> search(String texto) {
-
-        if (texto == null || texto.isBlank()) {
-            return findAll();
-        }
-
-        String filtro = texto.trim().toLowerCase();
-
-        return findAll().stream()
-                .filter(p ->
-                        p.getCodigo().name().toLowerCase().contains(filtro)
-                                || p.getDescripcion().toLowerCase().contains(filtro))
+                .sorted(Comparator.comparing(PermisoDto::getCodigo))
                 .toList();
     }
 
     /**
-     * El formulario de roles también necesita listar los permisos para
-     * asignarlos, así que se acepta PERMISO_VER, ROL_CREAR o ROL_EDITAR.
+     * Los permisos se consultan desde el formulario de roles: para asignarlos
+     * (ROL_CREAR, ROL_EDITAR) o para ver los de un rol (ROL_VER).
      */
     private void requerirLectura() {
         sesionUsuario.requerirAlgunPermiso(
-                PermisoCodigo.PERMISO_VER,
+                PermisoCodigo.ROL_VER,
                 PermisoCodigo.ROL_CREAR,
                 PermisoCodigo.ROL_EDITAR);
     }
