@@ -25,6 +25,21 @@
     -fx-padding: 20;
 }
 
+/*
+ * Panel con desplazamiento que envuelve cada vista del contenido: sin borde
+ * ni fondo propio (como .form-scroll, sin redefinir -fx-background).
+ */
+
+.scroll-pane.content-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.scroll-pane.content-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
 /* Barra inferior */
 
 .footer {
