@@ -64,8 +64,6 @@ public class App extends Application {
 
         stageManager.setPrimaryStage(primaryStage);
 
-        primaryStage.setResizable(false);
-
         var icono = App.class.getResource("/org/gestionComercio/images/Logo3.png");
         if (icono != null) {
             primaryStage.getIcons().add(new javafx.scene.image.Image(icono.toExternalForm()));
@@ -78,6 +76,8 @@ public class App extends Application {
     public void stop() {
 
         if (context != null) {
+            // Para abrir la ventana principal como se dejó la próxima vez en esta PC.
+            context.getBean(StageManager.class).guardarEstadoVentana();
             context.close();
         }
 
