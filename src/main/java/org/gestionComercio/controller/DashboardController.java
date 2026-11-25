@@ -3,8 +3,10 @@ package org.gestionComercio.controller;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.fxml.FXML;
+import javafx.scene.Cursor;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.StackPane;
 import lombok.RequiredArgsConstructor;
 import org.gestionComercio.controller.base.AbstractController;
@@ -46,15 +48,6 @@ public class DashboardController extends AbstractController {
     private Button btnInicio;
 
     @FXML
-    private Button btnRoles;
-
-    @FXML
-    private Button btnPermisos;
-
-    @FXML
-    private Button btnUsuarios;
-
-    @FXML
     private Button btnProductos;
 
     @FXML
@@ -94,18 +87,6 @@ public class DashboardController extends AbstractController {
     private Button btnConfiguracion;
 
     @FXML
-    private Button btnSistema;
-
-    @FXML
-    private Button btnFacturacion;
-
-    @FXML
-    private Button btnBackup;
-
-    @FXML
-    private Button btnLicencia;
-
-    @FXML
     private Label lblLicencia;
 
     @FXML
@@ -123,9 +104,6 @@ public class DashboardController extends AbstractController {
                 sesionUsuario.getUsuario().getNombre()
         );
 
-        mostrarSiTieneAcceso(btnRoles, AppView.ROL_LIST);
-        mostrarSiTieneAcceso(btnPermisos, AppView.PERMISO_LIST);
-        mostrarSiTieneAcceso(btnUsuarios, AppView.USUARIO_LIST);
         mostrarSiTieneAcceso(btnProductos, AppView.PRODUCTO_LIST);
         mostrarSiTieneAcceso(btnPrecios, AppView.ACTUALIZACION_PRECIOS);
         mostrarSiTieneAcceso(btnStock, AppView.STOCK_CONSULTA);
@@ -138,11 +116,12 @@ public class DashboardController extends AbstractController {
         mostrarSiTieneAcceso(btnVentas, vistaDeVentas());
         mostrarSiTieneAcceso(btnCompras, vistaDeCompras());
         mostrarSiTieneAcceso(btnReportes, AppView.REPORTES);
-        mostrarSiTieneAcceso(btnConfiguracion, AppView.EMPRESA_CONFIG);
-        mostrarSiTieneAcceso(btnSistema, AppView.CONFIGURACION_SISTEMA);
-        mostrarSiTieneAcceso(btnFacturacion, vistaDeFacturacion());
-        mostrarSiTieneAcceso(btnBackup, AppView.BACKUP);
-        mostrarSiTieneAcceso(btnLicencia, AppView.LICENCIA);
+        mostrarSiTieneAcceso(btnConfiguracion, AppView.CONFIGURACION);
+
+        if (navigator.puedeAcceder(AppView.LICENCIA)) {
+            lblLicencia.setCursor(Cursor.HAND);
+            lblLicencia.setTooltip(new Tooltip("Ver la licencia"));
+        }
 
         try {
             mostrarEstadoLicencia(licenciaService.estado());
@@ -158,13 +137,6 @@ public class DashboardController extends AbstractController {
     protected void initializeEvents() {
 
         btnInicio.setOnAction(e -> navigator.navigate(AppView.INICIO));
-
-        btnRoles.setOnAction(e ->
-                navigator.navigate(AppView.ROL_LIST));
-
-        btnPermisos.setOnAction(e -> navigator.navigate(AppView.PERMISO_LIST));
-
-        btnUsuarios.setOnAction(e -> navigator.navigate(AppView.USUARIO_LIST));
 
         btnProductos.setOnAction(e -> navigator.navigate(AppView.PRODUCTO_LIST));
 
@@ -190,31 +162,30 @@ public class DashboardController extends AbstractController {
 
         btnReportes.setOnAction(e -> navigator.navigate(AppView.REPORTES));
 
-        btnConfiguracion.setOnAction(e -> navigator.navigate(AppView.EMPRESA_CONFIG));
-
-        btnSistema.setOnAction(e -> navigator.navigate(AppView.CONFIGURACION_SISTEMA));
-
-        btnFacturacion.setOnAction(e -> navigator.navigate(vistaDeFacturacion()));
-
-        btnBackup.setOnAction(e -> navigator.navigate(AppView.BACKUP));
-
-        btnLicencia.setOnAction(e -> navigator.navigate(AppView.LICENCIA));
+        btnConfiguracion.setOnAction(e -> navigator.navigate(AppView.CONFIGURACION));
 
         btnCambiarPassword.setOnAction(e -> navigator.navigate(AppView.CAMBIAR_PASSWORD));
 
         btnCerrarSesion.setOnAction(e -> cerrarSesion());
+
+        // El aviso de licencia lleva a Configuración > Licencia (si puede administrarla).
+        lblLicencia.setOnMouseClicked(e -> {
+            if (navigator.puedeAcceder(AppView.LICENCIA)) {
+                navigator.navigate(AppView.LICENCIA);
+            }
+        });
     }
 
-    /** "Ventas" abre el punto de venta; quien sólo puede ver ventas va al listado. */
+    /**
+     * "Ventas" abre el punto de venta; quien sólo puede ver ventas va al
+     * listado, y quien sólo puede reintentar la autorización de facturas, a
+     * los comprobantes pendientes de CAE.
+     */
     private AppView vistaDeVentas() {
-        return navigator.puedeAcceder(AppView.PUNTO_VENTA) ? AppView.PUNTO_VENTA : AppView.VENTA_LIST;
-    }
-
-    /** "Facturación electrónica" abre la configuración; quien sólo puede reintentar va a los pendientes de CAE. */
-    private AppView vistaDeFacturacion() {
-        return navigator.puedeAcceder(AppView.FACTURACION_CONFIG)
-                ? AppView.FACTURACION_CONFIG
-                : AppView.FACTURACION_PENDIENTES;
+        if (navigator.puedeAcceder(AppView.PUNTO_VENTA)) {
+            return AppView.PUNTO_VENTA;
+        }
+        return navigator.puedeAcceder(AppView.VENTA_LIST) ? AppView.VENTA_LIST : AppView.FACTURACION_PENDIENTES;
     }
 
     /** "Compras" abre el listado; quien sólo puede registrar compras va al formulario. */

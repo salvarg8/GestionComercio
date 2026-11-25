@@ -15,10 +15,12 @@ import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.navigation.AppView;
 import org.gestionComercio.navigation.Navigator;
 import org.gestionComercio.service.RolService;
-import org.gestionComercio.view.component.table.ActionTableCell;
+import org.gestionComercio.view.component.table.RowActionsTableCell;
+import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Controller
@@ -121,21 +123,25 @@ public class RolListController extends AbstractController {
         boolean puedeEditar = sesionUsuario.tienePermiso(PermisoCodigo.ROL_EDITAR);
         boolean puedeEliminar = sesionUsuario.tienePermiso(PermisoCodigo.ROL_ELIMINAR);
 
-        colAcciones.setVisible(puedeEditar || puedeEliminar);
+        List<RowActionsTableCell.Accion<RolDto>> acciones = new ArrayList<>();
 
-        colAcciones.setCellFactory(column ->
-                new ActionTableCell<RolDto>(
-                        puedeEditar ? this::editar : null,
-                        puedeEliminar ? this::eliminar : null
-                ));
-    }
+        // Sin permiso para editar, el rol se abre en modo lectura para ver sus permisos.
+        acciones.add(puedeEditar
+                ? new RowActionsTableCell.Accion<>(FontAwesomeSolid.EDIT, "Editar", "btn-icon-edit",
+                        rol -> true, this::abrir)
+                : new RowActionsTableCell.Accion<>(FontAwesomeSolid.EYE, "Ver permisos", "btn-icon-edit",
+                        rol -> true, this::abrir));
 
-    private void editar(RolDto rol) {
-        if (!sesionUsuario.tienePermiso(PermisoCodigo.ROL_EDITAR)) {
-            warning("No tiene permiso para editar roles.");
-            return;
+        if (puedeEliminar) {
+            acciones.add(new RowActionsTableCell.Accion<>(FontAwesomeSolid.TRASH, "Eliminar", "btn-icon-delete",
+                    rol -> true, this::eliminar));
         }
 
+        colAcciones.setCellFactory(column -> new RowActionsTableCell<>(acciones));
+    }
+
+    /** Con ROL_EDITAR se edita; con sólo ROL_VER se abre en modo lectura. */
+    private void abrir(RolDto rol) {
         navigator.navigate(AppView.ROL_FORM, rol);
     }
 

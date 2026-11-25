@@ -108,21 +108,7 @@
 
             <Button fx:id="btnReportes" maxWidth="Infinity" styleClass="menu-button" text="Reportes" />
 
-            <Button fx:id="btnConfiguracion" maxWidth="Infinity" styleClass="menu-button" text="Datos de la empresa" />
-
-            <Button fx:id="btnSistema" maxWidth="Infinity" styleClass="menu-button" text="Parámetros del sistema" />
-
-            <Button fx:id="btnFacturacion" maxWidth="Infinity" styleClass="menu-button" text="Facturación electrónica" />
-
-            <Button fx:id="btnBackup" maxWidth="Infinity" styleClass="menu-button" text="Copias de seguridad" />
-
-            <Button fx:id="btnLicencia" maxWidth="Infinity" styleClass="menu-button" text="Licencia" />
-
-            <Button fx:id="btnUsuarios" maxWidth="Infinity" styleClass="menu-button" text="Usuarios" />
-
-            <Button fx:id="btnPermisos" maxWidth="Infinity" styleClass="menu-button" text="Permisos" />
-
-            <Button fx:id="btnRoles" maxWidth="Infinity" styleClass="menu-button" text="Roles" />
+            <Button fx:id="btnConfiguracion" maxWidth="Infinity" styleClass="menu-button" text="Configuración" />
 
             <Region VBox.vgrow="ALWAYS" />
 

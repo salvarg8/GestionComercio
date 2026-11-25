@@ -68,9 +68,6 @@ public class FacturacionConfigController extends AbstractController {
     private static final String HECHO = "paso-hecho";
 
     @FXML
-    private Button btnPendientes;
-
-    @FXML
     private Button btnActualizar;
 
     @FXML
@@ -146,9 +143,6 @@ public class FacturacionConfigController extends AbstractController {
 
         armarPasos();
 
-        boolean pendientes = navigator.puedeAcceder(AppView.FACTURACION_PENDIENTES);
-        mostrar(btnPendientes, pendientes);
-
         cargar();
     }
 
@@ -156,7 +150,6 @@ public class FacturacionConfigController extends AbstractController {
     protected void initializeEvents() {
 
         btnActualizar.setOnAction(e -> cargar());
-        btnPendientes.setOnAction(e -> navigator.navigate(AppView.FACTURACION_PENDIENTES));
 
         cmbAmbiente.valueProperty().addListener((obs, o, n) -> actualizarInstrucciones());
 

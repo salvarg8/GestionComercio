@@ -6,8 +6,7 @@ import java.util.List;
 
 public interface PermisoService {
 
+    /** Todos los permisos, en el orden en que se declaran en PermisoCodigo (agrupados por módulo). */
     List<PermisoDto> findAll();
-
-    List<PermisoDto> search(String texto);
 
 }

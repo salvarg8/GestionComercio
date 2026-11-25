@@ -117,8 +117,9 @@ public class DataInitializer implements CommandLineRunner {
         usuarioRepository.save(usuario);
     }
     /**
-     * Borra los permisos cuyo código ya no existe en PermisoCodigo (por ejemplo,
-     * uno renombrado). Si quedaran en la base, Hibernate no podría leerlos y la
+     * Borra de la base y de los roles los permisos cuyo código ya no existe en
+     * PermisoCodigo (uno renombrado, o PERMISO_VER, que se eliminó junto con la
+     * vista Permisos). Si quedaran en la base, Hibernate no podría leerlos y la
      * aplicación no arrancaría. Se hace por SQL porque cargarlos como entidad
      * es justamente lo que falla.
      */

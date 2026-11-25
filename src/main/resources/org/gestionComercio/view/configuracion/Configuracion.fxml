@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.TabPane?>
+
+<!-- Las pestañas se arman en el controlador según los permisos del usuario. -->
+<TabPane fx:id="tabs"
+         xmlns="http://javafx.com/javafx/21"
+         xmlns:fx="http://javafx.com/fxml/1"
+         fx:controller="org.gestionComercio.controller.configuracion.ConfiguracionController"
+         tabClosingPolicy="UNAVAILABLE"
+         styleClass="configuracion-tabs"/>

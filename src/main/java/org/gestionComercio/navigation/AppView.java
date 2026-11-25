@@ -37,32 +37,46 @@ public enum AppView {
             false
     ),
 
+    /**
+     * Pestañas de administración (ver {@link PestanaConfiguracion}), cada una
+     * visible según su permiso: alcanza con poder ver alguna. Acepta como dato
+     * la vista de la pestaña que se quiere abrir.
+     */
+    CONFIGURACION(
+            "/org/gestionComercio/view/configuracion/Configuracion.fxml",
+            "Configuración",
+            NavigationType.CONTENT,
+            WindowMode.MAXIMIZED,
+            false,
+            PermisoCodigo.EMPRESA_VER,
+            PermisoCodigo.CONFIGURACION_VER,
+            PermisoCodigo.FACTURACION_CONFIGURAR,
+            PermisoCodigo.USUARIO_VER,
+            PermisoCodigo.ROL_VER,
+            PermisoCodigo.BACKUP_CREAR,
+            PermisoCodigo.BACKUP_RESTAURAR,
+            PermisoCodigo.LICENCIA_ADMINISTRAR
+    ),
+
     ROL_LIST(
             "/org/gestionComercio/view/rol/RolList.fxml",
-            "Lista de roles",
+            "Roles",
             NavigationType.CONTENT,
             WindowMode.MAXIMIZED,
             false,
             PermisoCodigo.ROL_VER
     ),
 
+    /** Con sólo ROL_VER el rol se abre en modo lectura, para ver sus permisos. */
     ROL_FORM(
             "/org/gestionComercio/view/rol/RolForm.fxml",
-            "Roles",
+            "Rol",
             NavigationType.CONTENT,
             WindowMode.MAXIMIZED,
             false,
+            PermisoCodigo.ROL_VER,
             PermisoCodigo.ROL_CREAR,
             PermisoCodigo.ROL_EDITAR
-    ),
-
-    PERMISO_LIST(
-            "/org/gestionComercio/view/permiso/PermisoList.fxml",
-            "Permisos",
-            NavigationType.CONTENT,
-            WindowMode.MAXIMIZED,
-            false,
-            PermisoCodigo.PERMISO_VER
     ),
 
     USUARIO_LIST(
