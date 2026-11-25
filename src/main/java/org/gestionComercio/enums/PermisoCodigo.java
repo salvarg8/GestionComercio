@@ -82,6 +82,8 @@ public enum PermisoCodigo {
     CAJA_ABRIR_OTRO_USUARIO("Caja", "Abrir caja a nombre de otro usuario"),
     CAJA_CERRAR_OTRO_USUARIO("Caja", "Ver y cerrar con arqueo las cajas abiertas de otros usuarios"),
     CAJA_REGISTRAR_MOVIMIENTO("Caja", "Registrar ingresos, egresos, gastos y retiros de caja"),
+    CAJA_CONFIRMAR_RETIRO("Caja",
+            "Confirmar los retiros de caja cuando la empresa exige que los confirme un encargado"),
 
     // Ventas
     VENTA_VER("Ventas", "Ver ventas"),

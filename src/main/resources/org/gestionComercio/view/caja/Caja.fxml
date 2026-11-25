@@ -107,6 +107,14 @@
                 <Label fx:id="lblApertura"
                        styleClass="form-hint"/>
 
+                <!-- Aviso de retiro / caja bloqueada (control del efectivo) -->
+                <Label fx:id="lblAvisoEfectivo"
+                       styleClass="form-warning"
+                       wrapText="true"
+                       maxWidth="Infinity"
+                       visible="false"
+                       managed="false"/>
+
                 <HBox spacing="12">
 
                     <VBox styleClass="tarjeta-resumen" HBox.hgrow="ALWAYS" maxWidth="Infinity">

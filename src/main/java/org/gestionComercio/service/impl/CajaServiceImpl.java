@@ -5,6 +5,7 @@ import org.gestionComercio.dto.caja.CajaDto;
 import org.gestionComercio.dto.caja.MovimientoCajaDto;
 import org.gestionComercio.dto.caja.ResponsableCajaDto;
 import org.gestionComercio.entity.Caja;
+import org.gestionComercio.entity.Empresa;
 import org.gestionComercio.entity.MovimientoCaja;
 import org.gestionComercio.entity.Usuario;
 import org.gestionComercio.enums.EstadoCaja;
@@ -19,10 +20,12 @@ import org.gestionComercio.exception.EntityNotFoundException;
 import org.gestionComercio.mapper.CajaMapper;
 import org.gestionComercio.mapper.MovimientoCajaMapper;
 import org.gestionComercio.repository.CajaRepository;
+import org.gestionComercio.repository.EmpresaRepository;
 import org.gestionComercio.repository.MovimientoCajaRepository;
 import org.gestionComercio.repository.UsuarioRepository;
 import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.util.DateUtils;
+import org.gestionComercio.service.AuthenticationService;
 import org.gestionComercio.service.CajaService;
 import org.gestionComercio.util.CurrencyUtils;
 import org.springframework.stereotype.Service;
@@ -57,6 +60,9 @@ public class CajaServiceImpl implements CajaService {
     private final MovimientoCajaMapper movimientoCajaMapper;
     private final SesionUsuario sesionUsuario;
     private final UsuarioRepository usuarioRepository;
+    private final EmpresaRepository empresaRepository;
+    private final ControlEfectivoCaja controlEfectivoCaja;
+    private final AuthenticationService authenticationService;
 
     @Override
     public CajaDto abrir(BigDecimal saldoInicial) {
@@ -140,11 +146,26 @@ public class CajaServiceImpl implements CajaService {
 
         sesionUsuario.requerirPermiso(PermisoCodigo.CAJA_VER);
 
-        return buscarCajaAbierta().map(caja -> conResumen(caja, movimientosDe(caja)));
+        return buscarCajaAbierta().map(caja -> {
+
+            List<MovimientoCaja> movimientos = movimientosDe(caja);
+            CajaDto dto = conResumen(caja, movimientos);
+
+            dto.setEstadoEfectivo(controlEfectivoCaja.estado(caja, movimientos).orElse(null));
+            dto.setRetiroRequiereConfirmacion(retiroRequiereConfirmacion());
+
+            return dto;
+        });
     }
 
     @Override
     public MovimientoCajaDto registrarMovimiento(TipoMovimientoCaja tipo, BigDecimal importe, String descripcion) {
+        return registrarMovimiento(tipo, importe, descripcion, null, null);
+    }
+
+    @Override
+    public MovimientoCajaDto registrarMovimiento(TipoMovimientoCaja tipo, BigDecimal importe, String descripcion,
+                                                 String usuarioEncargado, String passwordEncargado) {
 
         sesionUsuario.requerirPermiso(PermisoCodigo.CAJA_REGISTRAR_MOVIMIENTO);
 
@@ -176,6 +197,11 @@ public class CajaServiceImpl implements CajaService {
             }
         }
 
+        // Lo último: no se piden credenciales para un movimiento que igual se rechazaría.
+        Usuario autorizador = tipo == TipoMovimientoCaja.RETIRO && retiroRequiereConfirmacion()
+                ? confirmadorDelRetiro(usuarioEncargado, passwordEncargado)
+                : null;
+
         MovimientoCaja movimiento = movimientoCajaRepository.save(MovimientoCaja.builder()
                 .fecha(LocalDateTime.now())
                 .tipo(tipo)
@@ -183,9 +209,48 @@ public class CajaServiceImpl implements CajaService {
                 .importe(monto)
                 .caja(caja)
                 .usuario(sesionUsuario.getUsuario())
+                .usuarioAutorizacion(autorizador)
                 .build());
 
         return movimientoCajaMapper.toDto(movimiento);
+    }
+
+    private boolean retiroRequiereConfirmacion() {
+        return empresaRepository.findFirstByOrderByIdAsc()
+                .map(Empresa::isRetiroRequiereConfirmacion)
+                .orElse(false);
+    }
+
+    /**
+     * Usuario que confirma un retiro: el de la sesión si tiene
+     * CAJA_CONFIRMAR_RETIRO; si no, el encargado de las credenciales, que
+     * tiene que tener ese permiso en su rol. No cambia la sesión.
+     */
+    private Usuario confirmadorDelRetiro(String usuarioEncargado, String passwordEncargado) {
+
+        if (sesionUsuario.tienePermiso(PermisoCodigo.CAJA_CONFIRMAR_RETIRO)) {
+            return sesionUsuario.getUsuario();
+        }
+
+        if (usuarioEncargado == null || usuarioEncargado.isBlank()
+                || passwordEncargado == null || passwordEncargado.isEmpty()) {
+            throw new BusinessException(
+                    "El retiro lo debe confirmar un encargado: ingrese su usuario y contraseña.");
+        }
+
+        Usuario encargado = authenticationService.authenticate(usuarioEncargado.trim(), passwordEncargado);
+
+        boolean puedeConfirmar = encargado.getEstadoRegistro() == EstadoRegistro.ACTIVO
+                && encargado.getRol() != null
+                && encargado.getRol().getPermisos().stream()
+                .anyMatch(p -> p.getCodigo() == PermisoCodigo.CAJA_CONFIRMAR_RETIRO);
+
+        if (!puedeConfirmar) {
+            throw new AuthorizationException("El usuario " + encargado.getUsuario()
+                    + " no tiene permiso para confirmar retiros de caja.");
+        }
+
+        return encargado;
     }
 
     @Transactional(readOnly = true)

@@ -1,10 +1,14 @@
 package org.gestionComercio.service.impl;
 
 import org.gestionComercio.dto.caja.CajaDto;
+import org.gestionComercio.dto.caja.EstadoEfectivoCaja;
 import org.gestionComercio.dto.caja.MovimientoCajaDto;
 import org.gestionComercio.dto.caja.ResponsableCajaDto;
 import org.gestionComercio.entity.Caja;
+import org.gestionComercio.entity.Empresa;
 import org.gestionComercio.entity.MovimientoCaja;
+import org.gestionComercio.entity.Permiso;
+import org.gestionComercio.entity.Rol;
 import org.gestionComercio.entity.Usuario;
 import org.gestionComercio.enums.EstadoCaja;
 import org.gestionComercio.enums.FiltroCaja;
@@ -12,15 +16,18 @@ import org.gestionComercio.enums.EstadoRegistro;
 import org.gestionComercio.enums.EstadoUsuario;
 import org.gestionComercio.enums.PermisoCodigo;
 import org.gestionComercio.enums.TipoMovimientoCaja;
+import org.gestionComercio.exception.AuthenticationException;
 import org.gestionComercio.exception.AuthorizationException;
 import org.gestionComercio.exception.BusinessException;
 import org.gestionComercio.exception.EntityNotFoundException;
 import org.gestionComercio.mapper.CajaMapper;
 import org.gestionComercio.mapper.MovimientoCajaMapper;
 import org.gestionComercio.repository.CajaRepository;
+import org.gestionComercio.repository.EmpresaRepository;
 import org.gestionComercio.repository.MovimientoCajaRepository;
 import org.gestionComercio.repository.UsuarioRepository;
 import org.gestionComercio.security.SesionUsuario;
+import org.gestionComercio.service.AuthenticationService;
 import org.gestionComercio.util.DateUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,11 +45,14 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -74,6 +84,15 @@ class CajaServiceImplTest {
     @Mock
     private UsuarioRepository usuarioRepository;
 
+    @Mock
+    private EmpresaRepository empresaRepository;
+
+    @Mock
+    private ControlEfectivoCaja controlEfectivoCaja;
+
+    @Mock
+    private AuthenticationService authenticationService;
+
     private SesionUsuario sesionUsuario;
 
     private CajaServiceImpl cajaService;
@@ -85,7 +104,7 @@ class CajaServiceImplTest {
 
         cajaService = new CajaServiceImpl(
                 cajaRepository, movimientoCajaRepository, cajaMapper, movimientoCajaMapper, sesionUsuario,
-                usuarioRepository);
+                usuarioRepository, empresaRepository, controlEfectivoCaja, authenticationService);
 
         lenient().when(cajaRepository.save(any())).thenAnswer(inv -> {
             Caja caja = inv.getArgument(0);
@@ -459,6 +478,174 @@ class CajaServiceImplTest {
         assertThrows(AuthorizationException.class, () -> cajaService.registrarMovimiento(
                 TipoMovimientoCaja.INGRESO_MANUAL, BigDecimal.TEN, "x"));
         verifyNoInteractions(cajaRepository, movimientoCajaRepository);
+    }
+
+    // ------------------------------------------------------------------
+    // Control del efectivo y confirmación de retiros
+    // ------------------------------------------------------------------
+
+    private void retiroRequiereConfirmacion(boolean requiere) {
+        Empresa empresa = Empresa.builder().retiroRequiereConfirmacion(requiere).build();
+        lenient().when(empresaRepository.findFirstByOrderByIdAsc()).thenReturn(Optional.of(empresa));
+    }
+
+    private Usuario encargado(String login, PermisoCodigo... permisos) {
+        Set<Permiso> deRol = new HashSet<>();
+        for (PermisoCodigo codigo : permisos) {
+            deRol.add(Permiso.builder().codigo(codigo).build());
+        }
+        Usuario encargado = Usuario.builder()
+                .usuario(login)
+                .estadoUsuario(EstadoUsuario.ACTIVO)
+                .rol(Rol.builder().nombre("ENCARGADO").permisos(deRol).build())
+                .build();
+        encargado.setId(99L);
+        return encargado;
+    }
+
+    private MovimientoCaja movimientoGuardado() {
+        ArgumentCaptor<MovimientoCaja> mov = ArgumentCaptor.forClass(MovimientoCaja.class);
+        verify(movimientoCajaRepository).save(mov.capture());
+        return mov.getValue();
+    }
+
+    @Test
+    @DisplayName("obtenerCajaAbierta informa el estado del efectivo y si los retiros requieren confirmación")
+    void obtenerCajaAbiertaConControlEfectivo() {
+
+        Caja caja = conCajaAbierta("1000");
+        retiroRequiereConfirmacion(true);
+        EstadoEfectivoCaja estado = new EstadoEfectivoCaja(
+                new BigDecimal("800"), new BigDecimal("1000.00"), true, 2, 1);
+        when(controlEfectivoCaja.estado(any(), any())).thenReturn(Optional.of(estado));
+
+        CajaDto dto = cajaService.obtenerCajaAbierta().orElseThrow();
+
+        assertSame(estado, dto.getEstadoEfectivo());
+        assertTrue(dto.isRetiroRequiereConfirmacion());
+        verify(controlEfectivoCaja).estado(org.mockito.ArgumentMatchers.same(caja), any());
+    }
+
+    @Test
+    @DisplayName("sin confirmación configurada, el retiro no guarda quién lo confirmó")
+    void retiroSinConfirmacion() {
+
+        conCajaAbierta("1000");
+        retiroRequiereConfirmacion(false);
+        loguearSin(PermisoCodigo.CAJA_CONFIRMAR_RETIRO);
+
+        cajaService.registrarMovimiento(TipoMovimientoCaja.RETIRO, new BigDecimal("200"), "Retiro");
+
+        assertNull(movimientoGuardado().getUsuarioAutorizacion());
+        verifyNoInteractions(authenticationService);
+    }
+
+    @Test
+    @DisplayName("con confirmación, un usuario con CAJA_CONFIRMAR_RETIRO confirma su propio retiro sin credenciales")
+    void retiroConfirmadoPorElMismoUsuario() {
+
+        conCajaAbierta("1000");
+        retiroRequiereConfirmacion(true);
+
+        cajaService.registrarMovimiento(TipoMovimientoCaja.RETIRO, new BigDecimal("200"), "Retiro");
+
+        assertSame(sesionUsuario.getUsuario(), movimientoGuardado().getUsuarioAutorizacion());
+        verifyNoInteractions(authenticationService);
+    }
+
+    @Test
+    @DisplayName("con confirmación, el retiro de un cajero sin permiso se rechaza si no hay credenciales")
+    void retiroSinCredenciales() {
+
+        conCajaAbierta("1000");
+        retiroRequiereConfirmacion(true);
+        loguearSin(PermisoCodigo.CAJA_CONFIRMAR_RETIRO);
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> cajaService.registrarMovimiento(
+                TipoMovimientoCaja.RETIRO, new BigDecimal("200"), "Retiro", "  ", null));
+
+        assertTrue(ex.getMessage().contains("encargado"));
+        verify(movimientoCajaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("con confirmación, el encargado confirma con su usuario y contraseña sin cambiar la sesión")
+    void retiroConfirmadoPorEncargado() {
+
+        conCajaAbierta("1000");
+        retiroRequiereConfirmacion(true);
+        loguearSin(PermisoCodigo.CAJA_CONFIRMAR_RETIRO);
+        Usuario cajero = sesionUsuario.getUsuario();
+        Usuario encargado = encargado("encargado", PermisoCodigo.CAJA_CONFIRMAR_RETIRO);
+        when(authenticationService.authenticate("encargado", "clave")).thenReturn(encargado);
+
+        cajaService.registrarMovimiento(
+                TipoMovimientoCaja.RETIRO, new BigDecimal("200"), "Retiro", " encargado ", "clave");
+
+        MovimientoCaja movimiento = movimientoGuardado();
+        assertSame(cajero, movimiento.getUsuario());
+        assertSame(encargado, movimiento.getUsuarioAutorizacion());
+        assertSame(cajero, sesionUsuario.getUsuario());
+    }
+
+    @Test
+    @DisplayName("con confirmación, se rechazan las credenciales inválidas")
+    void retiroConCredencialesInvalidas() {
+
+        conCajaAbierta("1000");
+        retiroRequiereConfirmacion(true);
+        loguearSin(PermisoCodigo.CAJA_CONFIRMAR_RETIRO);
+        when(authenticationService.authenticate("encargado", "mal"))
+                .thenThrow(new AuthenticationException("Usuario o contraseña incorrectos."));
+
+        assertThrows(AuthenticationException.class, () -> cajaService.registrarMovimiento(
+                TipoMovimientoCaja.RETIRO, new BigDecimal("200"), "Retiro", "encargado", "mal"));
+        verify(movimientoCajaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("con confirmación, el que confirma tiene que tener CAJA_CONFIRMAR_RETIRO")
+    void retiroConfirmadoPorUsuarioSinPermiso() {
+
+        conCajaAbierta("1000");
+        retiroRequiereConfirmacion(true);
+        loguearSin(PermisoCodigo.CAJA_CONFIRMAR_RETIRO);
+        when(authenticationService.authenticate("otro", "clave"))
+                .thenReturn(encargado("otro", PermisoCodigo.CAJA_VER));
+
+        AuthorizationException ex = assertThrows(AuthorizationException.class, () -> cajaService
+                .registrarMovimiento(TipoMovimientoCaja.RETIRO, new BigDecimal("200"), "Retiro", "otro", "clave"));
+
+        assertTrue(ex.getMessage().contains("otro"));
+        verify(movimientoCajaRepository, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = TipoMovimientoCaja.class, names = {"INGRESO_MANUAL", "EGRESO_MANUAL", "GASTO"})
+    @DisplayName("con confirmación de retiros, los demás movimientos manuales no la necesitan")
+    void otrosMovimientosNoRequierenConfirmacion(TipoMovimientoCaja tipo) {
+
+        conCajaAbierta("1000");
+        retiroRequiereConfirmacion(true);
+        loguearSin(PermisoCodigo.CAJA_CONFIRMAR_RETIRO);
+
+        cajaService.registrarMovimiento(tipo, new BigDecimal("200"), "Motivo");
+
+        assertNull(movimientoGuardado().getUsuarioAutorizacion());
+        verifyNoInteractions(authenticationService);
+    }
+
+    @Test
+    @DisplayName("un retiro que supera el saldo se rechaza antes de pedir credenciales")
+    void retiroQueSuperaElSaldoNoPideCredenciales() {
+
+        conCajaAbierta("100");
+        retiroRequiereConfirmacion(true);
+        loguearSin(PermisoCodigo.CAJA_CONFIRMAR_RETIRO);
+
+        assertThrows(BusinessException.class, () -> cajaService.registrarMovimiento(
+                TipoMovimientoCaja.RETIRO, new BigDecimal("500"), "Retiro", "encargado", "clave"));
+        verifyNoInteractions(authenticationService);
     }
 
     // ------------------------------------------------------------------

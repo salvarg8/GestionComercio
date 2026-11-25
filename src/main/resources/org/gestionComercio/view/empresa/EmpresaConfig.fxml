@@ -2,6 +2,7 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.DatePicker?>
 <?import javafx.scene.control.Label?>
@@ -269,6 +270,74 @@
                                     </children>
 
                                 </VBox>
+
+                                <Separator/>
+
+                                <!-- Control del efectivo en caja -->
+
+                                <Label text="Control del efectivo en caja"
+                                       styleClass="subtitle"/>
+
+                                <Label text="Avisa al cajero cuando el efectivo de su caja llega al monto máximo para que retire dinero y, si se indica, bloquea las ventas hasta que lo haga."
+                                       styleClass="form-hint"
+                                       wrapText="true"/>
+
+                                <HBox spacing="15">
+
+                                    <children>
+
+                                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+
+                                            <children>
+
+                                                <Label text="Monto máximo en caja"/>
+
+                                                <TextField fx:id="txtMontoMaximoCaja"
+                                                           promptText="Vacío: sin control. Ej.: 150000"/>
+
+                                                <Label fx:id="lblErrorMontoMaximoCaja"
+                                                       styleClass="field-error-label"
+                                                       wrapText="true"
+                                                       visible="false"
+                                                       managed="false"/>
+
+                                            </children>
+
+                                        </VBox>
+
+                                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+
+                                            <children>
+
+                                                <Label text="Clientes antes de bloquear"/>
+
+                                                <TextField fx:id="txtClientesAntesDeBloqueo"
+                                                           promptText="Vacío: nunca se bloquea"/>
+
+                                                <Label text="Ventas que se permiten después de alcanzar el monto. Con 0 se bloquea apenas se alcanza."
+                                                       styleClass="form-hint"
+                                                       wrapText="true"/>
+
+                                                <Label fx:id="lblErrorClientesAntesDeBloqueo"
+                                                       styleClass="field-error-label"
+                                                       wrapText="true"
+                                                       visible="false"
+                                                       managed="false"/>
+
+                                            </children>
+
+                                        </VBox>
+
+                                    </children>
+
+                                </HBox>
+
+                                <CheckBox fx:id="chkRetiroRequiereConfirmacion"
+                                          text="Los retiros los debe confirmar un encargado"/>
+
+                                <Label text="El encargado es un usuario con el permiso &quot;Confirmar los retiros de caja&quot;. Si el cajero no lo tiene, se piden el usuario y la contraseña del encargado."
+                                       styleClass="form-hint"
+                                       wrapText="true"/>
 
                             </children>
 

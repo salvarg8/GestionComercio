@@ -88,6 +88,22 @@ final class CajaFormato {
     }
 
     /** "Nombre Apellido (login)", o sólo el login si no hay nombre. */
+    /**
+     * Descripción del movimiento y, si un encargado confirmó el retiro, quién:
+     * "Retiro para el banco · Confirmó: Juan Pérez (jperez)".
+     */
+    static String descripcion(MovimientoCajaDto movimiento) {
+
+        String descripcion = Objects.toString(movimiento.getDescripcion(), "");
+
+        if (movimiento.getUsuarioAutorizacionId() == null) {
+            return descripcion;
+        }
+
+        return descripcion + " · Confirmó: " + usuario(
+                movimiento.getUsuarioAutorizacionNombreCompleto(), movimiento.getUsuarioAutorizacionNombre());
+    }
+
     static String usuario(String nombreCompleto, String login) {
 
         String nombre = nombreCompleto == null ? "" : nombreCompleto.trim();
@@ -170,8 +186,7 @@ final class CajaFormato {
 
         configurarColumnaTipo(colTipo);
 
-        colDescripcion.setCellValueFactory(c -> new SimpleStringProperty(
-                Objects.toString(c.getValue().getDescripcion(), "")));
+        colDescripcion.setCellValueFactory(c -> new SimpleStringProperty(descripcion(c.getValue())));
 
         colImporte.setCellValueFactory(c -> new SimpleStringProperty(
                 importeConSigno(c.getValue().getTipo(), c.getValue().getImporte())));

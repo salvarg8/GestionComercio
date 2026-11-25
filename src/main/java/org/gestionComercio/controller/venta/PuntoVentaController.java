@@ -29,6 +29,7 @@ import org.gestionComercio.controller.venta.CarritoVenta.Renglon;
 import org.gestionComercio.controller.facturacion.AutorizacionComprobantes;
 import org.gestionComercio.controller.facturacion.FacturaElectronicaFormato;
 import org.gestionComercio.dto.arca.ComprobanteArcaDto;
+import org.gestionComercio.dto.caja.EstadoEfectivoCaja;
 import org.gestionComercio.dto.cliente.ClienteDto;
 import org.gestionComercio.dto.configuracion.ConfiguracionDto;
 import org.gestionComercio.dto.producto.ProductoDto;
@@ -105,6 +106,9 @@ public class PuntoVentaController extends AbstractController {
 
     @FXML
     private BorderPane panelVenta;
+
+    @FXML
+    private Label lblAvisoEfectivo;
 
     @FXML
     private TextField txtBuscar;
@@ -196,6 +200,9 @@ public class PuntoVentaController extends AbstractController {
 
     /** Parámetros del sistema, leídos al abrir la pantalla (así rige un cambio sin reiniciar). */
     private ConfiguracionDto configuracion = ConfiguracionDto.porDefecto();
+
+    /** Efectivo de la caja frente al monto máximo de la empresa; null si no hay caja o control. */
+    private EstadoEfectivoCaja estadoEfectivo;
 
     @Override
     protected void initializeComponents() {
@@ -514,10 +521,47 @@ public class PuntoVentaController extends AbstractController {
             mostrar(btnIrACaja, accesoCaja);
             mostrar(lblSinAccesoCaja, !accesoCaja);
 
+            actualizarEfectivo(false);
+
             if (puedeVender) {
                 enfocarBusqueda();
             }
         });
+    }
+
+    /**
+     * Consulta el efectivo de la caja: muestra la franja de aviso y, con la
+     * caja bloqueada, deshabilita la confirmación de la venta.
+     *
+     * @param avisarCambios true para mostrar un cartel si recién se alcanzó el monto o se bloqueó la caja
+     */
+    private void actualizarEfectivo(boolean avisarCambios) {
+
+        EstadoEfectivoCaja anterior = estadoEfectivo;
+        estadoEfectivo = ventaService.estadoEfectivoCaja().orElse(null);
+
+        String mensaje = estadoEfectivo == null ? null : estadoEfectivo.mensaje();
+
+        mostrar(lblAvisoEfectivo, mensaje != null);
+        lblAvisoEfectivo.setText(Objects.toString(mensaje, ""));
+        lblAvisoEfectivo.getStyleClass().setAll("label", cajaBloqueada() ? "form-error" : "form-warning");
+
+        actualizarTotales();
+
+        if (!avisarCambios || mensaje == null) {
+            return;
+        }
+
+        boolean recienAlcanzado = anterior == null || !anterior.montoAlcanzado();
+        boolean recienBloqueada = cajaBloqueada() && (anterior == null || !anterior.bloqueada());
+
+        if (recienAlcanzado || recienBloqueada) {
+            Dialogs.advertencia(cajaBloqueada() ? "Caja bloqueada" : "Retire dinero de la caja", mensaje);
+        }
+    }
+
+    private boolean cajaBloqueada() {
+        return estadoEfectivo != null && estadoEfectivo.bloqueada();
     }
 
     // ------------------------------------------------------------------
@@ -680,7 +724,7 @@ public class PuntoVentaController extends AbstractController {
         BigDecimal vuelto = cobro.vuelto();
         lblVuelto.setText(vuelto == null ? "—" : VentaFormato.importe(vuelto.max(BigDecimal.ZERO)));
 
-        btnConfirmar.setDisable(carrito.estaVacio() || !cobro.valido());
+        btnConfirmar.setDisable(carrito.estaVacio() || !cobro.valido() || cajaBloqueada());
     }
 
     private void confirmar() {
@@ -688,6 +732,17 @@ public class PuntoVentaController extends AbstractController {
         if (carrito.estaVacio()) {
             enfocarBusqueda();
             return;
+        }
+
+        // Con la caja bloqueada se vuelve a consultar: pudo haberse retirado dinero desde otra pantalla.
+        if (cajaBloqueada()) {
+
+            execute(() -> actualizarEfectivo(false));
+
+            if (cajaBloqueada()) {
+                warning(estadoEfectivo.mensaje());
+                return;
+            }
         }
 
         Cobro cobro = calcularCobro();
@@ -747,10 +802,14 @@ public class PuntoVentaController extends AbstractController {
             enfocarBusqueda();
         });
 
-        // Si se cerró la caja mientras tanto, la pantalla lo muestra.
+        // Si se cerró la caja (o se bloqueó por exceso de efectivo) mientras tanto, la pantalla lo muestra.
         if (!registrada[0]) {
             verificarCaja();
+            return;
         }
+
+        // Después de la venta (y de sus carteles), avisa si recién se alcanzó el monto o se bloqueó la caja.
+        execute(() -> actualizarEfectivo(true));
     }
 
     private String resumen(Cobro cobro) {

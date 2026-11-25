@@ -114,6 +114,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         FacturacionElectronicaIntegrationTest.ArcaDePrueba.class,
         ArcaConfig.class,
         VentaServiceImpl.class,
+        ControlEfectivoCaja.class,
         ConfiguracionServiceImpl.class,
         ConfiguracionMapperImpl.class,
         NumeradorComprobanteRepository.class,

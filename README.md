@@ -131,6 +131,23 @@ sin reiniciar.
   categorías típicas del rubro (almacén, kiosco, verdulería, ferretería…) y
   fija la unidad de medida por defecto. No duplica categorías existentes.
 
+### Control del efectivo en caja
+
+Se configura en **Datos de la empresa**, sección "Control del efectivo en caja"
+(columnas de `empresas`). Sin monto máximo, la caja funciona sin control.
+
+| Parámetro | Efecto |
+|-----------|--------|
+| Monto máximo en caja | Cuando el saldo esperado de la caja llega a este monto, Punto de venta y Caja muestran una franja que pide retirar dinero (y un cartel al alcanzarlo). |
+| Clientes antes de bloquear | Ventas que se permiten después de alcanzar el monto. Superadas, no se registran ventas hasta que el saldo baje del monto (por ejemplo, con un retiro). Vacío: nunca se bloquea; 0: se bloquea apenas se alcanza. Sólo con monto máximo. |
+| Los retiros los debe confirmar un encargado | Un movimiento de tipo Retiro lo confirma un usuario con el permiso `CAJA_CONFIRMAR_RETIRO` (el rol ADMIN lo tiene; al resto se asigna desde Roles). Si el cajero no lo tiene, el diálogo pide usuario y contraseña del encargado sin cerrar su sesión. Quién confirmó se ve en la descripción del movimiento. |
+
+- Se cuentan como clientes las ventas no anuladas ni canceladas de la caja,
+  con cualquier forma de pago. Si el saldo baja del monto y vuelve a
+  alcanzarlo, la cuenta empieza de nuevo.
+- No se guarda estado: avisar, bloqueada y clientes restantes se calculan
+  siempre a partir de los movimientos y las ventas de la caja.
+
 ### Actualización masiva de precios
 
 Desde **Actualizar precios** (permiso `PRODUCTO_ACTUALIZAR_PRECIOS`) se aumenta

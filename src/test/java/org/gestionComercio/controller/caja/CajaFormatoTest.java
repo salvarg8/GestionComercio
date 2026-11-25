@@ -1,5 +1,6 @@
 package org.gestionComercio.controller.caja;
 
+import org.gestionComercio.dto.caja.MovimientoCajaDto;
 import org.gestionComercio.enums.TipoMovimientoCaja;
 import org.gestionComercio.util.CurrencyUtils;
 import org.junit.jupiter.api.DisplayName;
@@ -113,5 +114,22 @@ class CajaFormatoTest {
 
         assertThat(CierreCajaDialog.calcularDiferencia(bd("1300"), bd("1250"))).isEqualByComparingTo("-50");
         assertThat(CierreCajaDialog.calcularDiferencia(bd("100"), bd("120"))).isEqualByComparingTo("20");
+    }
+
+    @Test
+    @DisplayName("la descripción del movimiento muestra quién confirmó el retiro")
+    void descripcionConConfirmacion() {
+
+        MovimientoCajaDto sinConfirmar = MovimientoCajaDto.builder().descripcion("Pago de flete").build();
+        MovimientoCajaDto confirmado = MovimientoCajaDto.builder()
+                .descripcion("Retiro para el banco")
+                .usuarioAutorizacionId(3L)
+                .usuarioAutorizacionNombre("jperez")
+                .usuarioAutorizacionNombreCompleto("Juan Pérez")
+                .build();
+
+        assertThat(CajaFormato.descripcion(sinConfirmar)).isEqualTo("Pago de flete");
+        assertThat(CajaFormato.descripcion(confirmado))
+                .isEqualTo("Retiro para el banco · Confirmó: Juan Pérez (jperez)");
     }
 }

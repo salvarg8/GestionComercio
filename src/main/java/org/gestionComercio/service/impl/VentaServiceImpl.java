@@ -2,6 +2,7 @@ package org.gestionComercio.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.gestionComercio.dto.cliente.ClienteDto;
+import org.gestionComercio.dto.caja.EstadoEfectivoCaja;
 import org.gestionComercio.dto.configuracion.ConfiguracionDto;
 import org.gestionComercio.dto.inventario.LineaInventario;
 import org.gestionComercio.dto.producto.ProductoDto;
@@ -89,6 +90,7 @@ public class VentaServiceImpl implements VentaService {
     private final ClienteMapper clienteMapper;
     private final SesionUsuario sesionUsuario;
     private final ConfiguracionService configuracionService;
+    private final ControlEfectivoCaja controlEfectivoCaja;
 
     @Override
     public VentaDto registrar(VentaDto dto) {
@@ -110,6 +112,11 @@ public class VentaServiceImpl implements VentaService {
         if (caja == null && configuracion.exigeCaja()) {
             throw new BusinessException(
                     "No tiene una caja abierta. Debe abrir la caja antes de registrar una venta.");
+        }
+
+        // Con demasiado efectivo en caja, no se vende hasta retirar dinero.
+        if (caja != null) {
+            controlEfectivoCaja.verificarQuePuedeVender(caja);
         }
 
         normalizar(dto);
@@ -324,6 +331,18 @@ public class VentaServiceImpl implements VentaService {
         sesionUsuario.requerirPermiso(PermisoCodigo.VENTA_CREAR);
 
         return cajaRepository.existsByUsuarioIdAndEstadoCaja(sesionUsuario.getUsuario().getId(), EstadoCaja.ABIERTA);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Optional<EstadoEfectivoCaja> estadoEfectivoCaja() {
+
+        sesionUsuario.requerirPermiso(PermisoCodigo.VENTA_CREAR);
+
+        return cajaRepository
+                .findFirstByUsuarioIdAndEstadoCajaOrderByFechaAperturaDesc(
+                        sesionUsuario.getUsuario().getId(), EstadoCaja.ABIERTA)
+                .flatMap(controlEfectivoCaja::estado);
     }
 
     @Transactional(readOnly = true)

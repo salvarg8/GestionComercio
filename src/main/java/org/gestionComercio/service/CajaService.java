@@ -54,22 +54,40 @@ public interface CajaService {
     List<ResponsableCajaDto> listarResponsablesDisponibles();
 
     /**
-     * Caja abierta del usuario de la sesión, con sus totales y el saldo
-     * esperado al momento. Requiere CAJA_VER.
+     * Caja abierta del usuario de la sesión, con sus totales, el saldo
+     * esperado al momento, la situación del efectivo frente al monto máximo
+     * de la empresa y si los retiros requieren confirmación. Requiere CAJA_VER.
      */
     Optional<CajaDto> obtenerCajaAbierta();
+
+    /**
+     * Registra un movimiento manual sin confirmación de un encargado (ver
+     * {@link #registrarMovimiento(TipoMovimientoCaja, BigDecimal, String, String, String)}).
+     */
+    MovimientoCajaDto registrarMovimiento(TipoMovimientoCaja tipo, BigDecimal importe, String descripcion);
 
     /**
      * Registra un movimiento manual en la caja abierta del usuario de la
      * sesión. Requiere CAJA_REGISTRAR_MOVIMIENTO.
      *
-     * @param tipo        INGRESO_MANUAL, EGRESO_MANUAL, GASTO o RETIRO
-     * @param importe     mayor que cero, con hasta dos decimales
-     * @param descripcion motivo del movimiento (obligatorio)
+     * <p>Si la empresa exige confirmar los retiros, un RETIRO lo confirma un
+     * usuario con CAJA_CONFIRMAR_RETIRO: el de la sesión si tiene el permiso
+     * (las credenciales se ignoran) o, si no, el encargado cuyas credenciales
+     * se indican. La sesión no cambia. El movimiento guarda quién lo confirmó.
+     *
+     * @param tipo               INGRESO_MANUAL, EGRESO_MANUAL, GASTO o RETIRO
+     * @param importe            mayor que cero, con hasta dos decimales
+     * @param descripcion        motivo del movimiento (obligatorio)
+     * @param usuarioEncargado   usuario que confirma el retiro; null si no hace falta
+     * @param passwordEncargado  su contraseña
      * @throws org.gestionComercio.exception.BusinessException si no hay caja
-     *         abierta, el tipo no es manual o el egreso supera el saldo
+     *         abierta, el tipo no es manual, el egreso supera el saldo o falta
+     *         la confirmación del retiro
+     * @throws org.gestionComercio.exception.AuthenticationException si las credenciales no son válidas
+     * @throws org.gestionComercio.exception.AuthorizationException si el encargado no puede confirmar retiros
      */
-    MovimientoCajaDto registrarMovimiento(TipoMovimientoCaja tipo, BigDecimal importe, String descripcion);
+    MovimientoCajaDto registrarMovimiento(TipoMovimientoCaja tipo, BigDecimal importe, String descripcion,
+                                          String usuarioEncargado, String passwordEncargado);
 
     /**
      * Cajas cerradas, de la más reciente a la más antigua según la fecha de

@@ -2,6 +2,7 @@ package org.gestionComercio.controller.empresa;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Control;
@@ -21,12 +22,14 @@ import org.gestionComercio.exception.ValidationException;
 import org.gestionComercio.security.SesionUsuario;
 import org.gestionComercio.service.EmpresaService;
 import org.gestionComercio.util.ImageUtils;
+import org.gestionComercio.util.NumberUtils;
 import org.gestionComercio.view.component.SelectorFecha;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Controller;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.util.Objects;
 
@@ -100,6 +103,21 @@ public class EmpresaConfigController extends AbstractController {
     private Label lblErrorDireccion;
 
     @FXML
+    private TextField txtMontoMaximoCaja;
+
+    @FXML
+    private Label lblErrorMontoMaximoCaja;
+
+    @FXML
+    private TextField txtClientesAntesDeBloqueo;
+
+    @FXML
+    private Label lblErrorClientesAntesDeBloqueo;
+
+    @FXML
+    private CheckBox chkRetiroRequiereConfirmacion;
+
+    @FXML
     private ImageView imgLogo;
 
     @FXML
@@ -156,6 +174,10 @@ public class EmpresaConfigController extends AbstractController {
                 .registrar("telefono", txtTelefono, lblErrorTelefono, txtTelefono.textProperty())
                 .registrar("email", txtEmail, lblErrorEmail, txtEmail.textProperty())
                 .registrar("direccion", txtDireccion, lblErrorDireccion, txtDireccion.textProperty())
+                .registrar("montoMaximoCaja", txtMontoMaximoCaja, lblErrorMontoMaximoCaja,
+                        txtMontoMaximoCaja.textProperty())
+                .registrar("clientesAntesDeBloqueo", txtClientesAntesDeBloqueo, lblErrorClientesAntesDeBloqueo,
+                        txtClientesAntesDeBloqueo.textProperty())
                 .registrar("logo", btnSeleccionarLogo, lblErrorLogo, imgLogo.imageProperty());
 
         aplicarPermisos();
@@ -180,6 +202,9 @@ public class EmpresaConfigController extends AbstractController {
             }
         });
 
+        // Los clientes antes de bloquear sólo tienen sentido con un monto máximo.
+        txtMontoMaximoCaja.textProperty().addListener((obs, o, n) -> actualizarClientesAntesDeBloqueo());
+
         btnSeleccionarLogo.setOnAction(e -> seleccionarLogo());
 
         btnQuitarLogo.setOnAction(e -> {
@@ -196,11 +221,12 @@ public class EmpresaConfigController extends AbstractController {
 
         for (TextField campo : new TextField[]{
                 txtRazonSocial, txtNombreFantasia, txtCuit, txtIngresosBrutos,
-                txtTelefono, txtEmail, txtDireccion}) {
+                txtTelefono, txtEmail, txtDireccion, txtMontoMaximoCaja, txtClientesAntesDeBloqueo}) {
             campo.setEditable(puedeEditar);
             campo.setFocusTraversable(puedeEditar);
         }
 
+        chkRetiroRequiereConfirmacion.setDisable(!puedeEditar);
         cmbCondicionIva.setDisable(!puedeEditar);
         dpInicioActividades.setDisable(!puedeEditar);
 
@@ -224,6 +250,12 @@ public class EmpresaConfigController extends AbstractController {
         txtTelefono.setText(empresa.getTelefono());
         txtEmail.setText(empresa.getEmail());
         txtDireccion.setText(empresa.getDireccion());
+
+        txtMontoMaximoCaja.setText(NumberUtils.formatDecimalEditable(empresa.getMontoMaximoCaja()));
+        txtClientesAntesDeBloqueo.setText(empresa.getClientesAntesDeBloqueo() == null
+                ? "" : empresa.getClientesAntesDeBloqueo().toString());
+        chkRetiroRequiereConfirmacion.setSelected(empresa.isRetiroRequiereConfirmacion());
+        actualizarClientesAntesDeBloqueo();
 
         // Un dato viejo (por ejemplo, consumidor final) se muestra igual, para que se vea qué hay que corregir.
         if (empresa.getCondicionIva() != null && !cmbCondicionIva.getItems().contains(empresa.getCondicionIva())) {
@@ -297,6 +329,23 @@ public class EmpresaConfigController extends AbstractController {
 
         errores.limpiar();
 
+        BigDecimal montoMaximo;
+        Integer clientes;
+
+        try {
+            montoMaximo = NumberUtils.parseDecimal(txtMontoMaximoCaja.getText());
+        } catch (NumberFormatException ex) {
+            errores.mostrar("montoMaximoCaja", "Ingrese un monto válido. Ej.: 150000 o 150000,50");
+            return;
+        }
+
+        try {
+            clientes = montoMaximo == null ? null : NumberUtils.parseEntero(txtClientesAntesDeBloqueo.getText());
+        } catch (NumberFormatException ex) {
+            errores.mostrar("clientesAntesDeBloqueo", "Ingrese una cantidad entera de clientes, o déjelo vacío.");
+            return;
+        }
+
         execute(() -> {
 
             // El logo nuevo se copia antes de guardar; si el guardado falla, se borra la copia.
@@ -304,8 +353,11 @@ public class EmpresaConfigController extends AbstractController {
 
             try {
 
-                EmpresaDto guardada = empresaService.actualizar(
-                        construirDto(copiaLogo != null ? copiaLogo : rutaLogo));
+                EmpresaDto dto = construirDto(copiaLogo != null ? copiaLogo : rutaLogo);
+                dto.setMontoMaximoCaja(montoMaximo);
+                dto.setClientesAntesDeBloqueo(clientes);
+
+                EmpresaDto guardada = empresaService.actualizar(dto);
 
                 String logoAnterior = empresaGuardada.getLogo();
                 if (!Objects.equals(logoAnterior, guardada.getLogo())) {
@@ -352,7 +404,17 @@ public class EmpresaConfigController extends AbstractController {
                 .email(txtEmail.getText())
                 .direccion(txtDireccion.getText())
                 .logo(logo)
+                .retiroRequiereConfirmacion(chkRetiroRequiereConfirmacion.isSelected())
                 .build();
+    }
+
+    /**
+     * Sin monto máximo no hay control: los clientes antes de bloquear quedan
+     * deshabilitados y no se guardan.
+     */
+    private void actualizarClientesAntesDeBloqueo() {
+        txtClientesAntesDeBloqueo.setDisable(txtMontoMaximoCaja.getText() == null
+                || txtMontoMaximoCaja.getText().isBlank());
     }
 
     private void mostrar(Control control, boolean visible) {

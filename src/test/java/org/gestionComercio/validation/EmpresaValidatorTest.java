@@ -5,6 +5,8 @@ import org.gestionComercio.enums.CondicionIVA;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -154,5 +156,41 @@ class EmpresaValidatorTest {
         assertTrue(tieneError(result, "direccion", "150"));
         assertTrue(tieneError(result, "telefono", "50"));
         assertTrue(tieneError(result, "logo", "255"));
+    }
+
+    @Test
+    @DisplayName("control del efectivo: el monto máximo es opcional, mayor que cero y con hasta dos decimales")
+    void montoMaximoCaja() {
+        EmpresaDto dto = dtoValido();
+
+        dto.setMontoMaximoCaja(new BigDecimal("150000.50"));
+        assertFalse(validator.validate(dto).hasErrors());
+
+        dto.setMontoMaximoCaja(BigDecimal.ZERO);
+        assertTrue(tieneError(validator.validate(dto), "montoMaximoCaja", "mayor que cero"));
+
+        dto.setMontoMaximoCaja(new BigDecimal("100.001"));
+        assertTrue(tieneError(validator.validate(dto), "montoMaximoCaja", "dos decimales"));
+
+        dto.setMontoMaximoCaja(new BigDecimal("10000000000"));
+        assertTrue(tieneError(validator.validate(dto), "montoMaximoCaja", "máximo permitido"));
+    }
+
+    @Test
+    @DisplayName("control del efectivo: los clientes antes de bloquear necesitan monto máximo y admiten cero")
+    void clientesAntesDeBloqueo() {
+        EmpresaDto dto = dtoValido();
+
+        dto.setClientesAntesDeBloqueo(3);
+        assertTrue(tieneError(validator.validate(dto), "clientesAntesDeBloqueo", "monto máximo"));
+
+        dto.setMontoMaximoCaja(new BigDecimal("50000"));
+        assertFalse(validator.validate(dto).hasErrors());
+
+        dto.setClientesAntesDeBloqueo(0);
+        assertFalse(validator.validate(dto).hasErrors());
+
+        dto.setClientesAntesDeBloqueo(-1);
+        assertTrue(tieneError(validator.validate(dto), "clientesAntesDeBloqueo", "negativa"));
     }
 }
